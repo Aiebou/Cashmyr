@@ -1,0 +1,188 @@
+.chart {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.plot {
+  position: relative;
+}
+.plot svg {
+  display: block;
+  overflow: visible;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.tickKey {
+  width: 14px;
+  height: 2px;
+  background: var(--ink);
+}
+
+.grid {
+  stroke: var(--rule);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.baseline {
+  stroke: var(--ink-3);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.axis,
+.axisMuted,
+.endLabel {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  fill: var(--ink-2);
+}
+.axisMuted {
+  fill: var(--ink-3);
+  opacity: 0.6;
+}
+.endLabel {
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--ink);
+}
+.incomeTick {
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.crosshair {
+  stroke: var(--ink-3);
+  stroke-width: 1;
+}
+.ring {
+  stroke: var(--panel);
+  stroke-width: 2;
+}
+.dim {
+  opacity: 0.45;
+}
+.hit {
+  fill: transparent;
+  cursor: default;
+}
+.hit:focus-visible {
+  outline: none;
+  fill: color-mix(in srgb, var(--focus) 12%, transparent);
+}
+
+.tooltip {
+  position: absolute;
+  top: 0;
+  transform: translate(-50%, -8px);
+  min-width: 150px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  pointer-events: none;
+  z-index: 5;
+}
+.tooltipTitle {
+  font-weight: 600;
+  margin-bottom: 4px;
+  text-transform: capitalize;
+}
+.tooltip dl {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 14px;
+  margin: 0;
+}
+.tooltip dt {
+  color: var(--ink-2);
+}
+.tooltip dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 560;
+}
+
+.table summary {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.table th,
+.table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--rule);
+  text-align: right;
+}
+.table th[scope="row"],
+.table th:first-child {
+  text-align: left;
+  text-transform: capitalize;
+  font-weight: 560;
+}
+
+.ranking {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ranking li {
+  display: grid;
+  grid-template-columns: minmax(96px, 34%) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 28px;
+}
+.rankLabel {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rankTrack {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.rankBar {
+  height: 14px;
+  min-width: 2px;
+  border-radius: 0 4px 4px 0;
+}
+.rankValue {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+}

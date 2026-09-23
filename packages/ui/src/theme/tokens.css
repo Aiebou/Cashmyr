@@ -1,7 +1,8 @@
 /*
  * Jetons de couleur. Clair par défaut ; sombre selon le système, ou forcé par
  * data-theme sur <html>. Les couleurs de série sont validées (luminance, saturation,
- * daltonisme, contraste) pour chaque mode.
+ * daltonisme, contraste) pour chaque mode ; leur ordre repousse l'ocre et le vert,
+ * proches des couleurs d'usage (envies, épargne), aux dernières places.
  */
 :root {
   color-scheme: light;
@@ -23,12 +24,12 @@
   --positive: #4f8468;
 
   --series-0: #1e7ba8;
-  --series-1: #b7792a;
-  --series-2: #8a5a9e;
-  --series-3: #5e8c3a;
-  --series-4: #c4668a;
-  --series-5: #5460b0;
-  --series-6: #9a8a34;
+  --series-1: #9a8a34;
+  --series-2: #c4668a;
+  --series-3: #5460b0;
+  --series-4: #5e8c3a;
+  --series-5: #8a5a9e;
+  --series-6: #b7792a;
 
   --font-display: "Spectral", "Iowan Old Style", Georgia, serif;
   --font-ui: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -57,12 +58,12 @@
     --negative: #d4785f;
     --positive: #71b08e;
     --series-0: #3d96c5;
-    --series-1: #c28336;
-    --series-2: #a170b5;
-    --series-3: #6d9c4a;
-    --series-4: #ce6f93;
-    --series-5: #6a78cb;
-    --series-6: #a3933a;
+    --series-1: #a3933a;
+    --series-2: #ce6f93;
+    --series-3: #6a78cb;
+    --series-4: #6d9c4a;
+    --series-5: #a170b5;
+    --series-6: #c28336;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.25);
   }
 }
@@ -85,11 +86,11 @@
   --negative: #d4785f;
   --positive: #71b08e;
   --series-0: #3d96c5;
-  --series-1: #c28336;
-  --series-2: #a170b5;
-  --series-3: #6d9c4a;
-  --series-4: #ce6f93;
-  --series-5: #6a78cb;
-  --series-6: #a3933a;
+  --series-1: #a3933a;
+  --series-2: #ce6f93;
+  --series-3: #6a78cb;
+  --series-4: #6d9c4a;
+  --series-5: #a170b5;
+  --series-6: #c28336;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.25);
 }

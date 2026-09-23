@@ -1,0 +1,84 @@
+.block {
+  display: grid;
+  gap: 14px;
+  padding: 16px 20px 20px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+.before {
+  box-shadow: 0 -3px 0 0 var(--focus);
+}
+.after {
+  box-shadow: 0 3px 0 0 var(--focus);
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-right: -10px;
+}
+.title {
+  font-size: 19px;
+}
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Barre discrète, plus marquée au survol ou au focus. */
+.handleBar {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  opacity: 0.45;
+  transition: opacity 120ms ease-out;
+}
+.block:hover .handleBar,
+.handleBar:focus-within {
+  opacity: 1;
+}
+.grip {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: var(--tap);
+  color: var(--ink-3);
+  cursor: grab;
+  touch-action: none;
+}
+.grip:active {
+  cursor: grabbing;
+}
+.arrow {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: var(--tap);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.arrow:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--panel-2);
+}
+.arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Au doigt, pas de survol : la barre reste lisible. */
+@media (hover: none) {
+  .handleBar {
+    opacity: 0.8;
+  }
+  .grip {
+    display: none;
+  }
+}

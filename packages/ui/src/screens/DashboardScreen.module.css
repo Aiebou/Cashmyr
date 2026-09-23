@@ -1,0 +1,47 @@
+.screen {
+  display: grid;
+  gap: 18px;
+}
+.banner {
+  display: grid;
+  gap: 10px;
+  padding: 6px 0 8px;
+}
+.eyebrow {
+  font-size: 14px;
+  font-weight: 560;
+  color: var(--ink-2);
+}
+.big {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(44px, 9vw, 68px);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.lines {
+  display: grid;
+  gap: 2px;
+  color: var(--ink-2);
+}
+.lines strong {
+  color: var(--ink);
+}
+.items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: 18px 28px;
+}
+.item {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.note {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.overdue {
+  color: var(--negative);
+  font-weight: 600;
+}

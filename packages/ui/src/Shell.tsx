@@ -6,6 +6,7 @@ import { Toasts } from "./components/layout";
 import { Menu } from "./components/Menu";
 import { monthTitle, stamp } from "./lib/format";
 import { CreateAccountModal, CreateDebtModal, CreateGoalModal } from "./screens/CreateModals";
+import { DashboardScreen } from "./screens/DashboardScreen";
 import { GoalsScreen } from "./screens/GoalsScreen";
 import { MonthScreen } from "./screens/MonthScreen";
 import { OperationModal } from "./screens/OperationModal";
@@ -125,6 +126,8 @@ function Modals() {
 
 function Screen({ tab }: { tab: Tab }) {
   switch (tab) {
+    case "dashboard":
+      return <DashboardScreen />;
     case "month":
       return <MonthScreen />;
     case "goals":

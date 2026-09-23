@@ -123,7 +123,7 @@ export function createAppStore(deps: AppDeps): AppStore {
       fresh: repo.isFresh,
       sync: engine.state,
       today,
-      tab: "month",
+      tab: "dashboard",
       year: yearOf(today),
       month: monthOf(today),
       modal: null,
