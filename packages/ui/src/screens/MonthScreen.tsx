@@ -16,8 +16,9 @@ import { Select } from "../components/controls";
 import { Gauge, SegmentedBar, Stat } from "../components/figures";
 import { Card, Empty, Grid, ScreenTitle } from "../components/layout";
 import { OperationList, OperationRow } from "../components/OperationRow";
+import { PlannedList } from "../components/PlannedList";
 import { categoryName, liveAccounts, BUCKET_LABELS } from "../lib/data";
-import { dayShort, money, moneyExact, monthLong, monthTitle, ofMonth } from "../lib/format";
+import { money, moneyExact, monthLong, monthTitle, ofMonth } from "../lib/format";
 import { useActions, useApp } from "../store/context";
 import s from "./MonthScreen.module.css";
 
@@ -53,23 +54,7 @@ export function MonthScreen() {
   const prefs = data.preferences;
   const noAccount = liveAccounts(data).length === 0;
 
-  const plannedList =
-    planned.length > 0 ? (
-      <Card title={future ? "Prévu ce mois" : "Prévu d'ici la fin du mois"} subtitle="Lecture seule : les opérations apparaîtront le jour venu.">
-        <ul className={s.planned}>
-          {planned.map((p) => (
-            <li key={`${p.recurrence.id}-${p.month}`}>
-              <span className={s.plannedDate}>{dayShort(p.date)}</span>
-              <span className={s.plannedLabel}>{p.recurrence.label}</span>
-              <span className={s.plannedAmount}>
-                {p.recurrence.type === "out" ? "−" : p.recurrence.type === "in" ? "+" : ""}
-                {moneyExact(p.amount)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </Card>
-    ) : null;
+  const plannedList = planned.length > 0 ? <PlannedList planned={planned} future={future} /> : null;
 
   if (future) {
     return (

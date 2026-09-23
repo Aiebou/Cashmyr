@@ -1,14 +1,21 @@
 import type { Dataset, Operation } from "@cashmyr/core";
 import { operationColor, operationLabel, categoryName, accountName } from "../lib/data";
 import { dayShort, moneyExact } from "../lib/format";
+import { cx } from "./controls";
 import { Dot } from "./figures";
 import { RepeatIcon } from "./icons";
 import s from "./OperationRow.module.css";
 
-type Props = { data: Dataset; op: Operation; onOpen?(op: Operation): void };
+type Props = {
+  data: Dataset;
+  op: Operation;
+  onOpen?(op: Operation): void;
+  /** Faux quand la liste est déjà groupée par jour. */
+  showDate?: boolean;
+};
 
 /** Une opération dans une liste : pastille, libellé, détail, montant signé. */
-export function OperationRow({ data, op, onOpen }: Props) {
+export function OperationRow({ data, op, onOpen, showDate = true }: Props) {
   const label = operationLabel(data, op);
   const detail =
     op.type === "tx"
@@ -18,7 +25,7 @@ export function OperationRow({ data, op, onOpen }: Props) {
   const content = (
     <>
       <Dot color={operationColor(data, op)} />
-      <span className={s.date}>{dayShort(op.date)}</span>
+      {showDate && <span className={s.date}>{dayShort(op.date)}</span>}
       <span className={s.text}>
         <span className={s.label}>
           {label}
@@ -36,12 +43,12 @@ export function OperationRow({ data, op, onOpen }: Props) {
   );
   return onOpen ? (
     <li>
-      <button type="button" className={s.row} onClick={() => onOpen(op)}>
+      <button type="button" className={cx(s.row, !showDate && s.undated)} onClick={() => onOpen(op)}>
         {content}
       </button>
     </li>
   ) : (
-    <li className={s.row}>{content}</li>
+    <li className={cx(s.row, !showDate && s.undated)}>{content}</li>
   );
 }
 

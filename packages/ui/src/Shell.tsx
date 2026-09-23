@@ -11,6 +11,7 @@ import { AccountsScreen } from "./screens/AccountsScreen";
 import { DebtsScreen } from "./screens/DebtsScreen";
 import { GoalsScreen } from "./screens/GoalsScreen";
 import { MonthScreen } from "./screens/MonthScreen";
+import { OperationsScreen } from "./screens/OperationsScreen";
 import { OperationModal } from "./screens/OperationModal";
 import { Placeholder } from "./screens/Placeholder";
 import { Welcome } from "./screens/Welcome";
@@ -138,6 +139,8 @@ function Screen({ tab }: { tab: Tab }) {
       return <DebtsScreen />;
     case "accounts":
       return <AccountsScreen />;
+    case "operations":
+      return <OperationsScreen />;
     default:
       return <Placeholder tab={tab} />;
   }

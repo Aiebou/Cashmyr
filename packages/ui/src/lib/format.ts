@@ -13,6 +13,7 @@ const longDay = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long"
 const shortDay = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" });
 const longMonth = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric", timeZone: "UTC" });
 const monthOnly = new Intl.DateTimeFormat("fr-FR", { month: "long", timeZone: "UTC" });
+const weekdayDay = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 const shortMonth = new Intl.DateTimeFormat("fr-FR", { month: "short", year: "numeric", timeZone: "UTC" });
 const dateTime = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
@@ -20,6 +21,8 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** « 10 novembre 2026 », « 1er novembre 2026 » : Intl n'écrit pas l'ordinal du premier du mois. */
 export const dayLong = (day: Day) => longDay.format(utc(day)).replace(/^1(\s)/, "1er$1");
+/** « Vendredi 28 août », « Mardi 1er septembre » : intitulé d'une journée dans une liste. */
+export const dayHeading = (day: Day) => capitalize(weekdayDay.format(utc(day)).replace(/(\s)1(\s)/, "$11er$2"));
 /** « 10 nov. », « 1er nov. » */
 export const dayShort = (day: Day) => shortDay.format(utc(day)).replace(/^1(\s)/, "1er$1");
 /** « novembre 2026 » */

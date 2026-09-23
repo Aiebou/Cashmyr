@@ -19,6 +19,9 @@
   background: transparent;
   text-align: left;
 }
+.undated {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
 button.row {
   cursor: pointer;
   border-radius: var(--radius-sm);

@@ -1,0 +1,28 @@
+.planned {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.planned li {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 44px;
+  color: var(--ink-2);
+}
+.planned li + li {
+  border-top: 1px solid var(--rule);
+}
+.date {
+  font-size: 13px;
+}
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.amount {
+  font-weight: 600;
+}
