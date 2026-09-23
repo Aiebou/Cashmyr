@@ -50,16 +50,16 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │   │   └── index.ts
 │   └── test/                    *.test.ts, une fixture synthétique (jamais tes données)
 │
-├── packages/storage/            implémentations par plateforme + moteur de synchronisation
+├── packages/storage/            dépôt local, moteur de synchronisation, adaptateurs par plateforme
 │   └── src/
-│       ├── types.ts             Platform, LocalStore, SyncFile, FileIO, AppUpdates (§5)
-│       ├── engine.ts            SyncEngine : lire → fusionner → écrire, différé 2 s, état
-│       ├── local/indexeddb.ts   LocalStore web (idb)
-│       ├── local/tauri-file.ts  LocalStore bureau (plugin-fs, $APPDATA)
-│       ├── sync/tauri.ts        mode auto, commandes Rust (§6)
-│       ├── sync/fs-access.ts    mode auto, File System Access API
-│       ├── sync/assisted.ts     mode assisté : <input type=file> + partage / téléchargement
-│       └── web/, tauri/         FileIO et AppUpdates de chaque plateforme
+│       ├── types.ts             Platform, LocalStore, SyncFile, FileIO, AppUpdates, DeviceState (§5)
+│       ├── repository.ts        Repository : jeu en mémoire, validation, récurrences, modifications en attente
+│       ├── engine.ts            SyncEngine : lire → fusionner → adopter → écrire, différé 2 s, état affiché
+│       ├── web/                 entrée « @cashmyr/storage/web » : IndexedDB, File System Access,
+│       │                        mode assisté, exports, détection du mode
+│       └── tauri/               entrée « @cashmyr/storage/tauri » : fichier local atomique,
+│                                commandes Rust de synchronisation, dialogues natifs
+│   test/                        adaptateurs, dépôt, moteur, et bout en bout à trois appareils
 │
 ├── packages/ui/                 tous les écrans, aucune détection de plateforme
 │   └── src/
@@ -81,7 +81,8 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
                                  src/{main.rs, lib.rs, sync_file.rs}
 ```
 
-**Sens des dépendances** : `core` ← `storage` ← `ui` ← `apps/*`. `ui` n'importe de `storage` que les
+**Sens des dépendances** : `core` ← `storage` ← `ui` ← `apps/*`. `storage` a trois entrées : la racine (types,
+dépôt, moteur), `web` et `tauri`. La PWA n'importe jamais l'entrée `tauri`, et inversement. `ui` n'importe de `storage` que les
 *types*. Chaque `apps/*/src/platform.ts` instancie les implémentations et les passe à `<App platform />`.
 Un écran qui doit se comporter différemment lit une capacité de `platform` (par exemple
 `platform.sync.mode === "assisted"`), jamais la cible.
@@ -220,12 +221,15 @@ export type DeviceState = {
   deviceId: string;            // aléatoire, jamais un nom de machine
   deviceLabel: string;         // « Mac », « Safari iPhone »… déduit, modifiable
   sync: { fileId: string | null; targetName: string | null;
-          lastMergeAt: number | null; lastError: string | null };
-  dirty: string[];             // "operations:<id>", "pref:splits"… modifié depuis la dernière fusion
+          lastMergeAt: number | null; lastOfferAt: number | null; lastError: string | null };
+  dirty: Record<string, number>;   // "operations:<id>" ou "pref:<clé>" → updatedAt de la version modifiée
 };
 ```
 
-`dirty.length` est le nombre de **modifications en attente** affiché à l'écran de synchronisation.
+Une modification reste **en attente** tant qu'aucun fichier lu ou écrit par cet appareil ne la contient,
+dans sa version ou une plus récente. Leur nombre s'affiche à l'écran de synchronisation. En mode assisté, une
+modification proposée dans le fichier fusionné n'est confirmée qu'à la lecture suivante : l'application ne
+peut pas savoir si l'original a été remplacé.
 
 ---
 
@@ -295,83 +299,36 @@ Propriétés testées sur 300 tirages aléatoires : commutativité, idempotence,
 
 ---
 
-## 5. Interfaces de stockage (`packages/storage/src/types.ts`)
+## 5. Interfaces de stockage
 
-```ts
-export type ChangeSet = {
-  upserts: Partial<{ [K in keyof Collections]: Collections[K] }>;
-  preferences?: Preferences;
-};
+Les définitions font foi dans [`packages/storage/src/types.ts`](../packages/storage/src/types.ts). En résumé :
 
-export interface LocalStore {
-  load(): Promise<Dataset | null>;              // null au premier lancement
-  apply(changes: ChangeSet): Promise<void>;     // IDB : put par ligne ; fichier : réécriture atomique
-  replace(data: Dataset): Promise<void>;        // après fusion ou import
-  snapshot(): Promise<void>;                    // au démarrage ; 5 copies tournantes
-  listSnapshots(): Promise<{ id: string; takenAt: number; bytes: number }[]>;
-  readSnapshot(id: string): Promise<Dataset>;
-  getDevice(): Promise<DeviceState>;
-  setDevice(patch: Partial<DeviceState>): Promise<void>;
-  requestPersistence(): Promise<boolean>;       // web : navigator.storage.persist() ; bureau : true
-}
+- **`LocalStore`** : `load`, `apply` (incrémental), `replace`, `snapshot` (5 copies tournantes),
+  `getDevice` / `setDevice`, `requestPersistence`, `flush`. Deux implémentations : `IndexedDbLocalStore` et
+  `TauriFileLocalStore`.
+- **`SyncFile`** : deux formes.
+  - `AutoSyncFile` (`choose`, `status`, `requestPermission`, `read`, `writeAtomic`, `forget`), implémentée
+    par `createTauriSync` et `createFsAccessSync`.
+  - `AssistedSyncFile` (`pickAndRead`, `offer`), implémentée par `createAssistedSync`.
+- **`FileIO`** : exports et imports hors synchronisation. **`AppUpdates`** : branchée à l'étape 6.
+- **`Platform`** : ce que chaque point d'entrée assemble et passe à `<App />`.
 
-export type SyncTargetStatus = "unconfigured" | "ready" | "needs-permission" | "missing";
+**`Repository`** est la seule porte d'entrée des données.
+- Il ouvre le jeu local, en prend une copie de sauvegarde et génère les occurrences dues.
+- Il valide chaque lot d'écriture en entier : tout le lot passe ou rien n'est écrit.
+- Il compte les modifications en attente.
+- `acceptMerge` refusionne avec ce qui a été saisi pendant la synchronisation : rien n'est perdu.
 
-export interface AutoSyncFile {
-  readonly mode: "auto";
-  readonly via: "tauri" | "fs-access";
-  choose(kind: "open" | "create"): Promise<{ name: string } | null>; // sélecteur natif
-  status(): Promise<SyncTargetStatus>;
-  requestPermission(): Promise<boolean>;        // fs-access, sur geste utilisateur ; tauri : true
-  read(): Promise<string | null>;               // null si le fichier a disparu
-  writeAtomic(content: string): Promise<void>;
-  forget(): Promise<void>;
-}
-
-export interface AssistedSyncFile {
-  readonly mode: "assisted";
-  pickAndRead(): Promise<{ name: string; content: string } | null>;
-  offer(content: string, name: string): Promise<"shared" | "downloaded" | "cancelled">;
-}
-
-export type SyncFile = AutoSyncFile | AssistedSyncFile;
-
-export interface FileIO {                        // exports CSV / JSON, import JSON
-  saveAs(name: string, mime: string, content: string): Promise<boolean>;
-  openText(accept: string[]): Promise<{ name: string; content: string } | null>;
-}
-
-export interface AppUpdates {
-  onAvailable(cb: (apply: () => Promise<void>) => void): () => void; // « Nouvelle version disponible »
-  check?: () => Promise<"none" | "available">;   // bureau uniquement, sur clic
-}
-
-export interface Platform {
-  target: "web" | "desktop";                     // affichage uniquement
-  local: LocalStore;
-  sync: SyncFile;
-  files: FileIO;
-  updates: AppUpdates;
-  shortcutHint: string | null;                   // « ⌘N », « Ctrl+N », « N »
-}
-
-export type SyncState = {
-  mode: "auto-tauri" | "auto-fs-access" | "assisted";
-  status: SyncTargetStatus | "syncing" | "error";
-  targetName: string | null;
-  lastMergeAt: number | null;
-  pending: number;
-  lastError: string | null;
-};
-
-export interface SyncEngine {
-  getState(): SyncState;
-  subscribe(cb: (s: SyncState) => void): () => void;
-  syncNow(): Promise<MergeReport>;
-  notifyLocalChange(): void;   // auto : écriture différée de 2 s ; assisté : compteur seulement
-  onFocus(): void;             // auto : relit et fusionne
-}
-```
+**`SyncEngine`** orchestre les passages, un à la fois.
+- Mode automatique : lancement, retour au premier plan, et 2 s après une modification (une seule écriture
+  pour une rafale).
+- Mode assisté : sur demande. `syncNow` fusionne, puis `offerMerged` propose le fichier fusionné, depuis un
+  geste de l'utilisateur (iOS refuse le partage sinon).
+- Deux crochets demandent à l'utilisateur :
+  - `confirmFirstJoin` : premier passage avec des données des deux côtés ;
+  - `confirmDropPurged` : appareil évincé qui revient.
+- L'état affiché (`SyncState`) comprend : mode, automatique ou non, statut, fichier, dernière fusion,
+  dernier fichier proposé, modifications en attente, dernière erreur.
 
 ---
 
@@ -387,21 +344,26 @@ export interface SyncEngine {
 
 **Déroulé d'une synchronisation automatique.** Lire le fichier. S'il est illisible (JSON tronqué par
 un cloud en cours d'envoi, par exemple), abandonner sans rien écrire et réessayer au prochain focus.
-Sinon valider, fusionner, remplacer le local, écrire le fichier fusionné, puis vider `dirty`. Chaque
+Sinon valider, fusionner, adopter le résultat localement, écrire le fichier fusionné, puis retirer
+de `dirty` ce que le fichier contient désormais. Chaque
 écriture est précédée d'une lecture : aucune écriture n'est faite à l'aveugle.
 
 **Déroulé assisté.** Bouton « Synchroniser » → sélecteur de fichiers → fusion → le local est à jour →
-le fichier fusionné est proposé par le partage natif (« Enregistrer dans Fichiers » sur iOS) ou en
-téléchargement. L'écran dit en clair que la synchronisation n'a lieu qu'à la demande et que l'app ne peut
+bouton « Enregistrer le fichier fusionné » → partage natif (« Enregistrer dans Fichiers » sur iOS) ou
+téléchargement. Ce second geste est indispensable : iOS refuse le partage qui ne suit pas immédiatement
+un geste de l'utilisateur. L'écran dit en clair que la synchronisation n'a lieu qu'à la demande et que l'app ne peut
 pas vérifier que l'original a bien été remplacé. Sur iPhone, le comportement exact de « Enregistrer dans
 Fichiers » face à un fichier de même nom (remplacer, ou créer une copie) sera vérifié sur un appareil réel
 avant d'écrire la consigne affichée.
 
 **Pourquoi des commandes Rust sur bureau.** Le fichier temporaire vit à côté du fichier choisi. Or
 `plugin-dialog` n'ouvre la portée de `plugin-fs` qu'au fichier choisi, et pour la seule session en
-cours. `sync_file.rs` expose donc trois commandes : `sync_choose` (ouvre le dialogue côté Rust et mémorise
-le chemin dans `plugin-store`), `sync_read` et `sync_write_atomic`. Elles n'agissent que sur ce chemin
-mémorisé, et le front ne peut pas leur passer un autre chemin. `plugin-fs` reste limité à `$APPDATA`.
+cours. `sync_file.rs` expose donc six commandes, dont le contrat est décrit dans
+[`packages/storage/src/tauri/sync.ts`](../packages/storage/src/tauri/sync.ts) :
+`sync_choose`, `sync_status`, `sync_target_name`, `sync_read`, `sync_write_atomic`, `sync_forget`.
+`sync_choose` ouvre le dialogue côté Rust et mémorise le chemin ; en création, il crée un fichier vide.
+Les commandes n'agissent que sur le chemin mémorisé, et le front ne peut pas leur en passer un autre.
+`plugin-fs` reste limité à `$APPDATA`. Le code Rust arrive avec l'enveloppe Tauri, à l'étape 4.
 
 **Premier lancement.** Données vides, un écran d'accueil et trois choix : commencer avec les catégories
 par défaut (celles de l'ancienne app), importer un fichier, ou rejoindre un fichier de synchronisation
