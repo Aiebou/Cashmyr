@@ -1,0 +1,95 @@
+/*
+ * Jetons de couleur. Clair par défaut ; sombre selon le système, ou forcé par
+ * data-theme sur <html>. Les couleurs de série sont validées (luminance, saturation,
+ * daltonisme, contraste) pour chaque mode.
+ */
+:root {
+  color-scheme: light;
+  --paper: #f1f0ea;
+  --panel: #fbfaf6;
+  --panel-2: #f4f2eb;
+  --ink: #1b222c;
+  --ink-2: #525c69;
+  --ink-3: #6b7480;
+  --rule: #dcd9d0;
+  --track: #e7e4db;
+  --overlay: rgb(27 34 44 / 0.42);
+  --focus: #1e7ba8;
+
+  --bucket-besoin: #3e5c76;
+  --bucket-envie: #be8534;
+  --bucket-invest: #4f8468;
+  --negative: #a8503f;
+  --positive: #4f8468;
+
+  --series-0: #1e7ba8;
+  --series-1: #b7792a;
+  --series-2: #8a5a9e;
+  --series-3: #5e8c3a;
+  --series-4: #c4668a;
+  --series-5: #5460b0;
+  --series-6: #9a8a34;
+
+  --font-display: "Spectral", "Iowan Old Style", Georgia, serif;
+  --font-ui: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 2px rgb(27 34 44 / 0.06), 0 4px 16px rgb(27 34 44 / 0.06);
+  --tap: 44px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #13171d;
+    --panel: #1a1f27;
+    --panel-2: #20262f;
+    --ink: #e9e6de;
+    --ink-2: #aeb3ba;
+    --ink-3: #8d949d;
+    --rule: #2e3540;
+    --track: #2a313b;
+    --overlay: rgb(5 7 10 / 0.6);
+    --focus: #6e96b8;
+    --bucket-besoin: #6e96b8;
+    --bucket-envie: #d9a54e;
+    --bucket-invest: #71b08e;
+    --negative: #d4785f;
+    --positive: #71b08e;
+    --series-0: #3d96c5;
+    --series-1: #c28336;
+    --series-2: #a170b5;
+    --series-3: #6d9c4a;
+    --series-4: #ce6f93;
+    --series-5: #6a78cb;
+    --series-6: #a3933a;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.25);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #13171d;
+  --panel: #1a1f27;
+  --panel-2: #20262f;
+  --ink: #e9e6de;
+  --ink-2: #aeb3ba;
+  --ink-3: #8d949d;
+  --rule: #2e3540;
+  --track: #2a313b;
+  --overlay: rgb(5 7 10 / 0.6);
+  --focus: #6e96b8;
+  --bucket-besoin: #6e96b8;
+  --bucket-envie: #d9a54e;
+  --bucket-invest: #71b08e;
+  --negative: #d4785f;
+  --positive: #71b08e;
+  --series-0: #3d96c5;
+  --series-1: #c28336;
+  --series-2: #a170b5;
+  --series-3: #6d9c4a;
+  --series-4: #ce6f93;
+  --series-5: #6a78cb;
+  --series-6: #a3933a;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.25);
+}

@@ -1,0 +1,23 @@
+.form {
+  display: grid;
+  gap: 16px;
+}
+.repeat {
+  display: grid;
+  gap: 8px;
+  padding: 4px 0 0;
+}
+.notice {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.summary {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.delete {
+  margin-right: auto;
+}

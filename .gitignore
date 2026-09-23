@@ -51,3 +51,6 @@ Icon?
 # ── Éditeurs ───────────────────────────────────────────────────────────
 .idea/
 *.swp
+
+# ── Configuration locale de l'aperçu (chemins propres à la machine) ───
+.claude/launch.json

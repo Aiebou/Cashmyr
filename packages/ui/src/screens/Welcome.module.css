@@ -1,0 +1,22 @@
+.welcome {
+  display: grid;
+  gap: 24px;
+  max-width: 820px;
+  margin: 24px auto 0;
+}
+.title {
+  font-size: 34px;
+}
+.lead {
+  font-size: 17px;
+  color: var(--ink-2);
+  max-width: 62ch;
+}
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: 16px;
+}
+.text {
+  color: var(--ink-2);
+}

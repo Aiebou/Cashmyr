@@ -1,0 +1,181 @@
+.lines {
+  display: grid;
+  gap: 4px;
+}
+.capacity {
+  font-weight: 600;
+}
+.muted {
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.overdue {
+  color: var(--negative);
+  font-weight: 600;
+}
+.suggest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--positive) 12%, var(--panel));
+}
+.fieldset {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 10px 14px 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+}
+.fieldset legend {
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 560;
+  color: var(--ink-2);
+}
+.accountLabel {
+  display: inline-flex;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.settings {
+  border-top: 1px solid var(--rule);
+  padding-top: 6px;
+}
+.settings summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-weight: 560;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.settings summary:hover {
+  color: var(--ink);
+}
+.settingsBody {
+  display: grid;
+  gap: 16px;
+  padding: 8px 0 4px;
+}
+.inlineRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.steps {
+  display: grid;
+  gap: 8px;
+}
+.subhead {
+  font-size: 13px;
+  font-weight: 560;
+  color: var(--ink-2);
+}
+.stepList {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 120px auto;
+  gap: 8px;
+  align-items: center;
+}
+.stepCheck {
+  width: 20px;
+  height: 20px;
+  margin: 0 12px;
+  accent-color: var(--ink);
+}
+.stepTools {
+  display: flex;
+}
+.addStep {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--negative);
+  font-size: 14px;
+}
+
+.newGoal {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.archive {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.archive li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 12px;
+}
+.archive li + li {
+  border-top: 1px solid var(--rule);
+}
+.archiveName {
+  font-weight: 560;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.archiveTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 560px) {
+  .step {
+    grid-template-columns: auto minmax(0, 1fr) 96px;
+  }
+  .stepTools {
+    grid-column: 2 / -1;
+    justify-content: flex-end;
+  }
+  .addStep {
+    grid-template-columns: minmax(0, 1fr) 96px;
+  }
+  .addStep button {
+    grid-column: 1 / -1;
+  }
+  .archive li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .archiveTools {
+    grid-column: 1 / -1;
+  }
+}
+.alignStart {
+  justify-self: start;
+}

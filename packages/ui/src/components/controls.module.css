@@ -1,0 +1,185 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--tap);
+  padding: 0 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 560;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.button:hover {
+  border-color: var(--ink-3);
+}
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--panel);
+}
+.primary:hover {
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 88%, var(--panel));
+}
+.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-2);
+}
+.ghost:hover {
+  color: var(--ink);
+  border-color: var(--rule);
+}
+.danger {
+  color: var(--negative);
+  border-color: color-mix(in srgb, var(--negative) 40%, var(--rule));
+}
+.small {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.iconButton {
+  display: inline-grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.iconButton:hover {
+  color: var(--ink);
+  background: var(--panel-2);
+}
+.iconButton[aria-pressed="true"] {
+  color: var(--ink);
+}
+
+/* Conteneur de champ. Sa règle display ne doit jamais l'emporter sur [hidden] (voir global.css). */
+.field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.label {
+  font-size: 13px;
+  font-weight: 560;
+  color: var(--ink-2);
+}
+.hint {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.error {
+  font-size: 13px;
+  color: var(--negative);
+}
+
+.input,
+.select {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+.input:hover,
+.select:hover {
+  border-color: var(--ink-3);
+}
+.input[aria-invalid="true"] {
+  border-color: var(--negative);
+}
+.select {
+  appearance: none;
+  padding-right: 36px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%),
+    linear-gradient(135deg, var(--ink-3) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.amount {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 600;
+  min-height: 64px;
+  text-align: right;
+  padding-right: 44px;
+}
+.amountWrap {
+  position: relative;
+}
+.amountWrap::after {
+  content: "€";
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: var(--ink-3);
+  pointer-events: none;
+}
+.inlineAmount {
+  text-align: right;
+}
+
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  padding: 3px;
+  gap: 3px;
+  border-radius: calc(var(--radius-sm) + 3px);
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+}
+.segment {
+  min-height: 40px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  font-weight: 560;
+  cursor: pointer;
+}
+.segment[aria-checked="true"] {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap);
+  cursor: pointer;
+}
+.check input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
