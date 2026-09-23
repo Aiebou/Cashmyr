@@ -1,4 +1,4 @@
-import { BackupError, importBackup, parseBackup, restoreEverywhere, serializeBackup, type RestoreResult } from "@cashmyr/core";
+import { restoreEverywhere, serializeBackup, type RestoreResult } from "@cashmyr/core";
 import type { SnapshotInfo } from "@cashmyr/storage";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "../../components/controls";
@@ -6,6 +6,7 @@ import { RestoreIcon } from "../../components/icons";
 import { Card } from "../../components/layout";
 import { operationsCsv } from "../../lib/export";
 import { count, stamp } from "../../lib/format";
+import { importFromFile } from "../../lib/import";
 import type { AppStore } from "../../store/app-store";
 import { useActions, useApp, useStoreApi } from "../../store/context";
 import s from "./Settings.module.css";
@@ -17,7 +18,7 @@ export function DataSection() {
   const store = useStoreApi();
   const platform = useApp((st) => st.platform);
   const today = useApp((st) => st.today);
-  const { apply, ask, toast } = useActions();
+  const { toast } = useActions();
   const [snapshots, setSnapshots] = useState<SnapshotInfo[] | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -32,34 +33,6 @@ export function DataSection() {
 
   const save = async (name: string, mime: string, content: string, message: string) => {
     if (await platform.files.saveAs(name, mime, content)) toast(message);
-  };
-
-  // Décision 32 : l'import fusionne, la version la plus récente de chaque ligne gagne.
-  const importJson = async () => {
-    const file = await platform.files.openText([".json", "application/json"]);
-    if (!file) return;
-    let imported;
-    try {
-      imported = parseBackup(file.content);
-    } catch (e) {
-      toast(e instanceof BackupError ? e.message : String(e), "error");
-      return;
-    }
-    const current = store.getState().data;
-    const result = importBackup(current, imported);
-    if (result.rows === 0 && result.preferencesChanged.length === 0) {
-      toast("Rien de nouveau dans ce fichier : cet appareil a déjà tout, dans une version au moins aussi récente.");
-      return;
-    }
-    const ok = await ask({
-      title: `Importer « ${file.name} » ?`,
-      message:
-        `${count(result.rows, "ligne sera ajoutée ou mise à jour", "lignes seront ajoutées ou mises à jour")}` +
-        `${result.preferencesChanged.length > 0 ? `, ainsi que ${count(result.preferencesChanged.length, "réglage", "réglages")}` : ""}. ` +
-        "Pour chaque ligne, la version la plus récente gagne : rien de plus récent n'est écrasé.",
-      confirmLabel: "Importer",
-    });
-    if (ok) await apply(result.changes, result.preferences, "Sauvegarde importée");
   };
 
   // Décision 33 : restaurer une copie la fait gagner partout.
@@ -87,11 +60,12 @@ export function DataSection() {
           <Button onClick={() => save(`cashmyr-operations-${today}.csv`, "text/csv", operationsCsv(store.getState().data), "Opérations exportées")}>
             Exporter les opérations (CSV)
           </Button>
-          <Button onClick={importJson}>Importer une sauvegarde (JSON)</Button>
+          <Button onClick={() => importFromFile(store)}>Importer un fichier (JSON)</Button>
         </div>
         <p className={s.muted}>
-          L'import accepte une sauvegarde JSON de Cashmyr ou un fichier finances-sync.json, et les fusionne avec cet appareil. Le CSV
-          reprend les colonnes de l'ancienne application, pour un tableur.
+          L'import accepte une sauvegarde JSON de Cashmyr, un fichier finances-sync.json ou l'export de l'ancienne application
+          (mes-finances.json), et les fusionne avec cet appareil sans rien écraser de plus récent. Le CSV reprend les colonnes de
+          l'ancienne application, pour un tableur.
         </p>
       </Card>
       <Card

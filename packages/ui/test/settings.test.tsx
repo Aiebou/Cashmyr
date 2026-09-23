@@ -293,14 +293,19 @@ describe("sauvegardes (décisions 32 et 33)", () => {
     const { repository, store } = await openSettings({ files: { openText: async () => ({ name: "sauvegarde.json", content }) } });
     const extra = op("gift", "2026-09-15", 2_000, "out", { categoryId: cat("Cadeaux"), accountId: courant.id, updatedAt: 99 });
     content = serializeBackup({ ...store.getState().data, collections: { ...store.getState().data.collections, operations: [...shopping(), extra] } });
-    await user.click(screen.getByRole("button", { name: "Importer une sauvegarde (JSON)" }));
-    expect(plain(within(dialog()).getByText(/ligne sera ajoutée/).textContent)).toMatch(/^1 ligne sera ajoutée ou mise à jour\./);
+    await user.click(screen.getByRole("button", { name: "Importer un fichier (JSON)" }));
+    expect(plain(within(dialog()).getByText(/ligne sera ajoutée/).textContent)).toMatch(/^1 ligne sera ajoutée\. Pour chaque ligne/);
     await user.click(within(dialog()).getByRole("button", { name: "Importer" }));
     expect(repository.data.collections.operations.map((o) => o.id).sort()).toEqual(["gift", "shop-1", "shop-2"]);
 
+    // Un fichier de l'ancienne application incomplet : refusé en entier, les raisons dans une fenêtre.
     content = JSON.stringify({ settings: {}, months: {} });
-    await user.click(screen.getByRole("button", { name: "Importer une sauvegarde (JSON)" }));
-    expect(await screen.findByText("Ce fichier vient de l'ancienne application : sa reprise passe par l'import dédié.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Importer un fichier (JSON)" }));
+    expect(within(await screen.findByRole("dialog", { name: "Reprise refusée" })).getByText(/^Rien n'a été écrit/).textContent).toMatch(
+      /• settings\.v : champ manquant/,
+    );
+    expect(within(dialog()).queryByRole("button", { name: "Annuler" })).toBeNull();
+    await user.click(within(dialog()).getByRole("button", { name: "Compris" }));
     expect(repository.data.collections.operations).toHaveLength(3);
   });
 

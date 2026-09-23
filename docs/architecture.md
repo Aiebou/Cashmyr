@@ -41,12 +41,14 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │   │   │   └── year.ts          indicateurs annuels, séries 12 mois, classement
 │   │   ├── debts.ts             versement ponctuel, prélèvement créé depuis une dette
 │   │   ├── colors.ts            accesseur unique de couleur, choix et réinitialisation
+│   │   ├── defaults.ts          catégories par défaut, aux identifiants de l'ancienne application
 │   │   ├── recurrence.ts        matérialisation idempotente, annulation, rétablissement
 │   │   ├── merge.ts             fusion ligne à ligne, préférences clé à clé
 │   │   ├── sync.ts              document de synchronisation, registre, purge
 │   │   ├── migrate/
 │   │   │   ├── schema.ts        migrations du schéma (v1 → v2…)
-│   │   │   └── legacy.ts        import de mes-finances.json + vérification croisée
+│   │   │   ├── legacy.ts        import de mes-finances.json : lecture stricte, conversion
+│   │   │   └── legacy-check.ts  vérification croisée, calculateur de l'ancien format en euros
 │   │   └── index.ts
 │   └── test/                    *.test.ts, une fixture synthétique (jamais tes données)
 │
@@ -389,15 +391,30 @@ avant de fusionner. Les deux jeux seront réunis, et ce qui a été saisi des de
 
 ## 7. Reprise de `mes-finances.json`
 
-- Montants : `Math.round(x * 100)`, avec échec si `|x·100 − arrondi| > 1e-6`.
+Le code est dans [`packages/core/src/migrate/`](../packages/core/src/migrate/). L'import est proposé à
+l'accueil (« Reprendre mes données ») et dans Paramètres (« Importer un fichier »), qui reconnaissent seuls
+une sauvegarde Cashmyr, un `finances-sync.json` ou l'export de l'ancienne application.
+
+- **Lecture stricte.** Chaque objet de l'ancien format (`settings.v` = 2) doit avoir exactement ses champs
+  connus. Un champ en trop ou manquant, une valeur inconnue, une référence introuvable, une opération rangée
+  dans un autre mois que sa date : l'import échoue en entier et une fenêtre liste les raisons, chemin compris.
+- Montants : `Math.round(x * 100)`, avec échec si `|x·100 − arrondi| > 1e-6`. Répartition : fractions en
+  points de base, avec échec si la somme ne fait pas 100 %.
 - Identifiants : uuid v5 dérivés de l'identifiant d'origine (réimporter sur un autre appareil ne duplique rien).
+  Les catégories par défaut portent les identifiants de l'ancienne application (`r1`… `d30`) : commencer avec
+  elles, puis reprendre l'ancien fichier, n'en crée pas de doublon.
+- Horodatage : toutes les lignes reprises portent `updatedAt = 1` (décision 34), ainsi que les réglages
+  venus du fichier. Le thème, que l'ancienne application n'avait pas, garde 0 et ne remplace rien.
 - Anciens objectifs sans `pinned` / `done` / `archived` / `targetMode` : `false` / `false` / `false` /
-  `"manual"`. `safety.pinned` : `true`.
-- **Vérification croisée** : un calculateur minimal qui lit l'ancien format en euros recalcule les
-  totaux par mois, les soldes par compte et l'avancement de chaque objectif. Les résultats sont comparés
-  au centime près avec ceux de `core` sur les données converties. Le moindre écart, ou le moindre champ
-  inconnu, fait échouer l'import sans rien écrire. L'export fourni ne contient ni transfert, ni récurrence,
-  ni annulation, ni rattachement à un objectif : ces cas seront refusés tant que leur format n'est pas connu.
+  `"manual"`. `safety.pinned` : `true`. Dettes : `settledAt` à `null`. Couleurs de série dans l'ordre du
+  fichier, comme à la création.
+- **Vérification croisée** : un calculateur minimal lit l'ancien format en euros et recalcule, pour chaque
+  mois, le nombre d'opérations, les revenus, besoins, envies, mise de côté et reste ; le solde de chaque
+  compte ; l'avancement de chaque objectif ; le réglé de chaque dette. Chaque résultat est comparé au centime
+  près avec celui de `core` sur les données converties, et chaque catégorie doit garder nom, type et usage.
+  Le moindre écart fait échouer l'import sans rien écrire. La fenêtre de confirmation dit ce qui a été vérifié.
+- Refusés tant que leur format n'a pas été vu dans un export : transferts, récurrences, mois annulés,
+  rattachements `goal` / `debt` des opérations, couleurs choisies, prélèvement associé à une dette.
 - Le vrai fichier n'entre jamais dans le dépôt. Les tests utilisent une fixture synthétique au même format.
 
 ---
@@ -442,6 +459,7 @@ avant de fusionner. Les deux jeux seront réunis, et ce qui a été saisi des de
 | 31 | Suppression d'une catégorie utilisée | Ses opérations, récurrences et dettes passent à une catégorie de même nature, existante ou créée sur place ; un changement d'usage des mois passés est annoncé, montant à l'appui. Inutilisée : suppression directe, après confirmation. |
 | 32 | Import JSON | Fusion, avec la règle de la synchronisation : pour chaque ligne et chaque réglage, la version la plus récente gagne. Accepte un export Cashmyr ou un `finances-sync.json` ; refuse tout le reste en entier. |
 | 33 | Restauration d'une copie | La copie gagne partout : ses lignes sont réécrites avec un horodatage plus récent, les lignes vivantes créées depuis deviennent des suppressions, chaque réglage reprend sa valeur. Une copie de l'état actuel est prise avant ; en synchronisation automatique, un passage d'abord. |
+| 34 | Import de l'ancien fichier sur un appareil qui a des données | Cashmyr gagne : les lignes reprises portent un horodatage fixe très ancien. Réimporter n'ajoute que ce qui manque et n'écrase ni une modification ni une suppression faites dans Cashmyr ; deux appareils qui importent le même fichier produisent les mêmes lignes. |
 
 Lectures validées avec la section dettes :
 - Total : `principal` s'il est > 0.
@@ -478,7 +496,7 @@ Paramètres, choix d'interface validés le 23/09/2026 :
 - Une récurrence dont le premier mois est passé crée aussitôt les mois dont le jour est venu : la fenêtre
   le dit avant d'enregistrer.
 
-Enveloppe Tauri, choix à valider :
+Enveloppe Tauri, choix validés le 23/09/2026 :
 - Une seule instance : relancer l'application ramène la fenêtre ouverte, au lieu d'ouvrir une seconde
   instance qui écrirait dans le même `data.json` (plugin `single-instance`).
 - Barre de menus macOS en français (Cashmyr, Édition, Présentation, Fenêtre, Aide) ; ⌘N reste à
@@ -494,5 +512,15 @@ Enveloppe Tauri, choix à valider :
 - L'updater (clés, `latest.json`, bouton « Rechercher une mise à jour ») arrive avec la première
   Release, à l'étape 6, comme prévu au §5.
 
-Pour l'étape 5 : il faut un export récent contenant une dette, des couleurs, `goal` / `debt` sur les
-opérations, un transfert, une récurrence, une annulation, et l'en-tête CSV.
+Reprise, choix d'interface à valider :
+- L'accueil gagne une troisième carte, « Reprendre mes données » ; Paramètres, « Importer un fichier ».
+  Les deux passent par le même parcours, qui reconnaît le type de fichier.
+- Un refus s'affiche dans une fenêtre, jusqu'à six raisons avec leur chemin dans le fichier, et non dans un
+  message qui s'efface.
+- La confirmation dit ce que contient l'ancien fichier et ce que la vérification a trouvé identique. Sur un
+  appareil déjà en service, elle annonce seulement ce qui change vraiment : une ligne identique à
+  l'horodatage près ne compte pas (même règle pour l'import d'une sauvegarde).
+
+Pour finir l'étape 5 : l'export d'essai `mes-finances-essai.json` (transfert, récurrence et mois annulé,
+opérations rattachées à un objectif et à une dette, couleurs choisies) donnera le format des cas encore
+refusés. L'en-tête CSV avec la colonne `Dette` est connu et repris par l'export CSV.

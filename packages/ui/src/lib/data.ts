@@ -1,6 +1,5 @@
 import {
   colorFor,
-  derivedId,
   indexOf,
   type Account,
   type Bucket,
@@ -85,49 +84,5 @@ export function operationColor(data: Dataset, op: Operation): string {
 export const nextColor = (existing: readonly { color: SeriesColor }[]): SeriesColor =>
   (existing.length % 7) as SeriesColor;
 
-/** Catégories par défaut, reprises de l'application d'origine. Identifiants dérivés : deux appareils qui les créent n'en font qu'un jeu. */
-const DEFAULTS: { name: string; kind: "in" | "out"; bucket?: Bucket }[] = [
-  { name: "Salaire", kind: "in" },
-  { name: "Service et pourboires", kind: "in" },
-  { name: "Missions freelance", kind: "in" },
-  { name: "Primes", kind: "in" },
-  { name: "Revenus de trading", kind: "in" },
-  { name: "Aides et remboursements", kind: "in" },
-  { name: "Autre revenu", kind: "in" },
-  { name: "Loyer et charges", kind: "out", bucket: "besoin" },
-  { name: "Énergie et eau", kind: "out", bucket: "besoin" },
-  { name: "Internet et téléphone", kind: "out", bucket: "besoin" },
-  { name: "Assurances", kind: "out", bucket: "besoin" },
-  { name: "Courses", kind: "out", bucket: "besoin" },
-  { name: "Transport", kind: "out", bucket: "besoin" },
-  { name: "Santé", kind: "out", bucket: "besoin" },
-  { name: "Impôts", kind: "out", bucket: "besoin" },
-  { name: "Crédit", kind: "out", bucket: "besoin" },
-  { name: "Frais bancaires", kind: "out", bucket: "besoin" },
-  { name: "Restaurants et bars", kind: "out", bucket: "envie" },
-  { name: "Sorties et loisirs", kind: "out", bucket: "envie" },
-  { name: "Abonnements", kind: "out", bucket: "envie" },
-  { name: "Vêtements", kind: "out", bucket: "envie" },
-  { name: "Voyages", kind: "out", bucket: "envie" },
-  { name: "Cadeaux", kind: "out", bucket: "envie" },
-  { name: "Équipement", kind: "out", bucket: "envie" },
-  { name: "Épargne de précaution", kind: "out", bucket: "invest" },
-  { name: "PEA et ETF", kind: "out", bucket: "invest" },
-  { name: "Assurance-vie", kind: "out", bucket: "invest" },
-  { name: "PER", kind: "out", bucket: "invest" },
-  { name: "Compte de trading", kind: "out", bucket: "invest" },
-  { name: "Crypto", kind: "out", bucket: "invest" },
-];
-
-export function defaultCategories(): Category[] {
-  let income = 0;
-  return DEFAULTS.map((d) => ({
-    id: derivedId("seed-category", d.name),
-    updatedAt: 0,
-    deletedAt: null,
-    name: d.name,
-    kind: d.kind,
-    ...(d.bucket ? { bucket: d.bucket } : {}),
-    color: (d.kind === "in" ? income++ % 7 : 0) as SeriesColor,
-  }));
-}
+/** Catégories par défaut : définies dans `core`, avec les identifiants de l'ancienne application. */
+export { defaultCategories } from "@cashmyr/core";

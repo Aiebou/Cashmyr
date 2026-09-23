@@ -1,4 +1,5 @@
 import { canonicalJson, mergeDatasets } from "./merge";
+import { importLegacy, type LegacyConversion } from "./migrate/legacy";
 import {
   COLLECTION_NAMES,
   PREF_KEYS,
@@ -67,7 +68,23 @@ export function parseBackup(text: string): Dataset {
   return raw as Dataset;
 }
 
+export type ParsedImport = { kind: "backup"; data: Dataset } | { kind: "legacy"; conversion: LegacyConversion };
+
+/**
+ * Lit un fichier à importer : sauvegarde Cashmyr, `finances-sync.json`, ou export de
+ * l'ancienne application, converti et vérifié (`LegacyImportError` au moindre écart).
+ */
+export function parseImport(text: string): ParsedImport {
+  try {
+    return { kind: "backup", data: parseBackup(text) };
+  } catch (e) {
+    if (e instanceof BackupError && e.code === "legacy") return { kind: "legacy", conversion: importLegacy(JSON.parse(text)) };
+    throw e;
+  }
+}
+
 const byId = <T extends Meta>(list: readonly T[]) => new Map(list.map((r) => [r.id, r]));
+const withoutStamp = ({ updatedAt: _stamp, ...rest }: AnyRecord) => canonicalJson(rest);
 
 export type ImportResult = {
   changes: Changes;
@@ -76,6 +93,10 @@ export type ImportResult = {
   rows: number;
   /** Préférences dont la version importée est plus récente. */
   preferencesChanged: PrefKey[];
+  /** Ce qui change vraiment, horodatage mis à part : à annoncer avant d'importer. */
+  added: number;
+  modified: number;
+  preferencesModified: PrefKey[];
 };
 
 /**
@@ -86,10 +107,14 @@ export function importBackup(current: Dataset, imported: Dataset): ImportResult 
   const { data: merged, report } = mergeDatasets(current, imported);
   const changes: Changes = {};
   let rows = 0;
+  let added = 0;
+  let modified = 0;
   for (const name of COLLECTION_NAMES) {
     const before = byId<AnyRecord>(current.collections[name]);
     const changed = (merged.collections[name] as AnyRecord[]).filter((r) => {
       const b = before.get(r.id);
+      if (!b) added++;
+      else if (withoutStamp(b) !== withoutStamp(r)) modified++;
       return !b || canonicalJson(b) !== canonicalJson(r);
     });
     if (changed.length > 0) {
@@ -97,7 +122,18 @@ export function importBackup(current: Dataset, imported: Dataset): ImportResult 
       rows += changed.length;
     }
   }
-  return { changes, preferences: merged.preferences, rows, preferencesChanged: report.preferencesReceived };
+  const preferencesChanged = report.preferencesReceived;
+  return {
+    changes,
+    preferences: merged.preferences,
+    rows,
+    preferencesChanged,
+    added,
+    modified,
+    preferencesModified: preferencesChanged.filter(
+      (k) => canonicalJson(current.preferences[k]) !== canonicalJson(merged.preferences[k]),
+    ),
+  };
 }
 
 export type RestoreResult = {
@@ -111,7 +147,6 @@ export type RestoreResult = {
   preferencesChanged: PrefKey[];
 };
 
-const withoutStamp = ({ updatedAt: _stamp, ...rest }: AnyRecord) => canonicalJson(rest);
 
 /**
  * Décision 33 : restaurer une copie la fait gagner partout. Chaque ligne de la copie est

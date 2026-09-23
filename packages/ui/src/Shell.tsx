@@ -146,9 +146,11 @@ function ConfirmDialog() {
       onClose={() => answer(false)}
       footer={
         <>
-          <Button variant="ghost" onClick={() => answer(false)}>
-            {request.cancelLabel ?? "Annuler"}
-          </Button>
+          {request.cancelLabel !== null && (
+            <Button variant="ghost" onClick={() => answer(false)}>
+              {request.cancelLabel ?? "Annuler"}
+            </Button>
+          )}
           <Button variant={request.danger ? "danger" : "primary"} onClick={() => answer(true)} data-autofocus>
             {request.confirmLabel}
           </Button>

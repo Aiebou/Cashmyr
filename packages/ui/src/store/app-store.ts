@@ -40,7 +40,8 @@ export type ConfirmRequest = {
   title: string;
   message: string;
   confirmLabel: string;
-  cancelLabel?: string;
+  /** `null` : simple avis, un seul bouton. */
+  cancelLabel?: string | null;
   danger?: boolean;
 };
 

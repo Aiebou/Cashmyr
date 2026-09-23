@@ -1,11 +1,13 @@
 import { Button } from "../components/controls";
 import { Card, Stack } from "../components/layout";
 import { defaultCategories } from "../lib/data";
-import { useActions, useApp } from "../store/context";
+import { importFromFile } from "../lib/import";
+import { useActions, useApp, useStoreApi } from "../store/context";
 import s from "./Welcome.module.css";
 
-/** Premier lancement : partir des catégories par défaut, ou rejoindre un fichier de synchronisation existant. */
+/** Premier lancement : partir des catégories par défaut, reprendre un fichier, ou rejoindre un fichier de synchronisation. */
 export function Welcome() {
+  const store = useStoreApi();
   const sync = useApp((st) => st.sync);
   const { apply, openModal, sync: syncActions } = useActions();
 
@@ -32,7 +34,7 @@ export function Welcome() {
             Des catégories de revenus et de dépenses toutes prêtes, rangées en besoins, envies et mise de côté. Tu
             crées ensuite ton premier compte.
           </p>
-          <Button variant="primary" onClick={start}>
+          <Button variant="primary" className={s.choice} onClick={start}>
             Commencer avec les catégories par défaut
           </Button>
         </Card>
@@ -42,7 +44,14 @@ export function Welcome() {
               ? "Désigne ton fichier de synchronisation (finances-sync.json) dans ton app Fichiers : tes données le rejoindront."
               : "Choisis ton fichier de synchronisation (finances-sync.json) dans ton dossier synchronisé : tes données s'y retrouvent."}
           </p>
-          <Button onClick={join}>Rejoindre mon fichier de synchronisation</Button>
+          <Button className={s.choice} onClick={join}>Rejoindre mon fichier de synchronisation</Button>
+        </Card>
+        <Card title="Reprendre mes données">
+          <p className={s.text}>
+            L'export JSON de l'ancienne application (mes-finances.json) ou une sauvegarde Cashmyr. Tout est vérifié avant d'être
+            écrit : au moindre doute, rien n'est repris.
+          </p>
+          <Button className={s.choice} onClick={() => importFromFile(store)}>Importer un fichier</Button>
         </Card>
       </div>
     </div>

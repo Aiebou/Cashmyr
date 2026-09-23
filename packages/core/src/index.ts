@@ -20,3 +20,5 @@ export * from "./merge";
 export * from "./sync";
 export * from "./usage";
 export * from "./backup";
+export * from "./defaults";
+export * from "./migrate/legacy";
