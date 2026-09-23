@@ -1,0 +1,53 @@
+# ── Données personnelles : ne jamais commiter ──────────────────────────
+mes-finances.json
+finances-sync.json
+*.sqlite
+# variantes créées par les clouds et par iOS (« finances-sync 2.json »,
+# « finances-sync (conflicted copy).json »), sauvegardes, exports
+mes-finances*.json
+mes-finances*.csv
+*.local.csv
+finances-sync*.json
+*.sqlite-*
+*.local.json
+exports/
+
+# ── Clés de signature de l'updater Tauri ───────────────────────────────
+*.key
+.tauri/
+
+# ── Node / Vite / pnpm ─────────────────────────────────────────────────
+node_modules/
+dist/
+dist-ssr/
+dev-dist/
+.vite/
+coverage/
+*.tsbuildinfo
+.pnpm-store/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.*
+!.env.example
+
+# ── Rust / Tauri ───────────────────────────────────────────────────────
+target/
+**/src-tauri/gen/schemas/
+**/*.rs.bk
+
+# ── macOS ──────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+Icon?
+
+# ── Éditeurs ───────────────────────────────────────────────────────────
+.idea/
+*.swp
