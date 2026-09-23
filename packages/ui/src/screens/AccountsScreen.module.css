@@ -1,0 +1,148 @@
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+@media (max-width: 560px) {
+  /* Repliés l'un sous l'autre, les deux boutons prennent toute la ligne. */
+  .actions > * {
+    flex: 1 1 auto;
+  }
+}
+.muted {
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.negative {
+  color: var(--negative);
+}
+.name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Mouvements : sorties à gauche, entrées à droite, depuis un axe central commun. */
+.flows,
+.accounts {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.flow {
+  display: grid;
+  gap: 6px;
+  padding: 10px 0;
+}
+.flow + .flow,
+.account + .account {
+  border-top: 1px solid var(--rule);
+}
+.flow:first-child,
+.account:first-child {
+  padding-top: 0;
+}
+.flowHead,
+.accountHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.net {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.flowBody {
+  display: grid;
+  grid-template-columns: minmax(0, 150px) minmax(0, 1fr) minmax(0, 150px);
+  grid-template-areas: "out bar in";
+  gap: 12px;
+  align-items: center;
+  font-size: 14px;
+}
+.flowOut {
+  grid-area: out;
+  text-align: right;
+}
+.flowIn {
+  grid-area: in;
+}
+.flowLabel {
+  color: var(--ink-3);
+}
+.butterfly {
+  grid-area: bar;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  height: 12px;
+}
+.side {
+  display: flex;
+  min-width: 0;
+}
+.side:first-child {
+  justify-content: flex-end;
+}
+.barOut {
+  border-radius: 4px 0 0 4px;
+  background: color-mix(in srgb, var(--c) 45%, var(--panel));
+}
+.barIn {
+  border-radius: 0 4px 4px 0;
+  background: var(--c);
+}
+.total {
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-2);
+}
+.total strong {
+  color: var(--ink);
+}
+
+/* Vos comptes */
+.account {
+  display: grid;
+  gap: 4px;
+  padding: 12px 0;
+}
+.titles {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.balance {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.detail {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.detail strong {
+  color: var(--ink);
+}
+
+@media (max-width: 560px) {
+  .flowBody {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "bar bar"
+      "out in";
+    gap: 6px 12px;
+  }
+  .flowOut {
+    text-align: left;
+  }
+  .flowIn {
+    text-align: right;
+  }
+}

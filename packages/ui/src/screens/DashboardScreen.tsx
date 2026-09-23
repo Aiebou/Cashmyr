@@ -1,19 +1,13 @@
 import {
-  allAccountsOverview,
   asOfForYear,
   colorFor,
-  currentAccountsOverview,
   dashboardDebts,
   dashboardGoals,
   debtView,
-  formatCents,
   goalView,
   monthRange,
-  netWorth,
   normalizeDashOrder,
   safetyStatus,
-  savingsOverview,
-  totalOwed,
   yearSummary,
   type DashBlock,
   type Dataset,
@@ -25,7 +19,7 @@ import { MonthsChart } from "../components/charts/MonthsChart";
 import { RankingChart } from "../components/charts/RankingChart";
 import { SavingsChart } from "../components/charts/SavingsChart";
 import { Button } from "../components/controls";
-import { Gauge, SegmentedBar, Stat } from "../components/figures";
+import { Gauge, Stat } from "../components/figures";
 import { Empty, Grid } from "../components/layout";
 import { dropBefore, moveAmongVisible, ReorderableBlock } from "../components/Reorderable";
 import { debtSentence } from "../lib/debt-text";
@@ -33,6 +27,7 @@ import { categoryName } from "../lib/data";
 import { count, dayLong, money, oneDecimal, ratio, timeLeft } from "../lib/format";
 import type { Tab } from "../store/app-store";
 import { useActions, useApp } from "../store/context";
+import { AccountsBanner } from "./AccountsBanner";
 import s from "./DashboardScreen.module.css";
 
 const TITLES: Record<DashBlock, string> = {
@@ -43,51 +38,6 @@ const TITLES: Record<DashBlock, string> = {
   savings: "Progression de l'épargne",
   cats: "Postes de dépense",
 };
-
-// ── Bandeau ────────────────────────────────────────────────────────────────
-
-function Banner({ data, asOf, today, year }: { data: Dataset; asOf: Day; today: Day; year: number }) {
-  const prefs = data.preferences;
-  const all = allAccountsOverview(data, asOf);
-  const daily = currentAccountsOverview(data, asOf).total;
-  const savings = savingsOverview(data, asOf).total;
-  const others = all.total - daily - savings;
-  const hasDebt = data.collections.debts.some((d) => d.deletedAt === null);
-  const segments = all.byAccount
-    .filter((b) => b.balance > 0)
-    .map((b) => ({
-      key: b.account.id,
-      label: b.account.name,
-      value: b.balance,
-      color: colorFor(prefs, { kind: "series", color: b.account.color }),
-    }));
-
-  return (
-    <section className={s.banner} aria-labelledby="banner-title">
-      <p className={s.eyebrow} id="banner-title">
-        {asOf === today ? "Total de mes comptes aujourd'hui" : `Total de mes comptes au 31 décembre ${year}`}
-      </p>
-      <p className={s.big}>{money(all.total)}</p>
-      <SegmentedBar label="Répartition par compte" segments={segments} />
-      <div className={s.lines}>
-        <p>
-          Dont {money(daily)} disponibles au quotidien et {money(savings)} d'épargne et de placements
-          {Math.abs(others) > 100 ? `, et ${money(others)} sur d'autres comptes` : ""}.
-        </p>
-        {all.declaredGap !== null && (
-          <p>
-            Valeur déclarée : {formatCents(all.declaredGap, { decimals: 0, signed: true })} par rapport au capital injecté.
-          </p>
-        )}
-        {hasDebt && (
-          <p>
-            Dettes restantes : {money(totalOwed(data, asOf))}. Patrimoine net : <strong>{money(netWorth(data, asOf))}</strong>.
-          </p>
-        )}
-      </div>
-    </section>
-  );
-}
 
 // ── Blocs ──────────────────────────────────────────────────────────────────
 
@@ -278,7 +228,7 @@ export function DashboardScreen() {
 
   return (
     <div className={s.screen}>
-      <Banner data={data} asOf={asOf} today={today} year={year} />
+      <AccountsBanner data={data} asOf={asOf} today={today} year={year} />
       {visible.map((key, i) => (
         <ReorderableBlock
           key={key}

@@ -444,7 +444,7 @@ Lectures validées avec la section dettes :
 
 Pour l'étape 4 : le surtitre du bandeau dit « aujourd'hui » pour l'année en cours comme pour une année
 future, et le test des champs masqués demande `jsdom` et Testing Library.
-Écran Dettes, choix d'interface soumis à validation :
+Écran Dettes, choix d'interface validés le 23/09/2026 :
 - Le sens d'une dette ne se modifie plus dès qu'une opération ou un prélèvement y est rattaché ; sinon
   chaque opération changerait de signe dans le réglé.
 - Modifier la dette ne touche pas au prélèvement. La carte signale l'écart et propose « Mettre à jour le

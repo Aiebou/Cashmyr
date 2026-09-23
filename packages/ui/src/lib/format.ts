@@ -18,10 +18,10 @@ const dateTime = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "shor
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** « 10 novembre 2026 » */
-export const dayLong = (day: Day) => longDay.format(utc(day));
-/** « 10 nov. » */
-export const dayShort = (day: Day) => shortDay.format(utc(day));
+/** « 10 novembre 2026 », « 1er novembre 2026 » : Intl n'écrit pas l'ordinal du premier du mois. */
+export const dayLong = (day: Day) => longDay.format(utc(day)).replace(/^1(\s)/, "1er$1");
+/** « 10 nov. », « 1er nov. » */
+export const dayShort = (day: Day) => shortDay.format(utc(day)).replace(/^1(\s)/, "1er$1");
 /** « novembre 2026 » */
 export const monthLong = (month: Month) => longMonth.format(monthDate(month));
 /** « de novembre 2026 », « d'octobre 2026 » : élision devant avril, août et octobre. */

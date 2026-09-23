@@ -7,6 +7,7 @@ import { Menu } from "./components/Menu";
 import { monthTitle, stamp } from "./lib/format";
 import { CreateAccountModal, CreateDebtModal, CreateGoalModal } from "./screens/CreateModals";
 import { DashboardScreen } from "./screens/DashboardScreen";
+import { AccountsScreen } from "./screens/AccountsScreen";
 import { DebtsScreen } from "./screens/DebtsScreen";
 import { GoalsScreen } from "./screens/GoalsScreen";
 import { MonthScreen } from "./screens/MonthScreen";
@@ -135,6 +136,8 @@ function Screen({ tab }: { tab: Tab }) {
       return <GoalsScreen />;
     case "debts":
       return <DebtsScreen />;
+    case "accounts":
+      return <AccountsScreen />;
     default:
       return <Placeholder tab={tab} />;
   }
