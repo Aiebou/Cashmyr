@@ -291,7 +291,9 @@ enchaîne toute une synchronisation et renvoie le jeu local, le document à écr
      ce mois-là. Cet échéancier est calculé avec les opérations datées jusqu'au jour de l'occurrence.
      Le montant est plafonné à celui de l'échéance, la dernière pouvant être réduite ;
    - mode libre : l'occurrence est plafonnée au reste dû ;
-   - dette supprimée : la récurrence redevient ordinaire.
+   - dette supprimée : la récurrence redevient ordinaire. Supprimer une dette arrête ses prélèvements
+     (décision 29) ; ce cas ne se présente donc que si un autre appareil modifie le prélèvement après la
+     suppression, sa version plus récente le faisant revivre.
 
    Après un versement ponctuel, les prélèvements suivent donc la fiche et ne paient jamais trop.
 
@@ -425,6 +427,7 @@ avant de fusionner. Les deux jeux seront réunis, et ce qui a été saisi des de
 | 26 | Dette sans catégorie ou sans compte | Le versement dans le budget les demande, la dette retient le choix ; prélèvement impossible sans eux. |
 | 27 | Date de référence du réglé | Comme la décision 12. |
 | 28 | Total dû | Dettes « je dois » ni archivées ni soldées. |
+| 29 | Suppression d'une dette | Arrête aussi ses prélèvements : celui créé depuis la fiche et toute récurrence portant son `debtId`. Les opérations déjà générées restent dans le budget. |
 
 Lectures validées avec la section dettes :
 - Total : `principal` s'il est > 0.
@@ -441,5 +444,14 @@ Lectures validées avec la section dettes :
 
 Pour l'étape 4 : le surtitre du bandeau dit « aujourd'hui » pour l'année en cours comme pour une année
 future, et le test des champs masqués demande `jsdom` et Testing Library.
+Écran Dettes, choix d'interface soumis à validation :
+- Le sens d'une dette ne se modifie plus dès qu'une opération ou un prélèvement y est rattaché ; sinon
+  chaque opération changerait de signe dans le réglé.
+- Modifier la dette ne touche pas au prélèvement. La carte signale l'écart et propose « Mettre à jour le
+  prélèvement », qui le recrée depuis la prochaine échéance sans relancer un prélèvement en pause.
+- Supprimer une dette arrête ses prélèvements (décision 29) ; la confirmation le dit.
+- Hors budget, le champ date du versement disparaît : `paidManual` n'a pas de date.
+- Sans échéancier, un montant total est exigé à la saisie : un total nul rendrait la dette réglée d'office.
+
 Pour l'étape 5 : il faut un export récent contenant une dette, des couleurs, `goal` / `debt` sur les
 opérations, un transfert, une récurrence, une annulation, et l'en-tête CSV.

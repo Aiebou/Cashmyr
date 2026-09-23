@@ -19,6 +19,7 @@ import {
   plannedOccurrences,
   recordDebtPayment,
   removeDebtRecurrence,
+  deleteDebt,
   syncWithDocument,
   tombstone,
   totalOwed,
@@ -27,7 +28,7 @@ import {
   type Debt,
   type Operation,
 } from "../src";
-import { category, dataset, DAY, debt, eur, expense, income, NOW, TODAY, transfer, world } from "./fixtures";
+import { category, dataset, DAY, debt, eur, expense, income, NOW, recurrence, TODAY, transfer, world } from "./fixtures";
 
 const { cats, accs } = world();
 const credit = category("Crédit", "out", "besoin");
@@ -318,6 +319,30 @@ describe("prélèvement automatique", () => {
     expect(data.collections.recurrences[0]?.deletedAt).not.toBeNull();
     expect(data.collections.operations.filter((o) => o.debtId === d.id && o.deletedAt === null)).toHaveLength(3);
     expect(materializeRecurrences(data, "2026-12-31", NOW + 2)).toEqual([]);
+  });
+
+  it("supprimer la dette arrête ses prélèvements, y compris une récurrence rattachée à la main", () => {
+    const other = recurrence({ id: "rec-loyer", type: "out", amount: eur(700), dayOfMonth: 5, startMonth: "2026-01", categoryId: credit.id, accountId: courant.id });
+    const tagged = recurrence({ id: "rec-tagged", type: "out", amount: eur(50), dayOfMonth: 20, startMonth: "2026-09", categoryId: credit.id, accountId: courant.id, debtId: d.id });
+    let data = applyChanges(base, { recurrences: [other, tagged] });
+    data = launch(applyChanges(data, createDebtRecurrence(data, d.id, TODAY, NOW)), TODAY);
+    const generated = data.collections.operations.filter((o) => o.recurrenceId && o.deletedAt === null).map((o) => o.id);
+
+    const changes = deleteDebt(data, d.id, NOW + 1);
+    expect(changes.debts?.map((x) => [x.id, x.deletedAt])).toEqual([[d.id, NOW + 1]]);
+    expect(changes.recurrences?.map((r) => r.id).sort()).toEqual([debtRecurrenceId(d.id), "rec-tagged"].sort());
+
+    data = applyChanges(data, changes);
+    // Les opérations déjà générées restent ; seul le loyer continue.
+    expect(data.collections.operations.filter((o) => o.recurrenceId && o.deletedAt === null).map((o) => o.id)).toEqual(generated);
+    expect(new Set(materializeRecurrences(data, "2026-12-31", NOW + 2).map((o) => o.recurrenceId))).toEqual(new Set(["rec-loyer"]));
+    expect(validateDataset(data)).toEqual([]);
+  });
+
+  it("sans prélèvement, seule la dette est supprimée", () => {
+    const changes = deleteDebt(base, d.id, NOW + 1);
+    expect(changes.recurrences).toBeUndefined();
+    expect(() => deleteDebt(applyChanges(base, changes), d.id, NOW + 2)).toThrow(DebtActionError);
   });
 });
 

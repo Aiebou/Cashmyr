@@ -17,7 +17,7 @@ import { Gauge, SegmentedBar, Stat } from "../components/figures";
 import { Card, Empty, Grid, ScreenTitle } from "../components/layout";
 import { OperationList, OperationRow } from "../components/OperationRow";
 import { categoryName, liveAccounts, BUCKET_LABELS } from "../lib/data";
-import { dayShort, money, moneyExact, monthLong, monthTitle } from "../lib/format";
+import { dayShort, money, moneyExact, monthLong, monthTitle, ofMonth } from "../lib/format";
 import { useActions, useApp } from "../store/context";
 import s from "./MonthScreen.module.css";
 
@@ -104,14 +104,14 @@ export function MonthScreen() {
     targets.basis === "avg"
       ? `Cibles calculées sur la moyenne des ${targets.window} derniers mois (${money(targets.base)}).`
       : targets.fellBack
-        ? `Cibles calculées sur les revenus de ${monthLong(month)}, faute de moyenne.`
-        : `Cibles calculées sur les revenus de ${monthLong(month)}.`;
+        ? `Cibles calculées sur les revenus ${ofMonth(month)}, faute de moyenne.`
+        : `Cibles calculées sur les revenus ${ofMonth(month)}.`;
 
   return (
     <div className={s.screen}>
       <section className={s.hero} aria-labelledby="month-income">
         <p className={s.eyebrow} id="month-income">
-          Revenus de {monthLong(month)}
+          Revenus {ofMonth(month)}
         </p>
         <p className={s.big}>{money(agg.income)}</p>
         <div className={s.average}>

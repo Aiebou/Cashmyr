@@ -70,6 +70,7 @@
 /* Conteneur de champ. Sa règle display ne doit jamais l'emporter sur [hidden] (voir global.css). */
 .field {
   display: grid;
+  align-content: start;
   gap: 6px;
   min-width: 0;
 }
@@ -90,6 +91,7 @@
 .input,
 .select {
   width: 100%;
+  min-width: 0;
   min-height: var(--tap);
   padding: 0 12px;
   border: 1px solid var(--rule);

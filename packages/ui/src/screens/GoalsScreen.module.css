@@ -107,15 +107,6 @@
   align-items: center;
 }
 
-.confirm {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  color: var(--negative);
-  font-size: 14px;
-}
-
 .newGoal {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));

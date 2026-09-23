@@ -13,6 +13,7 @@ const longDay = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long"
 const shortDay = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" });
 const longMonth = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric", timeZone: "UTC" });
 const monthOnly = new Intl.DateTimeFormat("fr-FR", { month: "long", timeZone: "UTC" });
+const shortMonth = new Intl.DateTimeFormat("fr-FR", { month: "short", year: "numeric", timeZone: "UTC" });
 const dateTime = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -23,8 +24,15 @@ export const dayLong = (day: Day) => longDay.format(utc(day));
 export const dayShort = (day: Day) => shortDay.format(utc(day));
 /** « novembre 2026 » */
 export const monthLong = (month: Month) => longMonth.format(monthDate(month));
+/** « de novembre 2026 », « d'octobre 2026 » : élision devant avril, août et octobre. */
+export const ofMonth = (month: Month) => {
+  const text = monthLong(month);
+  return /^[aeiou]/.test(text) ? `d'${text}` : `de ${text}`;
+};
 /** « Novembre 2026 », pour un titre. */
 export const monthTitle = (month: Month) => capitalize(monthLong(month));
+/** « nov. 2026 » */
+export const monthShort = (month: Month) => shortMonth.format(monthDate(month));
 /** « novembre » */
 export const monthName = (month: Month) => monthOnly.format(monthDate(month));
 /** « 23 sept. 2026, 12:00 » */

@@ -32,6 +32,7 @@ import {
 } from "../components/controls";
 import { Gauge } from "../components/figures";
 import { ArchiveIcon, ArrowDownIcon, ArrowUpIcon, CheckIcon, EyeIcon, EyeOffIcon, PinIcon, RestoreIcon, TrashIcon } from "../components/icons";
+import { ConfirmDelete } from "../components/ConfirmDelete";
 import { Card, ScreenTitle, SectionTitle, Stack } from "../components/layout";
 import { liveAccounts, nextColor } from "../lib/data";
 import { dayLong, money, oneDecimal, ratio, timeLeft } from "../lib/format";
@@ -39,30 +40,6 @@ import { useActions, useApp } from "../store/context";
 import s from "./GoalsScreen.module.css";
 
 const plural = (n: number, one: string, many: string) => (n > 1 ? many : one);
-
-/** Suppression définitive en deux temps. */
-function ConfirmDelete({ label, onConfirm }: { label: string; onConfirm(): void }) {
-  const [armed, setArmed] = useState(false);
-  if (!armed) {
-    return (
-      <Button variant="danger" size="small" onClick={() => setArmed(true)}>
-        <TrashIcon size={16} />
-        {label}
-      </Button>
-    );
-  }
-  return (
-    <div className={s.confirm} role="group" aria-label="Confirmer la suppression">
-      <span>Supprimer définitivement ? C'est irréversible.</span>
-      <Button variant="danger" size="small" onClick={onConfirm}>
-        Supprimer
-      </Button>
-      <Button variant="ghost" size="small" onClick={() => setArmed(false)}>
-        Annuler
-      </Button>
-    </div>
-  );
-}
 
 // ── Épargne de précaution ──────────────────────────────────────────────────
 

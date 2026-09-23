@@ -1,0 +1,232 @@
+.banner {
+  display: grid;
+  gap: 10px;
+  padding: 6px 0 8px;
+}
+.eyebrow {
+  font-size: 14px;
+  font-weight: 560;
+  color: var(--ink-2);
+}
+.big {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(44px, 9vw, 68px);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.lines {
+  display: grid;
+  gap: 2px;
+  color: var(--ink-2);
+}
+.lines strong {
+  color: var(--ink);
+}
+.muted {
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.error {
+  color: var(--negative);
+  font-size: 14px;
+}
+.sentence {
+  line-height: 1.45;
+}
+.overdue {
+  color: var(--negative);
+  font-weight: 600;
+}
+
+/* Échéancier : une case par échéance, pleines jusqu'aux échéances couvertes. */
+.schedule {
+  display: grid;
+  gap: 6px;
+}
+.slots {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+}
+.tight {
+  gap: 1px;
+}
+.slot {
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--c) 18%, var(--panel));
+}
+.filled {
+  background: var(--c);
+}
+.dense {
+  gap: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c) 18%, var(--panel));
+}
+.denseFill {
+  height: 100%;
+  background: var(--c);
+}
+.scheduleEnds {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.suggest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--positive) 12%, var(--panel));
+}
+
+/* Encadré de versement, sur fond légèrement contrasté. */
+.payment {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+.paymentTitle {
+  font-weight: 600;
+}
+.paymentGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+/* Sur la ligne du montant, aligné sur les champs sous leur libellé. */
+.payButton {
+  grid-column: 3;
+  grid-row: 1;
+  margin-top: 23px;
+}
+.payFull {
+  grid-column: 1 / -1;
+}
+
+.debit {
+  display: grid;
+  gap: 8px;
+}
+.debitText {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.debitText svg {
+  flex: none;
+  position: relative;
+  top: 3px;
+  color: var(--ink-2);
+}
+.debitTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings {
+  border-top: 1px solid var(--rule);
+  padding-top: 6px;
+}
+.settings summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-weight: 560;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.settings summary:hover {
+  color: var(--ink);
+}
+.settingsBody {
+  display: grid;
+  gap: 16px;
+  padding: 8px 0 4px;
+}
+.scheduleFields {
+  display: grid;
+  gap: 16px;
+}
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.alignStart {
+  justify-self: start;
+}
+
+.newDebt {
+  display: grid;
+  gap: 16px;
+}
+
+.archive {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.archive li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 12px;
+}
+.archive li + li {
+  border-top: 1px solid var(--rule);
+}
+.archiveName {
+  font-weight: 560;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.archiveTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 560px) {
+  .paymentGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  /* Au doigt, le bouton passe en dernier, après la case à cocher. */
+  .payButton {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    order: 1;
+    margin-top: 0;
+  }
+  .archive li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .archiveTools {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 420px) {
+  .paymentGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

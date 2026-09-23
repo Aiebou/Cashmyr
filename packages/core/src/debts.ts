@@ -117,3 +117,23 @@ export function removeDebtRecurrence(data: Dataset, debtId: string, now: number)
   if (rec && rec.deletedAt === null) changes.recurrences = [tombstone(rec, now)];
   return changes;
 }
+
+/** Prélèvements vivants d'une dette : celui créé depuis la fiche et toute récurrence qui porte son `debtId`. */
+export function debtRecurrences(data: Dataset, debtId: string): Recurrence[] {
+  const debt = indexOf(data).debts.get(debtId);
+  return data.collections.recurrences.filter(
+    (r) => r.deletedAt === null && (r.debtId === debtId || (debt !== undefined && r.id === debt.recurrenceId)),
+  );
+}
+
+/**
+ * Suppression d'une dette : ses prélèvements s'arrêtent avec elle (décision 29).
+ * Les opérations déjà générées restent dans le budget, rattachées à la dette supprimée.
+ */
+export function deleteDebt(data: Dataset, debtId: string, now: number): Changes {
+  const debt = liveDebt(data, debtId);
+  const changes: Changes = { debts: [tombstone(debt, now)] };
+  const recurrences = debtRecurrences(data, debtId);
+  if (recurrences.length > 0) changes.recurrences = recurrences.map((r) => tombstone(r, now));
+  return changes;
+}
