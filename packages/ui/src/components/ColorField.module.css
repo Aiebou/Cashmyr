@@ -1,0 +1,27 @@
+.field {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+/* Pastille ronde de 28 px dans une zone tactile de 44 px. */
+.swatch {
+  width: 44px;
+  height: 44px;
+  padding: 8px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+.swatch::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.swatch::-webkit-color-swatch {
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+}
+.swatch::-moz-color-swatch {
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+}

@@ -92,7 +92,8 @@ export function CreateGoalModal() {
   );
 }
 
-export function CreateAccountModal() {
+/** `stay` : créé depuis les paramètres, on y reste au lieu de basculer sur Mes comptes. */
+export function CreateAccountModal({ stay = false }: { stay?: boolean }) {
   const data = useApp((st) => st.data);
   const { apply, closeModal, setTab } = useActions();
   const id = useId();
@@ -116,7 +117,7 @@ export function CreateAccountModal() {
     );
     if (await apply({ accounts: [account] }, undefined, "Compte créé")) {
       closeModal();
-      setTab("accounts");
+      if (!stay) setTab("accounts");
     }
   };
 

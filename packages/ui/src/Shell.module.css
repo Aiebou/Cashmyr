@@ -182,3 +182,8 @@
     justify-content: center;
   }
 }
+
+.confirmText {
+  white-space: pre-line;
+  line-height: 1.5;
+}

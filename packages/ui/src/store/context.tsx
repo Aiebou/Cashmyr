@@ -8,6 +8,11 @@ export function StoreProvider({ store, children }: { store: AppStore; children: 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }
 
+/** Le store lui-même, pour lire l'état au moment d'agir (import, restauration) plutôt qu'au rendu. */
+export function useStoreApi(): AppStore {
+  return useAppStore();
+}
+
 function useAppStore(): AppStore {
   const store = useContext(StoreContext);
   if (!store) throw new Error("StoreProvider manquant");

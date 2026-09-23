@@ -11,8 +11,10 @@ import {
   SyncEngine,
   type AssistedSyncFile,
   type DeviceState,
+  type FileIO,
   type LocalStore,
   type Platform,
+  type SnapshotInfo,
 } from "@cashmyr/storage";
 import { act, render } from "@testing-library/react";
 import { App } from "../src/App";
@@ -37,14 +39,22 @@ export class MemoryLocalStore implements LocalStore {
   async replace(data: Dataset) {
     this.data = data;
   }
-  async snapshot() {
-    return null;
+  snapshots: { info: SnapshotInfo; data: Dataset }[] = [];
+  async snapshot(now: number) {
+    if (!this.data) return null;
+    const text = JSON.stringify(this.data);
+    const info = { id: `snap-${this.snapshots.length + 1}`, takenAt: now, bytes: text.length };
+    this.snapshots.unshift({ info, data: JSON.parse(text) as Dataset });
+    this.snapshots = this.snapshots.slice(0, 5);
+    return info;
   }
   async listSnapshots() {
-    return [];
+    return this.snapshots.map((s) => s.info);
   }
-  async readSnapshot(): Promise<Dataset> {
-    throw new Error("aucune copie");
+  async readSnapshot(id: string): Promise<Dataset> {
+    const found = this.snapshots.find((s) => s.info.id === id);
+    if (!found) throw new Error("aucune copie");
+    return found.data;
   }
   async getDevice() {
     return this.device;
@@ -81,7 +91,7 @@ export const accounts = {
 };
 
 /** Application complète sur un stockage en mémoire, avec catégories et comptes de départ. */
-export async function renderApp(options: { seeded?: boolean; target?: Platform["target"] } = {}) {
+export async function renderApp(options: { seeded?: boolean; target?: Platform["target"]; files?: Partial<FileIO> } = {}) {
   const local = new MemoryLocalStore();
   const repository = await Repository.open({ local, deviceLabel: "test", now: () => NOW, today: () => TODAY });
   if (options.seeded !== false) {
@@ -98,11 +108,11 @@ export async function renderApp(options: { seeded?: boolean; target?: Platform["
     deviceLabel: "test",
     local,
     sync: noSync,
-    files: { saveAs: async () => true, openText: async () => null },
+    files: { saveAs: async () => true, openText: async () => null, ...options.files },
     shortcutHint: "N",
   };
   const store = createAppStore({ platform, repository, engine, today: () => TODAY, now: () => NOW });
   const view = render(<App store={store} />);
   const actions = store.getState().actions;
-  return { store, repository, view, actions, act };
+  return { store, repository, local, view, actions, act };
 }

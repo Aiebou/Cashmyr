@@ -428,6 +428,10 @@ avant de fusionner. Les deux jeux seront réunis, et ce qui a été saisi des de
 | 27 | Date de référence du réglé | Comme la décision 12. |
 | 28 | Total dû | Dettes « je dois » ni archivées ni soldées. |
 | 29 | Suppression d'une dette | Arrête aussi ses prélèvements : celui créé depuis la fiche et toute récurrence portant son `debtId`. Les opérations déjà générées restent dans le budget. |
+| 30 | Suppression d'un compte | Refusée tant qu'une opération, une récurrence, une dette ou un objectif vivants y font référence ; l'écran dit lesquels. |
+| 31 | Suppression d'une catégorie utilisée | Ses opérations, récurrences et dettes passent à une catégorie de même nature, existante ou créée sur place ; un changement d'usage des mois passés est annoncé, montant à l'appui. Inutilisée : suppression directe, après confirmation. |
+| 32 | Import JSON | Fusion, avec la règle de la synchronisation : pour chaque ligne et chaque réglage, la version la plus récente gagne. Accepte un export Cashmyr ou un `finances-sync.json` ; refuse tout le reste en entier. |
+| 33 | Restauration d'une copie | La copie gagne partout : ses lignes sont réécrites avec un horodatage plus récent, les lignes vivantes créées depuis deviennent des suppressions, chaque réglage reprend sa valeur. Une copie de l'état actuel est prise avant ; en synchronisation automatique, un passage d'abord. |
 
 Lectures validées avec la section dettes :
 - Total : `principal` s'il est > 0.
@@ -452,6 +456,17 @@ future, et le test des champs masqués demande `jsdom` et Testing Library.
 - Supprimer une dette arrête ses prélèvements (décision 29) ; la confirmation le dit.
 - Hors budget, le champ date du versement disparaît : `paidManual` n'a pas de date.
 - Sans échéancier, un montant total est exigé à la saisie : un total nul rendrait la dette réglée d'office.
+
+Paramètres, choix d'interface :
+- Export CSV : colonnes et format de l'ancienne application (champs entre guillemets, `;`, CRLF, montant
+  sans signe), plus un BOM UTF-8 pour Excel ; montants en euros à virgule, deux décimales.
+- Les exports s'appellent `cashmyr-sauvegarde-AAAA-MM-JJ.json` et `cashmyr-operations-AAAA-MM-JJ.csv` ;
+  le `.gitignore` les exclut.
+- Une couleur choisie s'enregistre à la fermeture du sélecteur ; un bouton rend la couleur du thème.
+- Les questions de la synchronisation et des suppressions s'affichent dans une fenêtre de l'application,
+  plus par `window.confirm`.
+- Une récurrence dont le premier mois est passé crée aussitôt les mois dont le jour est venu : la fenêtre
+  le dit avant d'enregistrer.
 
 Pour l'étape 5 : il faut un export récent contenant une dette, des couleurs, `goal` / `debt` sur les
 opérations, un transfert, une récurrence, une annulation, et l'en-tête CSV.

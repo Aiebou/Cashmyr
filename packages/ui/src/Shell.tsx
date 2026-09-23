@@ -1,9 +1,10 @@
 import { addMonths, monthOf, yearOf } from "@cashmyr/core";
 import { useEffect } from "react";
-import { IconButton } from "./components/controls";
+import { Button, IconButton } from "./components/controls";
 import { ChevronLeft, ChevronRight, PlusIcon, SyncIcon } from "./components/icons";
 import { Toasts } from "./components/layout";
 import { Menu } from "./components/Menu";
+import { Modal } from "./components/Modal";
 import { monthTitle, stamp } from "./lib/format";
 import { CreateAccountModal, CreateDebtModal, CreateGoalModal } from "./screens/CreateModals";
 import { DashboardScreen } from "./screens/DashboardScreen";
@@ -13,7 +14,9 @@ import { GoalsScreen } from "./screens/GoalsScreen";
 import { MonthScreen } from "./screens/MonthScreen";
 import { OperationsScreen } from "./screens/OperationsScreen";
 import { OperationModal } from "./screens/OperationModal";
-import { Placeholder } from "./screens/Placeholder";
+import { RecurrenceModal } from "./screens/RecurrenceModal";
+import { DeleteCategoryModal } from "./screens/settings/DeleteCategoryModal";
+import { SettingsScreen } from "./screens/settings/SettingsScreen";
 import { Welcome } from "./screens/Welcome";
 import { TABS, type Tab } from "./store/app-store";
 import { useActions, useApp } from "./store/context";
@@ -123,8 +126,38 @@ function Modals() {
     case "create-debt":
       return <CreateDebtModal />;
     case "create-account":
-      return <CreateAccountModal />;
+      return <CreateAccountModal stay={modal.stay ?? false} />;
+    case "recurrence":
+      return <RecurrenceModal key={modal.editId ?? "new"} {...(modal.editId ? { editId: modal.editId } : {})} />;
+    case "delete-category":
+      return <DeleteCategoryModal categoryId={modal.categoryId} />;
   }
+}
+
+/** Question en attente de réponse (synchronisation, restauration, suppression). */
+function ConfirmDialog() {
+  const request = useApp((st) => st.confirm);
+  const { answer } = useActions();
+  if (!request) return null;
+  return (
+    <Modal
+      title={request.title}
+      width="narrow"
+      onClose={() => answer(false)}
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => answer(false)}>
+            {request.cancelLabel ?? "Annuler"}
+          </Button>
+          <Button variant={request.danger ? "danger" : "primary"} onClick={() => answer(true)} data-autofocus>
+            {request.confirmLabel}
+          </Button>
+        </>
+      }
+    >
+      <p className={s.confirmText}>{request.message}</p>
+    </Modal>
+  );
 }
 
 function Screen({ tab }: { tab: Tab }) {
@@ -141,8 +174,8 @@ function Screen({ tab }: { tab: Tab }) {
       return <AccountsScreen />;
     case "operations":
       return <OperationsScreen />;
-    default:
-      return <Placeholder tab={tab} />;
+    case "settings":
+      return <SettingsScreen />;
   }
 }
 
@@ -205,7 +238,7 @@ export function Shell() {
                 </button>
               ))}
             </nav>
-            <PeriodPicker />
+            {TABS.find((t) => t.id === tab)?.period && <PeriodPicker />}
           </div>
         )}
       </header>
@@ -216,6 +249,7 @@ export function Shell() {
         </button>
       )}
       <Modals />
+      <ConfirmDialog />
       <Toasts />
     </div>
   );

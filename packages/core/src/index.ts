@@ -18,3 +18,5 @@ export * from "./debts";
 export * from "./colors";
 export * from "./merge";
 export * from "./sync";
+export * from "./usage";
+export * from "./backup";

@@ -163,6 +163,43 @@ export function InlineAmount({ value, label, allowNegative, onCommit }: InlineAm
   );
 }
 
+type InlineOptionalAmountProps = { value: Cents | null; label: string; placeholder?: string; onCommit(cents: Cents | null): void };
+
+/** Montant facultatif modifiable sur place : champ vide pour « aucun ». */
+export function InlineOptionalAmount({ value, label, placeholder, onCommit }: InlineOptionalAmountProps) {
+  const [text, setText] = useState(value === null ? "" : centsToInput(value));
+  const [invalid, setInvalid] = useState(false);
+  useEffect(() => setText(value === null ? "" : centsToInput(value)), [value]);
+  const commit = () => {
+    const empty = text.trim() === "";
+    const cents = empty ? null : parseAmount(text);
+    if (!empty && cents === null) {
+      setInvalid(true);
+      return;
+    }
+    setInvalid(false);
+    if (cents !== value) onCommit(cents);
+  };
+  return (
+    <input
+      className={cx(s.input, s.inlineAmount)}
+      inputMode="decimal"
+      aria-label={label}
+      aria-invalid={invalid}
+      placeholder={placeholder}
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        }
+      }}
+    />
+  );
+}
+
 type InlineTextProps = { value: string; label: string; onCommit(text: string): void; required?: boolean };
 
 /** Texte modifiable sur place, enregistré à la sortie du champ. */

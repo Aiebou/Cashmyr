@@ -11,6 +11,9 @@ finances-sync*.json
 *.sqlite-*
 *.local.json
 exports/
+# Sauvegardes et exports produits par Cashmyr
+cashmyr-*.json
+cashmyr-*.csv
 
 # ── Clés de signature de l'updater Tauri ───────────────────────────────
 *.key
