@@ -1,0 +1,28 @@
+{
+  "name": "@cashmyr/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "typecheck": "tsc -p tsconfig.json",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@cashmyr/storage": "workspace:*",
+    "@cashmyr/ui": "workspace:*",
+    "@tauri-apps/api": "^2.11.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.5",
+    "@types/node": "^24.13.6",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}

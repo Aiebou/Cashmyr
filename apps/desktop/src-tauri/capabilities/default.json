@@ -1,0 +1,30 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Fenêtre principale : données dans le répertoire de l'application, dialogues natifs, fichier de synchronisation par les commandes Rust. Aucun accès réseau.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "fs:allow-exists",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-rename",
+    "fs:allow-mkdir",
+    "fs:allow-read-dir",
+    "fs:allow-remove",
+    {
+      "identifier": "fs:scope",
+      "allow": [{ "path": "$APPDATA" }, { "path": "$APPDATA/**" }],
+      "deny": [{ "path": "$APPDATA/sync-target.txt" }]
+    },
+    "store:default",
+    "allow-sync-choose",
+    "allow-sync-status",
+    "allow-sync-target-name",
+    "allow-sync-read",
+    "allow-sync-write-atomic",
+    "allow-sync-forget"
+  ]
+}

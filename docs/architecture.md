@@ -9,7 +9,7 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 
 ```
 .
-├── package.json                 scripts racine : dev:web, dev:desktop, build, test, typecheck
+├── package.json                 scripts racine : dev:web, dev:desktop, build:web, build:desktop, test, typecheck
 ├── pnpm-workspace.yaml          packages/*, apps/*
 ├── tsconfig.base.json           strict, noUncheckedIndexedAccess
 ├── LICENSE                      MIT
@@ -75,10 +75,12 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
     ├── web/                     index.html, main.tsx, vite.config.ts (base = /<dépôt>/),
     │   ├── public/              manifest.webmanifest, icônes 192 / 512 / maskable, apple-touch-icon
     │   └── src/platform.ts      assemble la Platform web (IDB + fs-access ou assisted)
-    └── desktop/                 index.html, main.tsx, vite.config.ts
+    └── desktop/                 index.html, main.tsx, vite.config.ts (port 1420, base relative)
         ├── src/platform.ts      assemble la Platform bureau
-        └── src-tauri/           Cargo.toml, tauri.conf.json, capabilities/,
-                                 src/{main.rs, lib.rs, sync_file.rs}
+        └── src-tauri/           Cargo.toml, build.rs (permissions des commandes), tauri.conf.json,
+                                 Info.plist (français), capabilities/default.json,
+                                 icons/ (icon.svg est la source, « pnpm tauri icon » en tire le reste),
+                                 src/{main.rs, lib.rs, menu.rs, sync_file.rs}
 ```
 
 **Sens des dépendances** : `core` ← `storage` ← `ui` ← `apps/*`. `storage` a trois entrées : la racine (types,
@@ -88,7 +90,7 @@ Un écran qui doit se comporter différemment lit une capacité de `platform` (p
 `platform.sync.mode === "assisted"`), jamais la cible.
 
 **Dépendances d'exécution** : `react`, `react-dom`, `zustand`, `idb`, `uuid`, `@tauri-apps/api` et les
-plugins côté bureau. **Développement** : `vite`, `@vitejs/plugin-react`, `typescript`, `vitest`,
+plugins côté bureau (`dialog`, `fs`, `store`, plus `single-instance` côté Rust seulement). **Développement** : `vite`, `@vitejs/plugin-react`, `typescript`, `vitest`,
 `vite-plugin-pwa` (précache Workbox et invite de mise à jour), `@tauri-apps/cli`. Les woff2 de Spectral
 et Archivo (licence OFL) sont copiés une fois depuis `@fontsource/*` dans `packages/ui/src/theme/fonts/`
 et commités avec leur licence.
@@ -365,7 +367,15 @@ cours. `sync_file.rs` expose donc six commandes, dont le contrat est décrit dan
 `sync_choose`, `sync_status`, `sync_target_name`, `sync_read`, `sync_write_atomic`, `sync_forget`.
 `sync_choose` ouvre le dialogue côté Rust et mémorise le chemin ; en création, il crée un fichier vide.
 Les commandes n'agissent que sur le chemin mémorisé, et le front ne peut pas leur en passer un autre.
-`plugin-fs` reste limité à `$APPDATA`. Le code Rust arrive avec l'enveloppe Tauri, à l'étape 4.
+`plugin-fs` reste limité à `$APPDATA`.
+
+Le chemin est gardé dans `$APPDATA/sync-target.txt`, sous une ligne d'en-tête. `plugin-fs` n'a pas le
+droit d'y toucher (règle `deny` de `capabilities/default.json`). `plugin-store`, qui n'écrit que du JSON,
+ne peut pas en produire un valide. Le front ne peut donc pas rediriger la synchronisation vers un autre
+fichier. `build.rs` déclare les six commandes : seules celles que liste la capacité sont appelables.
+Un fichier choisi pour un export ou un import n'est accessible que pendant la session où il a été choisi.
+La CSP n'autorise que les fichiers de l'application et l'IPC de Tauri : aucune requête réseau n'est
+possible, même par erreur.
 
 **Premier lancement.** Données vides, un écran d'accueil et trois choix : commencer avec les catégories
 par défaut (celles de l'ancienne app), importer un fichier, ou rejoindre un fichier de synchronisation
@@ -457,7 +467,7 @@ future, et le test des champs masqués demande `jsdom` et Testing Library.
 - Hors budget, le champ date du versement disparaît : `paidManual` n'a pas de date.
 - Sans échéancier, un montant total est exigé à la saisie : un total nul rendrait la dette réglée d'office.
 
-Paramètres, choix d'interface :
+Paramètres, choix d'interface validés le 23/09/2026 :
 - Export CSV : colonnes et format de l'ancienne application (champs entre guillemets, `;`, CRLF, montant
   sans signe), plus un BOM UTF-8 pour Excel ; montants en euros à virgule, deux décimales.
 - Les exports s'appellent `cashmyr-sauvegarde-AAAA-MM-JJ.json` et `cashmyr-operations-AAAA-MM-JJ.csv` ;
@@ -467,6 +477,22 @@ Paramètres, choix d'interface :
   plus par `window.confirm`.
 - Une récurrence dont le premier mois est passé crée aussitôt les mois dont le jour est venu : la fenêtre
   le dit avant d'enregistrer.
+
+Enveloppe Tauri, choix à valider :
+- Une seule instance : relancer l'application ramène la fenêtre ouverte, au lieu d'ouvrir une seconde
+  instance qui écrirait dans le même `data.json` (plugin `single-instance`).
+- Barre de menus macOS en français (Cashmyr, Édition, Présentation, Fenêtre, Aide) ; ⌘N reste à
+  « Nouvelle opération ». `Info.plist` déclare le français : les dialogues du système le sont aussi.
+- « Créer un nouveau fichier » propose `finances-sync.json` ; un fichier existant choisi à cet endroit
+  n'est pas vidé, il est fusionné. Une écriture dans un fichier qui a disparu est refusée plutôt que de
+  le recréer en silence ; l'écriture garde les droits du fichier d'origine.
+- macOS 12 minimum : l'interface utilise `color-mix()` (Safari 16.2), que le WebView système doit
+  connaître. Fenêtre de 1240 × 840, 380 × 560 au minimum.
+- Glisser-déposer natif des fichiers désactivé sur la fenêtre, pour que le réordonnancement des blocs
+  (glisser-déposer HTML) marche aussi sous Windows.
+- Icône : l'anneau des trois usages (besoins 50 %, envies 30 %, mise de côté 20 %) sur une tuile claire.
+- L'updater (clés, `latest.json`, bouton « Rechercher une mise à jour ») arrive avec la première
+  Release, à l'étape 6, comme prévu au §5.
 
 Pour l'étape 5 : il faut un export récent contenant une dette, des couleurs, `goal` / `debt` sur les
 opérations, un transfert, une récurrence, une annulation, et l'en-tête CSV.

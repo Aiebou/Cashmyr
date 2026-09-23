@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Source des icônes : « pnpm tauri icon src-tauri/icons/icon.svg » depuis apps/desktop.
+       Tuile claire à la grille macOS (824 px, marge 100), anneau des trois enveloppes :
+       besoins 50 %, envies 30 %, épargne 20 %, aux couleurs du thème clair. -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#f1f0ea"/>
+  <rect x="100.5" y="100.5" width="823" height="823" rx="184.5" fill="none" stroke="#dcd9d0" stroke-width="1"/>
+  <g fill="none" stroke-width="116" transform="rotate(-90 512 512)">
+    <!-- circonférence 2π·248 ≈ 1558,23 ; 36 d'écart entre les parts -->
+    <circle cx="512" cy="512" r="248" stroke="#3e5c76" stroke-dasharray="743.12 815.11" stroke-dashoffset="-18"/>
+    <circle cx="512" cy="512" r="248" stroke="#be8534" stroke-dasharray="431.47 1126.76" stroke-dashoffset="-797.12"/>
+    <circle cx="512" cy="512" r="248" stroke="#4f8468" stroke-dasharray="275.65 1282.58" stroke-dashoffset="-1264.59"/>
+  </g>
+</svg>
