@@ -599,7 +599,7 @@ Publication (étape 6), choix validés le 24/09/2026 :
 - La CI passe aussi `cargo fmt`, `clippy` et les tests Rust, sur macOS ; la publication Pages repasse types et
   tests avant de construire.
 
-Écran de secours, choix d'interface à valider (décisions 38 à 40 validées le 24/09/2026) :
+Écran de secours, choix d'interface validés le 24/09/2026 (décisions 38 à 40 ci-dessus) :
 - Il remplace l'application au démarrage, sur le bureau comme sur le web, et remplace aussi la marche à suivre
   à la main que l'écran d'échec du bureau donnait depuis la PR #4.
 - Chaque copie est vérifiée comme au démarrage ; une copie abîmée est listée (« abîmée elle aussi ») sans
