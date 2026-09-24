@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textes propres à Tauri dans l'installateur .msi, en français. Les dialogues de WiX sont traduits
+     par WiX lui-même ; TauriLanguage et TauriCodepage sont ajoutés par Tauri (fr-FR : 1036, 1252).
+     Tauri ne remplace pas __productName__ ici : le nom est écrit en toutes lettres. -->
+<WixLocalization Culture="fr-fr" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+  <String Id="LaunchApp">Lancer Cashmyr</String>
+  <String Id="DowngradeErrorMessage">Une version plus récente de Cashmyr est déjà installée.</String>
+  <String Id="PathEnvVarFeature">Ajouter le dossier d'installation de Cashmyr à la variable d'environnement PATH du système, pour pouvoir lancer Cashmyr depuis n'importe quel emplacement.</String>
+  <String Id="InstallAppFeature">Installe Cashmyr.</String>
+</WixLocalization>
