@@ -33,6 +33,25 @@ export class LocalFileCorruptedError extends Error {
 }
 
 /**
+ * Marche à suivre quand `data.json` est illisible ou invalide au démarrage. L'application ne
+ * s'ouvre pas : Paramètres → Sauvegardes est hors d'atteinte. Les fichiers de `backups/` sont des
+ * copies exactes de `data.json`, prises à chaque ouverture réussie, et jamais à partir d'un
+ * fichier refusé : la plus récente est donc bonne.
+ */
+export function localRecoverySteps(dataDir: string): string[] {
+  const sep = dataDir.includes("\\") ? "\\" : "/";
+  return [
+    "Quitte Cashmyr.",
+    `Ouvre le dossier ${dataDir} (sur Mac : Finder, menu Aller → Aller au dossier…, puis colle ce chemin).`,
+    `Renomme ${DATA} en data-illisible.json : il reste là, rien n'est effacé.`,
+    `Dans le sous-dossier ${dataDir}${sep}${BACKUPS}, copie le fichier data-….json au plus grand numéro : c'est la copie la plus récente. Colle-la dans le dossier de l'étape 2 et renomme-la ${DATA}.`,
+    "Relance Cashmyr : tu retrouves tes données telles qu'à la dernière ouverture réussie. Si la synchronisation est en place, " +
+      "ce qui avait été synchronisé depuis revient à la synchronisation suivante. Si Cashmyr refuse encore de démarrer, " +
+      "recommence avec la copie précédente.",
+  ];
+}
+
+/**
  * Stockage local du bureau : un fichier JSON dans le répertoire de données de
  * l'application. Chaque écriture passe par un fichier temporaire renommé ensuite,
  * de sorte qu'une coupure ne laisse jamais un fichier à moitié écrit.
@@ -57,9 +76,8 @@ export class TauriFileLocalStore implements LocalStore {
     try {
       this.cache = JSON.parse(text) as Dataset;
     } catch {
-      throw new LocalFileCorruptedError(
-        "Le fichier de données local est illisible. Restaure une copie de sauvegarde depuis les paramètres.",
-      );
+      // Rien n'est écrit ni copié : les copies de sauvegarde restent intactes (voir localRecoverySteps).
+      throw new LocalFileCorruptedError(`Le fichier ${DATA} n'est pas du JSON lisible.`);
     }
     return this.cache;
   }

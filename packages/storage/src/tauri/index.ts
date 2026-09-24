@@ -11,7 +11,13 @@ import { TauriFileLocalStore, type FsLike } from "./file-store";
 import { createTauriFileIO, createTauriSync, type DialogLike } from "./sync";
 import { createTauriUpdates } from "./updates";
 
-export { LocalFileCorruptedError, TauriFileLocalStore, type FsLike, type KeyValueLike } from "./file-store";
+export {
+  LocalFileCorruptedError,
+  localRecoverySteps,
+  TauriFileLocalStore,
+  type FsLike,
+  type KeyValueLike,
+} from "./file-store";
 export { createTauriFileIO, createTauriSync, SYNC_COMMANDS, type Invoke } from "./sync";
 export { createTauriUpdates, type UpdaterLike } from "./updates";
 

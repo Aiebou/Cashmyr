@@ -356,6 +356,7 @@ Les définitions font foi dans [`packages/storage/src/types.ts`](../packages/sto
 |---|---|---|---|
 | Stockage local | `$APPDATA/data.json`, écrit dans `.tmp` puis renommé | IndexedDB, un store par collection | IndexedDB |
 | Copies tournantes | `$APPDATA/backups/`, 5 fichiers | store `snapshots`, 5 entrées | idem |
+| Données locales illisibles ou invalides au démarrage | rien n'est écrit ni copié ; l'écran d'échec donne le chemin du dossier et la marche à suivre (`localRecoverySteps`) : mettre `data.json` de côté, reprendre la copie la plus récente de `backups/` | rien n'est écrit ; message d'erreur | idem |
 | Sync | auto : lancement, focus, 2 s après modification | auto, même rythme ; permission redemandée si expirée | assistée, sur bouton |
 | Écriture atomique | commande Rust : `.tmp` dans le même dossier, `fsync`, `rename` | `createWritable()` écrit dans un fichier d'échange que Chromium substitue à `close()`. L'API web ne permet pas de renommer un fichier de l'utilisateur, c'est le seul mécanisme atomique disponible. | le navigateur livre le fichier complet ; c'est l'utilisateur qui écrase l'original |
 | Choix du mode | fixe | détection de `showOpenFilePicker`, hors mobile | par défaut |
