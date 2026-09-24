@@ -126,7 +126,9 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RELEASE_ID: ${{ needs.prepare.outputs.release-id }}
     steps:
-      - name: latest.json couvre les quatre plateformes, à la bonne version
+      # La clé publique attendue est celle de tauri.conf.json au commit du tag.
+      - uses: actions/checkout@v7
+      - name: Récupération de latest.json
         run: |
           url=$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" --paginate \
             --jq '.[] | select(.name == "latest.json") | .url')
@@ -134,15 +136,10 @@ jobs:
             echo "::error::latest.json manque à la Release."
             exit 1
           fi
-          gh api -H "Accept: application/octet-stream" "$url" > latest.json
-          node -e '
-            const json = JSON.parse(require("node:fs").readFileSync("latest.json", "utf8"));
-            const expected = ["darwin-aarch64", "darwin-x86_64", "linux-x86_64", "windows-x86_64"];
-            const missing = expected.filter((p) => !json.platforms?.[p]?.url || !json.platforms[p].signature);
-            const version = process.env.GITHUB_REF_NAME.slice(1);
-            if (json.version !== version) throw new Error(`latest.json annonce ${json.version} au lieu de ${version}`);
-            if (missing.length > 0) throw new Error(`latest.json ne couvre pas ${missing.join(", ")}`);
-            console.log(Object.keys(json.platforms).sort().join("\n"));
-          '
+          gh api -H "Accept: application/octet-stream" "$url" > "$RUNNER_TEMP/latest.json"
+      # Quatre plateformes, bonne version, et chaque paquet signé par la clé de tauri.conf.json :
+      # sinon les applications installées refuseraient la mise à jour sans que rien ne l'ait signalé.
+      - name: latest.json complet, à la bonne version, signé par la bonne clé
+        run: node .github/scripts/check-latest.mjs "$RUNNER_TEMP/latest.json" apps/desktop/src-tauri/tauri.conf.json "${GITHUB_REF_NAME#v}"
       - name: Publication de la Release
         run: gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" -F draft=false -f make_latest=true --silent

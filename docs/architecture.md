@@ -18,6 +18,7 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │                                mes-finances*.json, finances-sync*.json
 ├── .github/
 │   ├── release-notes.md         texte de chaque Release
+│   ├── scripts/check-latest.mjs contrôle de latest.json avant publication (plateformes, version, clé)
 │   └── workflows/
 │       ├── ci.yml               typecheck + vitest, et fmt + clippy + tests Rust sur macOS, à chaque push et PR
 │       ├── deploy-pages.yml     main → tests → build apps/web → actions/deploy-pages
@@ -551,7 +552,7 @@ Reprise, choix d'interface validés le 24/09/2026 :
 Reprise, choix validés le 24/09/2026 : décisions 35 à 37 ci-dessus. L'en-tête CSV avec la colonne `Dette`
 est repris par l'export CSV.
 
-Publication (étape 6), choix à valider :
+Publication (étape 6), choix validés le 24/09/2026 :
 - **macOS : un seul `.dmg` universel** (Apple Silicon et Intel), macOS 12 minimum. Signature ad hoc
   (`signingIdentity: "-"`) : sans elle, un Mac Apple Silicon déclare l'application « endommagée » et
   refuse de l'ouvrir. Ce n'est pas une signature par une autorité et elle ne contourne rien : Gatekeeper
@@ -561,6 +562,10 @@ Publication (étape 6), choix à valider :
   `Cargo.toml`, et les tests passent avant toute construction. Les binaires arrivent dans un brouillon, publié
   seulement quand `latest.json` couvre macOS (deux architectures), Windows et Linux à la bonne version :
   l'updater ne voit jamais une Release à moitié remplie. Une Release déjà publiée n'est jamais modifiée.
+- **Garde-fou de la clé** (ajouté après la 0.1.0) : chaque signature de `latest.json` doit porter
+  l'identifiant de la clé publique de `tauri.conf.json` au commit du tag. Un secret contenant une autre clé
+  privée, avec son bon mot de passe, construirait sans erreur des paquets que les applications installées
+  refuseraient ; la publication est bloquée à la place (`.github/scripts/check-latest.mjs`).
 - Les archives signées de l'updater ne sont produites qu'en Release (`tauri.release.conf.json`) : un
   `pnpm build:desktop` local n'a pas besoin de la clé privée.
 - Windows : l'updater installe le `-setup.exe` (NSIS) en mode passif, une petite fenêtre de progression,
