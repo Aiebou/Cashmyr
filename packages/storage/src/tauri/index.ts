@@ -13,7 +13,6 @@ import { createTauriUpdates } from "./updates";
 
 export {
   LocalFileCorruptedError,
-  localRecoverySteps,
   TauriFileLocalStore,
   type FsLike,
   type KeyValueLike,

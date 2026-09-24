@@ -25,6 +25,9 @@ export type DeviceState = {
 
 export type SnapshotInfo = { id: string; takenAt: number; bytes: number };
 
+/** Version des données locales mise de côté par l'écran de secours (décision 40). */
+export type SetAsideInfo = { id: string; setAsideAt: number; bytes: number };
+
 /** Source de vérité locale de l'appareil. */
 export interface LocalStore {
   readonly kind: "indexeddb" | "file";
@@ -44,6 +47,21 @@ export interface LocalStore {
   requestPersistence(): Promise<boolean>;
   /** Attend la fin des écritures en cours. */
   flush(): Promise<void>;
+
+  // Écran de secours (décisions 38 à 40) : données locales refusées à l'ouverture.
+  /** Données locales telles qu'elles sont stockées, même illisibles ou invalides ; null s'il n'y en a pas. */
+  readRaw(): Promise<string | null>;
+  /**
+   * Copie les données locales actuelles de côté, sans les retirer : si la suite échoue,
+   * l'appareil reste dans l'état d'avant. Bureau : un fichier par incident ; web : la dernière seulement.
+   */
+  setAside(now: number): Promise<SetAsideInfo | null>;
+  /** Retire les données locales : `load()` renvoie ensuite null (écran d'accueil). */
+  clear(): Promise<void>;
+  /** Versions mises de côté, de la plus récente à la plus ancienne. */
+  listSetAside(): Promise<SetAsideInfo[]>;
+  readSetAside(id: string): Promise<string>;
+  removeSetAside(id: string): Promise<void>;
 }
 
 export type SyncTargetStatus = "unconfigured" | "ready" | "needs-permission" | "missing";

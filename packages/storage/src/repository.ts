@@ -9,6 +9,7 @@ import {
   mergeDatasets,
   newId,
   PREF_KEYS,
+  SCHEMA_VERSION,
   toLocalDay,
   validateDataset,
   ValidationError,
@@ -31,8 +32,28 @@ export type RepositoryOptions = {
   today?: () => Day;
 };
 
-const recordKey = (collection: string, id: string) => `${collection}:${id}`;
-const prefKey = (key: string) => `pref:${key}`;
+/** Clés des modifications en attente (`DeviceState.dirty`). */
+export const recordKey = (collection: string, id: string) => `${collection}:${id}`;
+export const prefKey = (key: string) => `pref:${key}`;
+
+/**
+ * Données locales refusées à l'ouverture : illisibles (JSON abîmé) ou invalides (refusées par
+ * la validation). L'application affiche alors l'écran de secours au lieu de démarrer.
+ */
+export class LocalDataError extends Error {
+  override name = "LocalDataError";
+  constructor(
+    readonly kind: "illisible" | "invalide",
+    /** Message d'origine, affiché comme détail technique. */
+    readonly detail: string,
+  ) {
+    super(
+      kind === "illisible"
+        ? "Les données de cet appareil sont illisibles."
+        : "Les données de cet appareil contiennent des incohérences.",
+    );
+  }
+}
 
 function newDevice(label: string): DeviceState {
   return {
@@ -67,14 +88,34 @@ export class Repository {
 
   /**
    * Ouvre le jeu local : copie de sauvegarde au démarrage, puis génération des
-   * occurrences dues. Lève `ValidationError` si le fichier local est corrompu.
+   * occurrences dues. Lève `LocalDataError` si les données locales sont illisibles ou
+   * invalides ; aucune copie n'est alors prise, les précédentes restent bonnes.
    */
   static async open(options: RepositoryOptions): Promise<Repository> {
     const now = options.now ?? Date.now;
     const today = options.today ?? (() => toLocalDay(new Date()));
-    const loaded = await options.local.load();
+    let loaded: Dataset | null;
+    try {
+      loaded = await options.local.load();
+    } catch (e) {
+      if (e instanceof Error && e.name === "LocalFileCorruptedError") throw new LocalDataError("illisible", e.message);
+      throw e;
+    }
     if (loaded) {
-      assertValidDataset(loaded);
+      // Données d'une version plus récente : elles ne sont pas abîmées, l'application est en retard.
+      // Pas d'écran de secours, qui les mettrait de côté.
+      const version = (loaded as { schemaVersion?: unknown }).schemaVersion;
+      if (typeof version === "number" && version > SCHEMA_VERSION) {
+        throw new Error(
+          "Les données de cet appareil viennent d'une version plus récente de Cashmyr. Mets l'application à jour : rien n'a été modifié.",
+        );
+      }
+      try {
+        assertValidDataset(loaded);
+      } catch (e) {
+        if (e instanceof ValidationError) throw new LocalDataError("invalide", e.message);
+        throw e;
+      }
       await options.local.snapshot(now());
     }
     let device = await options.local.getDevice();

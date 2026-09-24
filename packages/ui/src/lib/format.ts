@@ -40,6 +40,8 @@ export const monthShort = (month: Month) => shortMonth.format(monthDate(month));
 export const monthName = (month: Month) => monthOnly.format(monthDate(month));
 /** « 23 sept. 2026, 12:00 » */
 export const stamp = (ms: number) => dateTime.format(new Date(ms));
+/** « 512 o », « 48 Ko » */
+export const fileSize = (bytes: number) => (bytes < 1024 ? `${bytes} o` : `${Math.round(bytes / 1024)} Ko`);
 
 const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`;
 

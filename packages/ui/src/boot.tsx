@@ -1,8 +1,9 @@
 import { toLocalDay } from "@cashmyr/core";
-import { Repository, SyncEngine, type Platform, type SyncHooks } from "@cashmyr/storage";
+import { LocalDataError, Repository, SyncEngine, type Platform, type SyncHooks } from "@cashmyr/storage";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { RecoveryScreen } from "./screens/Recovery";
 import { createAppStore, type AppActions } from "./store/app-store";
 
 const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? "s" : ""}`;
@@ -32,10 +33,29 @@ function syncHooks(ask: () => AppActions["ask"]): SyncHooks {
   };
 }
 
-/** Démarre l'application sur une plateforme donnée. */
-export async function startApp(platform: Platform, element: HTMLElement): Promise<void> {
+/**
+ * Démarre l'application sur une plateforme donnée. Si les données locales sont refusées à
+ * l'ouverture, affiche l'écran de secours à la place ; une restauration réussie relance tout.
+ */
+export async function startApp(
+  platform: Platform,
+  element: HTMLElement,
+  options: { restart?: () => void } = {},
+): Promise<void> {
   const today = () => toLocalDay(new Date());
-  const repository = await Repository.open({ local: platform.local, deviceLabel: platform.deviceLabel, today });
+  let repository: Repository;
+  try {
+    repository = await Repository.open({ local: platform.local, deviceLabel: platform.deviceLabel, today });
+  } catch (e) {
+    if (!(e instanceof LocalDataError)) throw e;
+    const restart = options.restart ?? (() => window.location.reload());
+    createRoot(element).render(
+      <StrictMode>
+        <RecoveryScreen platform={platform} problem={e} onRecovered={restart} />
+      </StrictMode>,
+    );
+    return;
+  }
   void platform.local.requestPersistence();
   // Le moteur naît avant le store qui affiche ses questions : celles-ci passent par une référence tardive.
   let ask: AppActions["ask"] = async () => false;

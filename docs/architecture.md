@@ -61,6 +61,7 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │       ├── types.ts             Platform, LocalStore, SyncFile, FileIO, AppUpdates, DeviceState (§5)
 │       ├── repository.ts        Repository : jeu en mémoire, validation, récurrences, modifications en attente
 │       ├── engine.ts            SyncEngine : lire → fusionner → adopter → écrire, différé 2 s, état affiché
+│       ├── recovery.ts          écran de secours : copies vérifiées, restauration, retour à zéro (décisions 38 à 40)
 │       ├── web/                 entrée « @cashmyr/storage/web » : IndexedDB, File System Access,
 │       │                        mode assisté, exports, détection du mode, service worker (updates.ts)
 │       └── tauri/               entrée « @cashmyr/storage/tauri » : fichier local atomique,
@@ -71,7 +72,7 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │   └── src/
 │       ├── App.tsx              reçoit `platform: Platform` en prop, le fournit par contexte
 │       ├── store/               Zustand : données, préférences, période affichée, UI
-│       ├── screens/             Dashboard, Month, Goals, Accounts, Operations, Settings, Sync
+│       ├── screens/             Dashboard, Month, Goals, Accounts, Operations, Settings, Sync, Recovery
 │       ├── components/          OperationModal, Gauge, SegmentedBar, BarChart12, LineChart,
 │       │                        ReorderableBlock, PeriodPicker, EmptyState…
 │       ├── theme/               tokens.css (clair / sombre), fonts/*.woff2 + OFL.txt
@@ -319,8 +320,13 @@ Propriétés testées sur 300 tirages aléatoires : commutativité, idempotence,
 Les définitions font foi dans [`packages/storage/src/types.ts`](../packages/storage/src/types.ts). En résumé :
 
 - **`LocalStore`** : `load`, `apply` (incrémental), `replace`, `snapshot` (5 copies tournantes),
-  `getDevice` / `setDevice`, `requestPersistence`, `flush`. Deux implémentations : `IndexedDbLocalStore` et
-  `TauriFileLocalStore`.
+  `getDevice` / `setDevice`, `requestPersistence`, `flush`. Pour l'écran de secours : `readRaw`, `setAside`
+  (copie de côté, sans retirer), `clear`, `listSetAside` / `readSetAside` / `removeSetAside`. Deux
+  implémentations : `IndexedDbLocalStore` et `TauriFileLocalStore`.
+- **Données refusées à l'ouverture** : `Repository.open` lève `LocalDataError` (« illisible » ou
+  « invalide ») sans prendre de copie ; `startApp` affiche alors l'écran de secours, qui s'appuie sur
+  `recoveryCopies` et `recoverLocalData`. Des données d'une version plus récente de Cashmyr lèvent une autre
+  erreur : elles ne sont pas abîmées et ne doivent pas être mises de côté.
 - **`SyncFile`** : deux formes.
   - `AutoSyncFile` (`choose`, `status`, `requestPermission`, `read`, `writeAtomic`, `forget`), implémentée
     par `createTauriSync` et `createFsAccessSync`.
@@ -356,7 +362,7 @@ Les définitions font foi dans [`packages/storage/src/types.ts`](../packages/sto
 |---|---|---|---|
 | Stockage local | `$APPDATA/data.json`, écrit dans `.tmp` puis renommé | IndexedDB, un store par collection | IndexedDB |
 | Copies tournantes | `$APPDATA/backups/`, 5 fichiers | store `snapshots`, 5 entrées | idem |
-| Données locales illisibles ou invalides au démarrage | rien n'est écrit ni copié ; l'écran d'échec donne le chemin du dossier et la marche à suivre (`localRecoverySteps`) : mettre `data.json` de côté, reprendre la copie la plus récente de `backups/` | rien n'est écrit ; message d'erreur | idem |
+| Données locales illisibles ou invalides au démarrage | rien n'est écrit ni copié ; écran de secours (décisions 38 à 40). Version abîmée gardée dans `$APPDATA/mis-de-cote/`, un fichier par incident | écran de secours ; la dernière version abîmée gardée dans le magasin `meta` | idem |
 | Sync | auto : lancement, focus, 2 s après modification | auto, même rythme ; permission redemandée si expirée | assistée, sur bouton |
 | Écriture atomique | commande Rust : `.tmp` dans le même dossier, `fsync`, `rename` | `createWritable()` écrit dans un fichier d'échange que Chromium substitue à `close()`. L'API web ne permet pas de renommer un fichier de l'utilisateur, c'est le seul mécanisme atomique disponible. | le navigateur livre le fichier complet ; c'est l'utilisateur qui écrase l'original |
 | Choix du mode | fixe | détection de `showOpenFilePicker`, hors mobile | par défaut |
@@ -490,6 +496,9 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | 35 | Dette de l'ancien fichier dont la catégorie n'a pas la nature attendue (dette basculée de « je dois » à « on me doit ») | Reprise sans catégorie ; Cashmyr la demande au prochain versement (décision 26). La confirmation le dit. |
 | 36 | Liens vers un objectif, une dette ou une récurrence supprimés dans l'ancienne application | Écartés, comme elle le faisait ; la vérification croisée prouve que rien ne change et la confirmation dit combien. |
 | 37 | Transfert entre deux comptes d'épargne rattaché à un objectif | L'ancienne application le comptait +montant, Cashmyr 0 : l'import est refusé, avec l'opération en cause. |
+| 38 | Restauration depuis l'écran de secours | La copie reprend sa place telle quelle, avec ses dates d'origine, puis la synchronisation normale passe : ce qui est plus récent dans le fichier revient. Seul ce qui n'avait été saisi que sur cet appareil après la copie est perdu. (Différent de Paramètres → Restaurer, décision 33, où la copie gagne partout.) |
+| 39 | Écran de secours sans copie utilisable | « Repartir de zéro », après confirmation : l'appareil repart vide (écran d'accueil) et la synchronisation, si elle est en place, ramène tout ce qui avait été synchronisé. |
+| 40 | Version abîmée | Gardée de côté automatiquement avant toute restauration (bureau : un fichier par incident ; web : la dernière), et enregistrable depuis l'écran de secours comme depuis Paramètres → Sauvegardes. |
 
 Lectures validées avec la section dettes :
 - Total : `principal` s'il est > 0.
@@ -589,3 +598,20 @@ Publication (étape 6), choix validés le 24/09/2026 :
   et anneau réduit à 85 %, dans la zone sûre.
 - La CI passe aussi `cargo fmt`, `clippy` et les tests Rust, sur macOS ; la publication Pages repasse types et
   tests avant de construire.
+
+Écran de secours, choix d'interface à valider (décisions 38 à 40 validées le 24/09/2026) :
+- Il remplace l'application au démarrage, sur le bureau comme sur le web, et remplace aussi la marche à suivre
+  à la main que l'écran d'échec du bureau donnait depuis la PR #4.
+- Chaque copie est vérifiée comme au démarrage ; une copie abîmée est listée (« abîmée elle aussi ») sans
+  bouton. La plus récente utilisable a le bouton principal. « Repartir de zéro » n'apparaît que s'il n'existe
+  aucune copie utilisable, et demande une confirmation sur place.
+- Bureau : la version abîmée est copiée dans `mis-de-cote/data-<horodatage>.json`, et non renommée à la
+  racine : la portée de `plugin-fs` n'est éprouvée que pour les sous-dossiers, comme `backups/`.
+- La version abîmée est copiée de côté *avant* que la copie la remplace, d'une seule écriture : une panne au
+  milieu laisse l'appareil tel quel, et l'écran de secours revient au lancement suivant.
+- Les modifications en attente sont ramenées à la copie : une ligne absente de la copie n'a plus rien à
+  envoyer ; une ligne plus ancienne reste à envoyer dans la version de la copie.
+- Données d'une version plus récente de Cashmyr : pas d'écran de secours, le message demande de mettre
+  l'application à jour.
+- Paramètres → Sauvegardes gagne une carte « Versions abîmées mises de côté » (Enregistrer, Supprimer après
+  confirmation), visible seulement s'il y en a.

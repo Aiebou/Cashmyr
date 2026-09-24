@@ -15,6 +15,7 @@ import {
   type FileIO,
   type LocalStore,
   type Platform,
+  type SetAsideInfo,
   type SnapshotInfo,
 } from "@cashmyr/storage";
 import { act, render } from "@testing-library/react";
@@ -67,6 +68,31 @@ export class MemoryLocalStore implements LocalStore {
     return true;
   }
   async flush() {}
+  setAsideList: { info: SetAsideInfo; content: string }[] = [];
+  async readRaw() {
+    return this.data === null ? null : JSON.stringify(this.data);
+  }
+  async setAside(now: number) {
+    const content = await this.readRaw();
+    if (content === null) return null;
+    const info = { id: String(now), setAsideAt: now, bytes: content.length };
+    this.setAsideList.unshift({ info, content });
+    return info;
+  }
+  async clear() {
+    this.data = null;
+  }
+  async listSetAside() {
+    return this.setAsideList.map((v) => v.info);
+  }
+  async readSetAside(id: string) {
+    const found = this.setAsideList.find((v) => v.info.id === id);
+    if (!found) throw new Error("introuvable");
+    return found.content;
+  }
+  async removeSetAside(id: string) {
+    this.setAsideList = this.setAsideList.filter((v) => v.info.id !== id);
+  }
 }
 
 const noSync: AssistedSyncFile = {
