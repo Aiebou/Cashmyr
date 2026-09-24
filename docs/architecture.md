@@ -87,6 +87,7 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
         ├── src/platform.ts      assemble la Platform bureau
         └── src-tauri/           Cargo.toml, build.rs (permissions des commandes), tauri.conf.json,
                                  tauri.release.conf.json (archives signées de l'updater, en Release seulement),
+                                 windows/fr-FR.wxl (textes de Tauri dans le .msi, en français),
                                  Info.plist (français), capabilities/default.json,
                                  icons/ (icon.svg est la source, « pnpm tauri icon » en tire le reste),
                                  src/{main.rs, lib.rs, menu.rs, sync_file.rs}
@@ -569,7 +570,9 @@ Publication (étape 6), choix validés le 24/09/2026 :
 - Les archives signées de l'updater ne sont produites qu'en Release (`tauri.release.conf.json`) : un
   `pnpm build:desktop` local n'a pas besoin de la clé privée.
 - Windows : l'updater installe le `-setup.exe` (NSIS) en mode passif, une petite fenêtre de progression,
-  sans droits d'administrateur. Linux : l'updater met à jour l'AppImage ; `.deb` et `.rpm` se mettent à
+  sans droits d'administrateur. Les deux installateurs sont en français seulement, comme l'application
+  (à partir de la version qui suit la 0.1.0) : NSIS avec la traduction fournie par Tauri, `.msi` en `fr-FR` avec
+  `windows/fr-FR.wxl` pour les quatre textes propres à Tauri. Le `.msi` s'appelle `…_x64_fr-FR.msi`. Linux : l'updater met à jour l'AppImage ; `.deb` et `.rpm` se mettent à
   jour à la main.
 - **PWA** : service worker en mode « prompt ». La nouvelle version se télécharge en arrière-plan puis attend.
   Le bandeau « Nouvelle version disponible. » propose « Recharger » ou « Plus tard ». Paramètres → Application
