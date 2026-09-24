@@ -87,7 +87,8 @@ L'architecture, le modèle de données et toutes les règles de calcul et de fus
 bureau, mets le même numéro dans `apps/desktop/package.json`, `apps/web/package.json` et
 `apps/desktop/src-tauri/Cargo.toml`, puis pousse le tag `vX.Y.Z` : le workflow construit les trois plateformes,
 signe les paquets de l'updater avec la clé privée des secrets `TAURI_SIGNING_PRIVATE_KEY` et
-`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, et publie la Release une fois tout en place.
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, et ne publie la Release qu'une fois chaque paquet présent et signé par
+la clé publique de `tauri.conf.json`.
 
 ## Licence
 
