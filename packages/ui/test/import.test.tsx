@@ -20,15 +20,18 @@ function legacyFile() {
       window: 6,
       safety: { amount: 0, hidden: false, mode: "months", months: 4 },
       goals: [],
-      debts: [],
+      debts: [] as Record<string, unknown>[],
       catColors: {},
       bucketColors: {},
       dashOrder: ["goals", "debts", "stats", "months", "savings", "cats"],
       recurring: [],
     },
     months: {
-      "2026-09": { items: [{ id: "x1", d: "2026-09-02", t: "out", amt: 12.5, cat: "d12", acc: "a1", note: "Marché" }], skips: [] },
-    },
+      "2026-09": {
+        items: [{ id: "x1", d: "2026-09-02", t: "out", amt: 12.5, cat: "d12", acc: "a1", note: "Marché" }] as Record<string, unknown>[],
+        skips: [] as string[],
+      },
+    } as Record<string, { items: Record<string, unknown>[]; skips: string[] }>,
   };
 }
 
@@ -48,6 +51,44 @@ describe("reprise de l'ancienne application", () => {
     await screen.findByText("Données de l'ancienne application reprises");
     expect(screen.queryByRole("heading", { name: "Bienvenue" })).toBeNull();
     expect(repository.data.collections.operations).toEqual([expect.objectContaining({ amount: 1250, note: "Marché" })]);
+  });
+
+  it("la confirmation dit ce qui est laissé de côté : lien vers un élément supprimé, catégorie de dette (décisions 35 et 36)", async () => {
+    const file = legacyFile();
+    file.months["2026-09"]!.items[0]!.goal = "objectif-supprime";
+    file.settings.debts.push({
+      id: "dt1",
+      name: "Dépannage",
+      creditor: "",
+      direction: "lent",
+      principal: 150,
+      paidManual: 0,
+      mode: "free",
+      installmentAmount: 0,
+      installmentCount: 0,
+      startDate: "2026-09-01",
+      dayOfMonth: 1,
+      categoryId: "d16",
+      accountId: "a1",
+      recurrenceId: null,
+      hidden: false,
+      pinned: false,
+      settled: false,
+      archived: false,
+    });
+    const user = userEvent.setup();
+    const { repository } = await renderApp({
+      seeded: false,
+      files: { openText: async () => ({ name: "mes-finances.json", content: JSON.stringify(file) }) },
+    });
+    await user.click(screen.getByRole("button", { name: "Importer un fichier" }));
+    const d = await screen.findByRole("dialog", { name: "Reprendre « mes-finances.json » ?" });
+    const text = plain(within(d).getByText(/^Ancienne application/).textContent);
+    expect(text).toContain("1 lien vers un élément supprimé est écarté, comme le faisait l'ancienne application : aucun total ne change.");
+    expect(text).toContain("La dette « Dépannage » est reprise sans catégorie");
+    await user.click(within(d).getByRole("button", { name: "Reprendre mes données" }));
+    await screen.findByText("Données de l'ancienne application reprises");
+    expect(repository.data.collections.debts[0]).toMatchObject({ name: "Dépannage", categoryId: null });
   });
 
   it("depuis les paramètres, sur un appareil déjà en service : n'ajoute que ce qui manque", async () => {

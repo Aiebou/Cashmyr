@@ -391,30 +391,42 @@ avant de fusionner. Les deux jeux seront réunis, et ce qui a été saisi des de
 
 ## 7. Reprise de `mes-finances.json`
 
-Le code est dans [`packages/core/src/migrate/`](../packages/core/src/migrate/). L'import est proposé à
-l'accueil (« Reprendre mes données ») et dans Paramètres (« Importer un fichier »), qui reconnaissent seuls
-une sauvegarde Cashmyr, un `finances-sync.json` ou l'export de l'ancienne application.
+Le code est dans [`packages/core/src/migrate/`](../packages/core/src/migrate/). L'ancienne application est
+l'artifact claude.ai « Mes finances » ; ses formats sont tirés de son code et confirmés par un export réel
+(24/09/2026). L'import est proposé à l'accueil (« Reprendre mes données ») et dans Paramètres (« Importer un
+fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.json` ou l'ancien export.
 
-- **Lecture stricte.** Chaque objet de l'ancien format (`settings.v` = 2) doit avoir exactement ses champs
-  connus. Un champ en trop ou manquant, une valeur inconnue, une référence introuvable, une opération rangée
-  dans un autre mois que sa date : l'import échoue en entier et une fenêtre liste les raisons, chemin compris.
+- **Lecture stricte.** Chaque objet (`settings.v` = 2) doit avoir exactement ses champs connus : une clé en
+  trop ou une obligatoire qui manque, une valeur inconnue, une catégorie ou un compte introuvable, une
+  opération rangée dans un autre mois que sa date : l'import échoue en entier, et une fenêtre liste les
+  raisons avec leur chemin dans le fichier.
+- **Formats repris.** Transfert : `t: "tx"`, `from`, `to`. Rattachements : `goal`, `debt` sur une opération ou
+  une récurrence. Opération générée : `rec`. Mois annulé : `skips`, liste d'identifiants de récurrences.
+  Récurrence : `label`, `amt`, `t`, `day`, `start`, `end`, `active` (absent = active). Postes d'objectif :
+  `steps` `{id, label, amount, done}`. Dates `doneAt` et `settledAt`. Valeur déclarée : `mv` (sans date).
+  Couleurs : `catColors` par catégorie, `bucketColors` par usage. Précaution : `pinned` absent = épinglée.
 - Montants : `Math.round(x * 100)`, avec échec si `|x·100 − arrondi| > 1e-6`. Répartition : fractions en
   points de base, avec échec si la somme ne fait pas 100 %.
-- Identifiants : uuid v5 dérivés de l'identifiant d'origine (réimporter sur un autre appareil ne duplique rien).
-  Les catégories par défaut portent les identifiants de l'ancienne application (`r1`… `d30`) : commencer avec
-  elles, puis reprendre l'ancien fichier, n'en crée pas de doublon.
+- Identifiants : uuid v5 dérivés de l'identifiant d'origine. Une opération générée prend l'identifiant de
+  l'occurrence de son mois, celui que Cashmyr lui aurait donné : il la reconnaît et ne la génère pas une
+  seconde fois ; une deuxième pour le même mois reste une opération rattachée. Un mois annulé prend
+  l'identifiant d'une annulation Cashmyr. Les catégories par défaut portent les identifiants de l'ancien
+  fichier (`r1`… `d30`) : commencer avec elles, puis reprendre, n'en crée pas de doublon.
 - Horodatage : toutes les lignes reprises portent `updatedAt = 1` (décision 34), ainsi que les réglages
   venus du fichier. Le thème, que l'ancienne application n'avait pas, garde 0 et ne remplace rien.
 - Anciens objectifs sans `pinned` / `done` / `archived` / `targetMode` : `false` / `false` / `false` /
-  `"manual"`. `safety.pinned` : `true`. Dettes : `settledAt` à `null`. Couleurs de série dans l'ordre du
-  fichier, comme à la création.
-- **Vérification croisée** : un calculateur minimal lit l'ancien format en euros et recalcule, pour chaque
-  mois, le nombre d'opérations, les revenus, besoins, envies, mise de côté et reste ; le solde de chaque
-  compte ; l'avancement de chaque objectif ; le réglé de chaque dette. Chaque résultat est comparé au centime
-  près avec celui de `core` sur les données converties, et chaque catégorie doit garder nom, type et usage.
-  Le moindre écart fait échouer l'import sans rien écrire. La fenêtre de confirmation dit ce qui a été vérifié.
-- Refusés tant que leur format n'a pas été vu dans un export : transferts, récurrences, mois annulés,
-  rattachements `goal` / `debt` des opérations, couleurs choisies, prélèvement associé à une dette.
+  `"manual"`. Couleurs de série dans l'ordre du fichier, comme à la création.
+- Dette dont la catégorie n'est pas de la nature attendue (décision 35) : reprise sans catégorie. Liens vers un
+  objectif, une dette ou une récurrence supprimés (décision 36) : écartés et comptés. Transfert entre deux
+  comptes d'épargne rattaché à un objectif (décision 37) : l'import est refusé.
+- **Vérification croisée** : un calculateur minimal refait, sur l'ancien format et en euros, les calculs de
+  l'ancienne application tels qu'écrits dans son code : pour chaque mois, le nombre d'opérations, les revenus,
+  besoins, envies, mise de côté et reste ; le solde de chaque compte ; l'avancement et la cible de chaque
+  objectif ; le réglé de chaque dette. Chaque résultat est comparé au centime près avec celui de `core` sur les
+  données converties, et chaque catégorie doit garder nom, type et usage. Le moindre écart fait échouer l'import
+  sans rien écrire. La confirmation dit ce qui a été vérifié et ce qui est laissé de côté.
+- Après la reprise, Cashmyr applique ses propres règles : il génère les mois de récurrence absents du fichier
+  le jour venu, et le prélèvement d'une dette suit l'échéancier restant (décision 24).
 - Le vrai fichier n'entre jamais dans le dépôt. Les tests utilisent une fixture synthétique au même format.
 
 ---
@@ -460,6 +472,9 @@ une sauvegarde Cashmyr, un `finances-sync.json` ou l'export de l'ancienne applic
 | 32 | Import JSON | Fusion, avec la règle de la synchronisation : pour chaque ligne et chaque réglage, la version la plus récente gagne. Accepte un export Cashmyr ou un `finances-sync.json` ; refuse tout le reste en entier. |
 | 33 | Restauration d'une copie | La copie gagne partout : ses lignes sont réécrites avec un horodatage plus récent, les lignes vivantes créées depuis deviennent des suppressions, chaque réglage reprend sa valeur. Une copie de l'état actuel est prise avant ; en synchronisation automatique, un passage d'abord. |
 | 34 | Import de l'ancien fichier sur un appareil qui a des données | Cashmyr gagne : les lignes reprises portent un horodatage fixe très ancien. Réimporter n'ajoute que ce qui manque et n'écrase ni une modification ni une suppression faites dans Cashmyr ; deux appareils qui importent le même fichier produisent les mêmes lignes. |
+| 35 | Dette de l'ancien fichier dont la catégorie n'a pas la nature attendue (dette basculée de « je dois » à « on me doit ») | Reprise sans catégorie ; Cashmyr la demande au prochain versement (décision 26). La confirmation le dit. |
+| 36 | Liens vers un objectif, une dette ou une récurrence supprimés dans l'ancienne application | Écartés, comme elle le faisait ; la vérification croisée prouve que rien ne change et la confirmation dit combien. |
+| 37 | Transfert entre deux comptes d'épargne rattaché à un objectif | L'ancienne application le comptait +montant, Cashmyr 0 : l'import est refusé, avec l'opération en cause. |
 
 Lectures validées avec la section dettes :
 - Total : `principal` s'il est > 0.
@@ -521,6 +536,5 @@ Reprise, choix d'interface validés le 24/09/2026 :
   appareil déjà en service, elle annonce seulement ce qui change vraiment : une ligne identique à
   l'horodatage près ne compte pas (même règle pour l'import d'une sauvegarde).
 
-Pour finir l'étape 5 : l'export d'essai `mes-finances-essai.json` (transfert, récurrence et mois annulé,
-opérations rattachées à un objectif et à une dette, couleurs choisies) donnera le format des cas encore
-refusés. L'en-tête CSV avec la colonne `Dette` est connu et repris par l'export CSV.
+Reprise, choix validés le 24/09/2026 : décisions 35 à 37 ci-dessus. L'en-tête CSV avec la colonne `Dette`
+est repris par l'export CSV.

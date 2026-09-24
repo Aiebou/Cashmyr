@@ -1,18 +1,19 @@
 import { accountFigures } from "../calc/accounts";
 import { debtPaid } from "../calc/debts";
-import { goalProgress } from "../calc/goals";
+import { goalProgress, goalTarget } from "../calc/goals";
 import { monthAggregates } from "../calc/month";
 import { legacyCategoryId } from "../defaults";
 import { legacyId } from "../ids";
-import type { Bucket, Cents, Dataset, Day, Month } from "../model";
+import type { Cents, Dataset, Day, Month, Role } from "../model";
 import { formatCents } from "../money";
 import type { LegacyExport } from "./legacy";
 
 /**
  * Vérification croisée de la reprise (§7). Un calculateur minimal, indépendant de `core`,
- * lit l'ancien format en euros et recalcule les totaux par mois, les soldes par compte,
- * l'avancement des objectifs et le réglé des dettes. Chaque résultat est comparé au
- * centime près avec celui de `core` sur les données converties.
+ * refait sur l'ancien format, en euros, les calculs de l'ancienne application (`agg`,
+ * `balances`, `goalProgress`, `goalTarget`, `debtRepaid` de son code) : totaux par mois,
+ * soldes, avancement et cible des objectifs, réglé des dettes. Chaque résultat est comparé
+ * au centime près avec celui de `core` sur les données converties.
  */
 
 export type LegacyChecked = { months: number; accounts: number; goals: number; debts: number };
@@ -20,11 +21,14 @@ export type LegacyChecked = { months: number; accounts: number; goals: number; d
 /** Toutes les opérations comptent, quelle que soit leur date. */
 const ALL_TIME: Day = "9999-12-31";
 
+const saves = (role: Role | undefined) => role === "epargne" || role === "invest";
+
 type MonthTotals = { count: number; income: number; needs: number; wants: number; saved: number };
 
-/** Le calculateur de l'ancien format : euros décimaux, règles du cahier des charges. */
+/** Le calculateur de l'ancienne application : euros décimaux, ses règles telles qu'écrites. */
 function legacyFigures(file: LegacyExport) {
   const bucketOf = new Map(file.cats.map((c) => [c.id, c.bucket]));
+  const roleOf = new Map(file.accounts.map((a) => [a.id, a.role]));
   const months = new Map<Month, MonthTotals>(
     file.months.map((m) => [m, { count: 0, income: 0, needs: 0, wants: 0, saved: 0 }]),
   );
@@ -34,35 +38,72 @@ function legacyFigures(file: LegacyExport) {
   for (const it of file.items) {
     const t = months.get(it.month)!;
     t.count++;
-    if (it.t === "in") {
+    if (it.t === "tx") {
+      if (saves(roleOf.get(it.to))) t.saved += it.amt;
+      if (saves(roleOf.get(it.from))) t.saved -= it.amt;
+      move(it.from, -it.amt);
+      move(it.to, it.amt);
+    } else if (it.t === "in") {
       t.income += it.amt;
       move(it.acc, it.amt);
     } else {
-      const bucket = bucketOf.get(it.cat) as Bucket;
-      if (bucket === "besoin") t.needs += it.amt;
-      else if (bucket === "envie") t.wants += it.amt;
-      else t.saved += it.amt;
+      const bucket = bucketOf.get(it.cat);
+      if (bucket === "envie") t.wants += it.amt;
+      else if (bucket === "invest") t.saved += it.amt;
+      else t.needs += it.amt;
       move(it.acc, -it.amt);
     }
   }
 
-  const goals = new Map(
-    file.goals.map((g) => [
-      g.id,
-      // L'ancien format ne rattache encore aucune opération : un objectif « tagged » est à 0.
-      g.source === "account" ? g.accounts.reduce((sum, a) => sum + (balances.get(a) ?? 0), 0) : 0,
-    ]),
-  );
-  const debts = new Map(file.debts.map((d) => [d.id, d.paidManual]));
-  return { months, balances, goals, debts };
+  const goals = new Map<string, { progress: number; target: number }>();
+  /** Décision 37 : cas où l'ancienne application et Cashmyr ne comptent pas pareil. */
+  const divergences: string[] = [];
+  for (const g of file.goals) {
+    let progress = 0;
+    if (g.source === "account") progress = g.accounts.reduce((sum, a) => sum + (balances.get(a) ?? 0), 0);
+    else {
+      for (const it of file.items) {
+        if (it.goal !== g.id) continue;
+        if (it.t === "tx") {
+          const toSaves = saves(roleOf.get(it.to));
+          const fromSaves = saves(roleOf.get(it.from));
+          // L'ancienne application : « vers l'épargne, sinon depuis l'épargne » ; Cashmyr applique les deux.
+          if (toSaves && fromSaves) {
+            divergences.push(
+              `l'opération du ${it.d} (${formatCents(Math.round(it.amt * 100))}) est un transfert entre deux comptes d'épargne ` +
+                `rattaché à l'objectif « ${g.name} » : l'ancienne application le comptait en plus, Cashmyr le compte pour zéro. ` +
+                "Retire ce rattachement dans l'ancienne application, puis refais l'export",
+            );
+          }
+          if (toSaves) progress += it.amt;
+          else if (fromSaves) progress -= it.amt;
+        } else if (it.t === "in") progress += it.amt;
+        else progress += bucketOf.get(it.cat) === "invest" ? it.amt : -it.amt;
+      }
+    }
+    const target = g.targetMode === "steps" ? g.steps.reduce((sum, s) => sum + s.amount, 0) : g.target;
+    goals.set(g.id, { progress, target });
+  }
+
+  const debts = new Map<string, number>();
+  for (const d of file.debts) {
+    let paid = d.paidManual;
+    for (const it of file.items) {
+      if (it.debt !== d.id) continue;
+      if (d.direction === "lent") paid += it.t === "in" ? it.amt : -it.amt;
+      else paid += it.t === "in" ? -it.amt : it.amt;
+    }
+    debts.set(d.id, paid);
+  }
+  return { months, balances, goals, debts, divergences };
 }
 
 /** Les sommes d'euros décimaux ne sont exactes qu'au flottant près : on les ramène au centime. */
 const toCents = (euros: number): Cents => Math.round(euros * 100);
 
 export function crossCheckLegacy(file: LegacyExport, data: Dataset): { issues: string[]; checked: LegacyChecked } {
-  const issues: string[] = [];
   const old = legacyFigures(file);
+  const issues: string[] = [...old.divergences];
   const compare = (what: string, legacyEuros: number, converted: Cents) => {
     const expected = toCents(legacyEuros);
     if (expected !== converted) {
@@ -91,8 +132,12 @@ export function crossCheckLegacy(file: LegacyExport, data: Dataset): { issues: s
 
   const goals = new Map(data.collections.goals.map((g) => [g.id, g]));
   for (const goal of file.goals) {
+    // Un écart déjà expliqué (décision 37) n'est pas répété.
+    if (old.divergences.some((d) => d.includes(`l'objectif « ${goal.name} »`))) continue;
     const converted = goals.get(legacyId("goal", goal.id));
-    compare(`l'avancement de l'objectif « ${goal.name} »`, old.goals.get(goal.id)!, converted ? goalProgress(data, converted, ALL_TIME) : 0);
+    const o = old.goals.get(goal.id)!;
+    compare(`l'avancement de l'objectif « ${goal.name} »`, o.progress, converted ? goalProgress(data, converted, ALL_TIME) : 0);
+    compare(`la cible de l'objectif « ${goal.name} »`, o.target, converted ? goalTarget(data, converted) : 0);
   }
 
   const debts = new Map(data.collections.debts.map((d) => [d.id, d]));

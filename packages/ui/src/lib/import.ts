@@ -15,9 +15,31 @@ function legacyContents({ counts }: LegacyConversion): string {
       counts.categories > 0 ? count(counts.categories, "catégorie", "catégories") : "",
       counts.goals > 0 ? count(counts.goals, "objectif", "objectifs") : "",
       counts.debts > 0 ? count(counts.debts, "dette", "dettes") : "",
+      counts.recurrences > 0 ? count(counts.recurrences, "récurrence", "récurrences") : "",
       count(counts.operations, "opération", "opérations"),
+      counts.skips > 0 ? count(counts.skips, "mois annulé", "mois annulés") : "",
     ].filter(Boolean),
   );
+}
+
+/** Ce que la reprise laisse de côté, dit avant d'écrire (décisions 35 et 36). */
+function legacyNotes({ deadLinks, clearedDebtCategories }: LegacyConversion): string[] {
+  const notes: string[] = [];
+  if (deadLinks > 0) {
+    notes.push(
+      `${count(deadLinks, "lien vers un élément supprimé est écarté", "liens vers des éléments supprimés sont écartés")}, ` +
+        "comme le faisait l'ancienne application : aucun total ne change.",
+    );
+  }
+  if (clearedDebtCategories.length > 0) {
+    const names = list(clearedDebtCategories.map((n) => `« ${n} »`));
+    notes.push(
+      clearedDebtCategories.length === 1
+        ? `La dette ${names} est reprise sans catégorie : la sienne ne correspondait pas au sens de la dette. Cashmyr te la demandera au prochain versement.`
+        : `Les dettes ${names} sont reprises sans catégorie : la leur ne correspondait pas au sens de la dette. Cashmyr te la demandera au prochain versement.`,
+    );
+  }
+  return notes;
 }
 
 /** Ce que la vérification croisée a trouvé identique. */
@@ -26,7 +48,7 @@ function legacyChecked({ checked }: LegacyConversion): string {
     [
       checked.months > 0 ? `les totaux de ${count(checked.months, "mois", "mois")}` : "",
       checked.accounts > 0 ? `les soldes de ${count(checked.accounts, "compte", "comptes")}` : "",
-      checked.goals > 0 ? `l'avancement de ${count(checked.goals, "objectif", "objectifs")}` : "",
+      checked.goals > 0 ? `l'avancement et la cible de ${count(checked.goals, "objectif", "objectifs")}` : "",
       checked.debts > 0 ? `le réglé de ${count(checked.debts, "dette", "dettes")}` : "",
     ].filter(Boolean),
   );
@@ -94,6 +116,7 @@ export async function importFromFile(store: AppStore): Promise<void> {
           message: [
             `Ancienne application : ${legacyContents(parsed.conversion)}.`,
             `Vérifié au centime près par un recalcul sur l'ancien fichier : ${legacyChecked(parsed.conversion)}.`,
+            ...legacyNotes(parsed.conversion),
             fresh ? "" : `${changes} Rien de ce que Cashmyr contient déjà n'est écrasé.`,
           ]
             .filter(Boolean)

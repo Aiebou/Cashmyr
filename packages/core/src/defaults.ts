@@ -2,10 +2,12 @@ import { legacyId } from "./ids";
 import type { Bucket, Category, SeriesColor } from "./model";
 
 /**
- * Catégories par défaut, reprises de l'application d'origine avec ses identifiants
- * (`r1`… pour les revenus, `d8`… pour les dépenses). Leurs identifiants dérivent de
- * ceux-là, comme à l'import : un appareil qui a commencé avec elles puis reprend
- * l'ancien fichier n'en a qu'un jeu, et deux appareils qui les créent aussi.
+ * Catégories par défaut, telles que l'ancien fichier les contient, avec leurs identifiants
+ * (`r1`… pour les revenus, `d8`… pour les dépenses). Leurs identifiants dérivent de ceux-là,
+ * comme à l'import : un appareil qui a commencé avec elles puis reprend l'ancien fichier
+ * n'en a qu'un jeu, et deux appareils qui les créent aussi. La dernière version du code de
+ * l'ancienne application ne crée plus que `r1`… `d24` et nomme `r5` « Gains de trading » :
+ * un fichier qui en viendrait garde ses noms, qui l'emportent à la reprise.
  */
 export const DEFAULT_CATEGORIES: readonly { legacy: string; name: string; kind: "in" | "out"; bucket?: Bucket }[] = [
   { legacy: "r1", name: "Salaire", kind: "in" },
