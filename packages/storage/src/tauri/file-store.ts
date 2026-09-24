@@ -1,5 +1,5 @@
 import { applyChanges, emptyDataset, type Changes, type Dataset, type Preferences } from "@cashmyr/core";
-import type { DeviceState, LocalStore, SnapshotInfo } from "../types";
+import type { DeviceState, LocalStore, SetAsideInfo, SnapshotInfo } from "../types";
 
 /** Opérations de fichiers utilisées, sur des chemins relatifs au répertoire de données de l'application. */
 export interface FsLike {
@@ -25,30 +25,14 @@ const TMP = "data.json.tmp";
 const BACKUPS = "backups";
 const KEEP_SNAPSHOTS = 5;
 const SNAPSHOT_NAME = /^data-(\d+)\.json$/;
+/** Versions refusées à l'ouverture, mises de côté par l'écran de secours : un fichier par incident. */
+const SET_ASIDE = "mis-de-cote";
+const SET_ASIDE_NAME = /^data-(\d+)\.json$/;
 
 const byteLength = (text: string) => new TextEncoder().encode(text).length;
 
 export class LocalFileCorruptedError extends Error {
   override name = "LocalFileCorruptedError";
-}
-
-/**
- * Marche à suivre quand `data.json` est illisible ou invalide au démarrage. L'application ne
- * s'ouvre pas : Paramètres → Sauvegardes est hors d'atteinte. Les fichiers de `backups/` sont des
- * copies exactes de `data.json`, prises à chaque ouverture réussie, et jamais à partir d'un
- * fichier refusé : la plus récente est donc bonne.
- */
-export function localRecoverySteps(dataDir: string): string[] {
-  const sep = dataDir.includes("\\") ? "\\" : "/";
-  return [
-    "Quitte Cashmyr.",
-    `Ouvre le dossier ${dataDir} (sur Mac : Finder, menu Aller → Aller au dossier…, puis colle ce chemin).`,
-    `Renomme ${DATA} en data-illisible.json : il reste là, rien n'est effacé.`,
-    `Dans le sous-dossier ${dataDir}${sep}${BACKUPS}, copie le fichier data-….json au plus grand numéro : c'est la copie la plus récente. Colle-la dans le dossier de l'étape 2 et renomme-la ${DATA}.`,
-    "Relance Cashmyr : tu retrouves tes données telles qu'à la dernière ouverture réussie. Si la synchronisation est en place, " +
-      "ce qui avait été synchronisé depuis revient à la synchronisation suivante. Si Cashmyr refuse encore de démarrer, " +
-      "recommence avec la copie précédente.",
-  ];
 }
 
 /**
@@ -76,7 +60,7 @@ export class TauriFileLocalStore implements LocalStore {
     try {
       this.cache = JSON.parse(text) as Dataset;
     } catch {
-      // Rien n'est écrit ni copié : les copies de sauvegarde restent intactes (voir localRecoverySteps).
+      // Rien n'est écrit ni copié : Repository.open en fait une LocalDataError (écran de secours).
       throw new LocalFileCorruptedError(`Le fichier ${DATA} n'est pas du JSON lisible.`);
     }
     return this.cache;
@@ -159,5 +143,52 @@ export class TauriFileLocalStore implements LocalStore {
 
   async flush(): Promise<void> {
     await this.writing;
+  }
+
+  async readRaw(): Promise<string | null> {
+    await this.flush();
+    return (await this.fs.exists(DATA)) ? this.fs.readTextFile(DATA) : null;
+  }
+
+  /** Copie data.json dans mis-de-cote/, sans y toucher : il n'est remplacé qu'ensuite, d'un seul renommage. */
+  async setAside(now: number): Promise<SetAsideInfo | null> {
+    const text = await this.readRaw();
+    if (text === null) return null;
+    await this.fs.mkdir(SET_ASIDE);
+    const name = `data-${now}.json`;
+    await this.fs.writeTextFile(`${SET_ASIDE}/${name}.tmp`, text);
+    await this.fs.rename(`${SET_ASIDE}/${name}.tmp`, `${SET_ASIDE}/${name}`);
+    return { id: String(now), setAsideAt: now, bytes: byteLength(text) };
+  }
+
+  async clear(): Promise<void> {
+    await this.flush();
+    if (await this.fs.exists(DATA)) await this.fs.remove(DATA);
+    this.cache = null;
+  }
+
+  async listSetAside(): Promise<SetAsideInfo[]> {
+    if (!(await this.fs.exists(SET_ASIDE))) return [];
+    const out: SetAsideInfo[] = [];
+    for (const entry of await this.fs.readDir(SET_ASIDE)) {
+      const match = entry.isFile ? SET_ASIDE_NAME.exec(entry.name) : null;
+      if (!match) continue;
+      const text = await this.fs.readTextFile(`${SET_ASIDE}/${entry.name}`);
+      out.push({ id: match[1]!, setAsideAt: Number(match[1]), bytes: byteLength(text) });
+    }
+    return out.sort((a, b) => b.setAsideAt - a.setAsideAt);
+  }
+
+  async readSetAside(id: string): Promise<string> {
+    return this.fs.readTextFile(this.setAsidePath(id));
+  }
+
+  async removeSetAside(id: string): Promise<void> {
+    await this.fs.remove(this.setAsidePath(id));
+  }
+
+  private setAsidePath(id: string): string {
+    if (!/^\d+$/.test(id)) throw new Error(`Version mise de côté introuvable : ${id}`);
+    return `${SET_ASIDE}/data-${id}.json`;
   }
 }

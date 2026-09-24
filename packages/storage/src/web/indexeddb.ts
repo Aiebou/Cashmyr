@@ -1,6 +1,6 @@
 import { COLLECTION_NAMES, type Changes, type Collections, type Dataset, type Preferences } from "@cashmyr/core";
 import { openDB, type IDBPDatabase } from "idb";
-import type { DeviceState, LocalStore, SnapshotInfo } from "../types";
+import type { DeviceState, LocalStore, SetAsideInfo, SnapshotInfo } from "../types";
 
 const DB_VERSION = 1;
 const META = "meta";
@@ -9,6 +9,9 @@ const KEEP_SNAPSHOTS = 5;
 const STORES = [...COLLECTION_NAMES, META] as string[];
 
 type StoredSnapshot = SnapshotInfo & { json: string };
+/** Version refusée à l'ouverture, mise de côté par l'écran de secours : la dernière seulement. */
+const SET_ASIDE = "setAside";
+type StoredSetAside = SetAsideInfo & { content: string };
 
 const byteLength = (text: string) => new TextEncoder().encode(text).length;
 
@@ -122,6 +125,42 @@ export class IndexedDbLocalStore implements LocalStore {
   }
 
   async flush(): Promise<void> {}
+
+  async readRaw(): Promise<string | null> {
+    const data = await this.load();
+    return data ? JSON.stringify(data) : null;
+  }
+
+  async setAside(now: number): Promise<SetAsideInfo | null> {
+    const content = await this.readRaw();
+    if (content === null) return null;
+    const info: SetAsideInfo = { id: String(now), setAsideAt: now, bytes: byteLength(content) };
+    await this.db.put(META, { ...info, content } satisfies StoredSetAside, SET_ASIDE);
+    return info;
+  }
+
+  async clear(): Promise<void> {
+    const tx = this.db.transaction(STORES, "readwrite");
+    const writes: Promise<unknown>[] = COLLECTION_NAMES.map((name) => tx.objectStore(name).clear());
+    writes.push(tx.objectStore(META).delete("preferences"), tx.objectStore(META).delete("schemaVersion"));
+    await Promise.all([...writes, tx.done]);
+  }
+
+  async listSetAside(): Promise<SetAsideInfo[]> {
+    const kept = (await this.db.get(META, SET_ASIDE)) as StoredSetAside | undefined;
+    return kept ? [{ id: kept.id, setAsideAt: kept.setAsideAt, bytes: kept.bytes }] : [];
+  }
+
+  async readSetAside(id: string): Promise<string> {
+    const kept = (await this.db.get(META, SET_ASIDE)) as StoredSetAside | undefined;
+    if (!kept || kept.id !== id) throw new Error(`Version mise de côté introuvable : ${id}`);
+    return kept.content;
+  }
+
+  async removeSetAside(id: string): Promise<void> {
+    const kept = (await this.db.get(META, SET_ASIDE)) as StoredSetAside | undefined;
+    if (kept?.id === id) await this.db.delete(META, SET_ASIDE);
+  }
 
   close(): void {
     this.db.close();

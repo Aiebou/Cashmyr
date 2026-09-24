@@ -1,25 +1,24 @@
-import { restoreEverywhere, serializeBackup, type RestoreResult } from "@cashmyr/core";
-import type { SnapshotInfo } from "@cashmyr/storage";
+import { restoreEverywhere, serializeBackup, toLocalDay, type RestoreResult } from "@cashmyr/core";
+import type { SetAsideInfo, SnapshotInfo } from "@cashmyr/storage";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "../../components/controls";
 import { RestoreIcon } from "../../components/icons";
 import { Card } from "../../components/layout";
 import { operationsCsv } from "../../lib/export";
-import { count, stamp } from "../../lib/format";
+import { count, fileSize, stamp } from "../../lib/format";
 import { importFromFile } from "../../lib/import";
 import type { AppStore } from "../../store/app-store";
 import { useActions, useApp, useStoreApi } from "../../store/context";
 import s from "./Settings.module.css";
-
-const size = (bytes: number) => (bytes < 1024 ? `${bytes} o` : `${Math.round(bytes / 1024)} Ko`);
 
 /** Export, import, copies de sauvegarde. */
 export function DataSection() {
   const store = useStoreApi();
   const platform = useApp((st) => st.platform);
   const today = useApp((st) => st.today);
-  const { toast } = useActions();
+  const { toast, ask } = useActions();
   const [snapshots, setSnapshots] = useState<SnapshotInfo[] | null>(null);
+  const [setAside, setSetAside] = useState<SetAsideInfo[]>([]);
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -28,11 +27,35 @@ export function DataSection() {
     } catch {
       setSnapshots([]);
     }
+    try {
+      setSetAside(await platform.local.listSetAside());
+    } catch {
+      setSetAside([]);
+    }
   }, [platform]);
   useEffect(() => void refresh(), [refresh]);
 
   const save = async (name: string, mime: string, content: string, message: string) => {
     if (await platform.files.saveAs(name, mime, content)) toast(message);
+  };
+
+  // Décision 40 : les versions abîmées gardées par l'écran de secours.
+  const saveSetAside = async (v: SetAsideInfo) => {
+    const content = await platform.local.readSetAside(v.id);
+    const day = toLocalDay(new Date(v.setAsideAt));
+    await save(`cashmyr-version-abimee-${day}.json`, "application/json", content, "Version abîmée enregistrée");
+  };
+  const removeSetAside = async (v: SetAsideInfo) => {
+    const ok = await ask({
+      title: "Supprimer cette version abîmée ?",
+      message: `La version mise de côté le ${stamp(v.setAsideAt)} sera effacée de cet appareil. Enregistre-la d'abord si tu veux la garder.`,
+      confirmLabel: "Supprimer",
+      danger: true,
+    });
+    if (!ok) return;
+    await platform.local.removeSetAside(v.id);
+    toast("Version abîmée supprimée");
+    void refresh();
   };
 
   // Décision 33 : restaurer une copie la fait gagner partout.
@@ -81,7 +104,7 @@ export function DataSection() {
             {snapshots.map((snap) => (
               <li key={snap.id} className={s.snapshot}>
                 <span>
-                  Copie du {stamp(snap.takenAt)} <span className={s.muted}>· {size(snap.bytes)}</span>
+                  Copie du {stamp(snap.takenAt)} <span className={s.muted}>· {fileSize(snap.bytes)}</span>
                 </span>
                 <Button size="small" variant="ghost" disabled={busy} onClick={() => restore(snap)} aria-label={`Restaurer la copie du ${stamp(snap.takenAt)}`}>
                   <RestoreIcon size={16} />
@@ -96,6 +119,27 @@ export function DataSection() {
           actuel est prise juste avant.
         </p>
       </Card>
+      {setAside.length > 0 && (
+        <Card title="Versions abîmées mises de côté" subtitle="Gardées par l'écran de secours, quand les données de cet appareil n'ont pas pu être ouvertes.">
+          <ul className={s.list}>
+            {setAside.map((v) => (
+              <li key={v.id} className={s.snapshot}>
+                <span>
+                  Mise de côté le {stamp(v.setAsideAt)} <span className={s.muted}>· {fileSize(v.bytes)}</span>
+                </span>
+                <span className={s.actions}>
+                  <Button size="small" variant="ghost" onClick={() => void saveSetAside(v)} aria-label={`Enregistrer la version mise de côté le ${stamp(v.setAsideAt)}`}>
+                    Enregistrer
+                  </Button>
+                  <Button size="small" variant="ghost" onClick={() => void removeSetAside(v)} aria-label={`Supprimer la version mise de côté le ${stamp(v.setAsideAt)}`}>
+                    Supprimer
+                  </Button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
     </>
   );
 }

@@ -1,6 +1,6 @@
 import { applyChanges, occurrenceId, setPreference, tombstone, touch, ValidationError, type Recurrence } from "@cashmyr/core";
 import { describe, expect, it } from "vitest";
-import { Repository } from "../src";
+import { LocalDataError, Repository } from "../src";
 import { TauriFileLocalStore } from "../src/tauri";
 import { Clock, MemoryFs, MemoryKv, op, seed, TODAY } from "./fakes";
 
@@ -126,8 +126,8 @@ describe("dépôt local", () => {
     const broken = JSON.parse(fs.files.get("data.json")!);
     broken.collections.operations.push(op("op-x", "2026-09-01", 12.5, "cat-courses", "acc-courant", 2));
     fs.files.set("data.json", JSON.stringify(broken));
-    await expect(open()).rejects.toThrow(ValidationError);
-    // La copie restante est celle d'avant : localRecoverySteps peut y renvoyer.
+    await expect(open()).rejects.toThrow(LocalDataError);
+    // La copie restante est celle d'avant : l'écran de secours peut y renvoyer.
     expect(backups()).toEqual(good);
   });
 

@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 import { applyChanges, emptyDataset, setPreference, type Dataset } from "@cashmyr/core";
 import { describe, expect, it } from "vitest";
 import type { DeviceState, LocalStore } from "../src";
-import { LocalFileCorruptedError, localRecoverySteps, TauriFileLocalStore } from "../src/tauri";
+import { LocalFileCorruptedError, TauriFileLocalStore } from "../src/tauri";
 import { IndexedDbLocalStore } from "../src/web";
 import { MemoryFs, MemoryKv, op, seed, T0 } from "./fakes";
 
@@ -134,16 +134,6 @@ describe("fichier local du bureau : écriture atomique", () => {
     expect(fs.files.get("data.json")).toBe("{abîmé");
     expect([...fs.files.keys()].filter((k) => k.startsWith("backups/"))).toEqual(["backups/data-1000.json"]);
     expect(fs.files.get("backups/data-1000.json")).toBe(good);
-  });
-
-  it("marche à suivre : le vrai dossier, le séparateur du système, data.json gardé de côté", () => {
-    const mac = localRecoverySteps("/Users/moi/Library/Application Support/io.github.aiebou.cashmyr");
-    expect(mac[1]).toContain("/Users/moi/Library/Application Support/io.github.aiebou.cashmyr");
-    expect(mac[2]).toContain("data-illisible.json");
-    expect(mac[3]).toContain("io.github.aiebou.cashmyr/backups");
-    expect(mac[3]).toContain("renomme-la data.json");
-    const windows = localRecoverySteps("C:\\Users\\moi\\AppData\\Roaming\\io.github.aiebou.cashmyr");
-    expect(windows[3]).toContain("io.github.aiebou.cashmyr\\backups");
   });
 });
 
