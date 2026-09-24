@@ -68,7 +68,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQyQjUxNDg4MTdCMTNGNDQKUldSRVA3RVhpQlMxUWpsQWp0TmIrV1N5Mms4OFF2NjhTVmloWUJUS0Z3dE90UFd5Yk52T3J5eVcK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVGQkNBODlFQjBDRDk3QwpSV1I4MlF6cmljcjdEaWN5YzBUOHY0SXlDZHY5VTdFVlNvZ29hTjU5eG15NkV4dk41QkdheVFNNQo=",
       "endpoints": ["https://github.com/Aiebou/Cashmyr/releases/latest/download/latest.json"],
       "windows": {
         "installMode": "passive"
