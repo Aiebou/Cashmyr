@@ -1,14 +1,19 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { appDataDir, join } from "@tauri-apps/api/path";
 import * as dialog from "@tauri-apps/plugin-dialog";
 import * as fs from "@tauri-apps/plugin-fs";
+import { relaunch } from "@tauri-apps/plugin-process";
 import { load } from "@tauri-apps/plugin-store";
-import type { FileIO, LocalStore, SyncFile } from "../types";
+import { check } from "@tauri-apps/plugin-updater";
+import type { AppUpdates, FileIO, LocalStore, SyncFile } from "../types";
 import { TauriFileLocalStore, type FsLike } from "./file-store";
 import { createTauriFileIO, createTauriSync, type DialogLike } from "./sync";
+import { createTauriUpdates } from "./updates";
 
 export { LocalFileCorruptedError, TauriFileLocalStore, type FsLike, type KeyValueLike } from "./file-store";
 export { createTauriFileIO, createTauriSync, SYNC_COMMANDS, type Invoke } from "./sync";
+export { createTauriUpdates, type UpdaterLike } from "./updates";
 
 /** `plugin-fs` ramené à des chemins relatifs au répertoire de données de l'application. */
 async function appDataFs(): Promise<FsLike> {
@@ -27,7 +32,12 @@ async function appDataFs(): Promise<FsLike> {
 }
 
 /** Assemble les adaptateurs du bureau. Appelé une seule fois, par le point d'entrée Tauri. */
-export async function createTauriPlatformParts(): Promise<{ local: LocalStore; sync: SyncFile; files: FileIO }> {
+export async function createTauriPlatformParts(): Promise<{
+  local: LocalStore;
+  sync: SyncFile;
+  files: FileIO;
+  updates: AppUpdates;
+}> {
   const store = await load("device.json", { autoSave: false, defaults: {} });
   const local = new TauriFileLocalStore(await appDataFs(), {
     get: <T>(key: string) => store.get<T>(key),
@@ -42,5 +52,6 @@ export async function createTauriPlatformParts(): Promise<{ local: LocalStore; s
     local,
     sync: createTauriSync(invoke),
     files: createTauriFileIO(dialogs, { readTextFile: (p) => fs.readTextFile(p), writeTextFile: (p, d) => fs.writeTextFile(p, d) }),
+    updates: createTauriUpdates({ check: () => check(), relaunch: () => relaunch() }, await getVersion()),
   };
 }

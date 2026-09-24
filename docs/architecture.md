@@ -16,10 +16,13 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 ├── README.md
 ├── .gitignore                   node_modules, dist, target, *.local.json,
 │                                mes-finances*.json, finances-sync*.json
-├── .github/workflows/
-│   ├── ci.yml                   typecheck + vitest sur chaque push et PR
-│   ├── deploy-pages.yml         main → build apps/web → actions/deploy-pages
-│   └── release.yml              tag v* → tauri-action, matrice macOS / Windows / Linux
+├── .github/
+│   ├── release-notes.md         texte de chaque Release
+│   └── workflows/
+│       ├── ci.yml               typecheck + vitest, et fmt + clippy + tests Rust sur macOS, à chaque push et PR
+│       ├── deploy-pages.yml     main → tests → build apps/web → actions/deploy-pages
+│       └── release.yml          tag v* → versions et tests → brouillon → tauri-action (macOS universel,
+│                                Windows, Linux) → publication une fois latest.json complet
 ├── docs/architecture.md         ce document, tenu à jour
 │
 ├── packages/core/               pur : ni React, ni stockage, ni Date.now() implicite
@@ -58,9 +61,9 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │       ├── repository.ts        Repository : jeu en mémoire, validation, récurrences, modifications en attente
 │       ├── engine.ts            SyncEngine : lire → fusionner → adopter → écrire, différé 2 s, état affiché
 │       ├── web/                 entrée « @cashmyr/storage/web » : IndexedDB, File System Access,
-│       │                        mode assisté, exports, détection du mode
+│       │                        mode assisté, exports, détection du mode, service worker (updates.ts)
 │       └── tauri/               entrée « @cashmyr/storage/tauri » : fichier local atomique,
-│                                commandes Rust de synchronisation, dialogues natifs
+│                                commandes Rust de synchronisation, dialogues natifs, updater (updates.ts)
 │   test/                        adaptateurs, dépôt, moteur, et bout en bout à trois appareils
 │
 ├── packages/ui/                 tous les écrans, aucune détection de plateforme
@@ -74,12 +77,15 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │       └── format.ts            Intl.NumberFormat fr-FR
 │
 └── apps/
-    ├── web/                     index.html, main.tsx, vite.config.ts (base = /<dépôt>/),
-    │   ├── public/              manifest.webmanifest, icônes 192 / 512 / maskable, apple-touch-icon
-    │   └── src/platform.ts      assemble la Platform web (IDB + fs-access ou assisted)
+    ├── web/                     index.html, main.tsx, vite.config.ts (base = /Cashmyr/, vite-plugin-pwa :
+    │   │                        manifeste et précache ; CSP en balise meta)
+    │   ├── icons/maskable.svg   source des icônes maskable et apple-touch-icon
+    │   ├── public/              icons/ (192, 512, maskable 192 et 512), apple-touch-icon.png
+    │   └── src/platform.ts      assemble la Platform web (IDB + fs-access ou assisted, service worker)
     └── desktop/                 index.html, main.tsx, vite.config.ts (port 1420, base relative)
         ├── src/platform.ts      assemble la Platform bureau
         └── src-tauri/           Cargo.toml, build.rs (permissions des commandes), tauri.conf.json,
+                                 tauri.release.conf.json (archives signées de l'updater, en Release seulement),
                                  Info.plist (français), capabilities/default.json,
                                  icons/ (icon.svg est la source, « pnpm tauri icon » en tire le reste),
                                  src/{main.rs, lib.rs, menu.rs, sync_file.rs}
@@ -92,7 +98,8 @@ Un écran qui doit se comporter différemment lit une capacité de `platform` (p
 `platform.sync.mode === "assisted"`), jamais la cible.
 
 **Dépendances d'exécution** : `react`, `react-dom`, `zustand`, `idb`, `uuid`, `@tauri-apps/api` et les
-plugins côté bureau (`dialog`, `fs`, `store`, plus `single-instance` côté Rust seulement). **Développement** : `vite`, `@vitejs/plugin-react`, `typescript`, `vitest`,
+plugins côté bureau (`dialog`, `fs`, `store`, `updater`, `process`, plus `single-instance` côté Rust seulement),
+`workbox-window` côté web. **Développement** : `vite`, `@vitejs/plugin-react`, `typescript`, `vitest`,
 `vite-plugin-pwa` (précache Workbox et invite de mise à jour), `@tauri-apps/cli`. Les woff2 de Spectral
 et Archivo (licence OFL) sont copiés une fois depuis `@fontsource/*` dans `packages/ui/src/theme/fonts/`
 et commités avec leur licence.
@@ -316,7 +323,10 @@ Les définitions font foi dans [`packages/storage/src/types.ts`](../packages/sto
   - `AutoSyncFile` (`choose`, `status`, `requestPermission`, `read`, `writeAtomic`, `forget`), implémentée
     par `createTauriSync` et `createFsAccessSync`.
   - `AssistedSyncFile` (`pickAndRead`, `offer`), implémentée par `createAssistedSync`.
-- **`FileIO`** : exports et imports hors synchronisation. **`AppUpdates`** : branchée à l'étape 6.
+- **`FileIO`** : exports et imports hors synchronisation.
+- **`AppUpdates`** : version en service, `onAvailable` (une nouvelle version est prête, `kind` « reload » ou
+  « restart »), `onOfflineReady` (PWA) et `check` (bureau, sur clic). `createPwaUpdates` enveloppe le
+  `registerSW` de vite-plugin-pwa, `createTauriUpdates` les plugins `updater` et `process`.
 - **`Platform`** : ce que chaque point d'entrée assemble et passe à `<App />`.
 
 **`Repository`** est la seule porte d'entrée des données.
@@ -347,6 +357,7 @@ Les définitions font foi dans [`packages/storage/src/types.ts`](../packages/sto
 | Sync | auto : lancement, focus, 2 s après modification | auto, même rythme ; permission redemandée si expirée | assistée, sur bouton |
 | Écriture atomique | commande Rust : `.tmp` dans le même dossier, `fsync`, `rename` | `createWritable()` écrit dans un fichier d'échange que Chromium substitue à `close()`. L'API web ne permet pas de renommer un fichier de l'utilisateur, c'est le seul mécanisme atomique disponible. | le navigateur livre le fichier complet ; c'est l'utilisateur qui écrase l'original |
 | Choix du mode | fixe | détection de `showOpenFilePicker`, hors mobile | par défaut |
+| Mise à jour de l'application | sur clic (« Rechercher une mise à jour ») : `latest.json` de la dernière Release, paquet vérifié par sa signature, installé puis redémarrage | le navigateur regarde à l'ouverture si le service worker a changé ; la nouvelle version attend, un bandeau propose « Recharger » | idem |
 
 **Déroulé d'une synchronisation automatique.** Lire le fichier. S'il est illisible (JSON tronqué par
 un cloud en cours d'envoi, par exemple), abandonner sans rien écrire et réessayer au prochain focus.
@@ -377,7 +388,8 @@ ne peut pas en produire un valide. Le front ne peut donc pas rediriger la synchr
 fichier. `build.rs` déclare les six commandes : seules celles que liste la capacité sont appelables.
 Un fichier choisi pour un export ou un import n'est accessible que pendant la session où il a été choisi.
 La CSP n'autorise que les fichiers de l'application et l'IPC de Tauri : aucune requête réseau n'est
-possible, même par erreur.
+possible, même par erreur. La recherche de mise à jour passe par Rust (plugin `updater`), sur clic seulement.
+La PWA porte la même CSP, en balise meta puisque GitHub Pages ne permet pas d'en-têtes.
 
 **Premier lancement.** Données vides, un écran d'accueil et trois choix : commencer avec les catégories
 par défaut (celles de l'ancienne app), importer un fichier, ou rejoindre un fichier de synchronisation
@@ -538,3 +550,33 @@ Reprise, choix d'interface validés le 24/09/2026 :
 
 Reprise, choix validés le 24/09/2026 : décisions 35 à 37 ci-dessus. L'en-tête CSV avec la colonne `Dette`
 est repris par l'export CSV.
+
+Publication (étape 6), choix à valider :
+- **macOS : un seul `.dmg` universel** (Apple Silicon et Intel), macOS 12 minimum. Signature ad hoc
+  (`signingIdentity: "-"`) : sans elle, un Mac Apple Silicon déclare l'application « endommagée » et
+  refuse de l'ouvrir. Ce n'est pas une signature par une autorité et elle ne contourne rien : Gatekeeper
+  avertit comme prévu. **Écart avec la consigne** : depuis macOS 15, le clic droit → « Ouvrir » ne suffit
+  plus ; le README donne aussi le chemin Réglages Système → Confidentialité et sécurité → « Ouvrir quand même ».
+- **Release** : le tag doit porter le numéro de `apps/desktop/package.json`, `apps/web/package.json` et
+  `Cargo.toml`, et les tests passent avant toute construction. Les binaires arrivent dans un brouillon, publié
+  seulement quand `latest.json` couvre macOS (deux architectures), Windows et Linux à la bonne version :
+  l'updater ne voit jamais une Release à moitié remplie. Une Release déjà publiée n'est jamais modifiée.
+- Les archives signées de l'updater ne sont produites qu'en Release (`tauri.release.conf.json`) : un
+  `pnpm build:desktop` local n'a pas besoin de la clé privée.
+- Windows : l'updater installe le `-setup.exe` (NSIS) en mode passif, une petite fenêtre de progression,
+  sans droits d'administrateur. Linux : l'updater met à jour l'AppImage ; `.deb` et `.rpm` se mettent à
+  jour à la main.
+- **PWA** : service worker en mode « prompt ». La nouvelle version se télécharge en arrière-plan puis attend.
+  Le bandeau « Nouvelle version disponible. » propose « Recharger » ou « Plus tard ». Paramètres → Application
+  garde le bouton tant que la version attend. Toute la coquille est précachée (pages, scripts, styles, polices,
+  icônes), rien n'est mis en cache à l'exécution. À la première visite, un message dit que l'application
+  fonctionne désormais hors ligne.
+- Avant de recharger ou de redémarrer : un passage de synchronisation s'il reste des modifications en
+  attente (mode automatique), puis les écritures locales se terminent.
+- Paramètres gagne une huitième section, « Application » : version en service et, sur le bureau, « Rechercher une
+  mise à jour ». Une vérification impossible donne la raison technique entre parenthèses, en anglais, telle que
+  Tauri la renvoie.
+- Icônes de la PWA : tuile de l'icône de bureau pour « any » ; pour « maskable » et l'apple-touch-icon, fond plein
+  et anneau réduit à 85 %, dans la zone sûre.
+- La CI passe aussi `cargo fmt`, `clippy` et les tests Rust, sur macOS ; la publication Pages repasse types et
+  tests avant de construire.

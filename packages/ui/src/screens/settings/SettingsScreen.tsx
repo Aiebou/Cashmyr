@@ -3,6 +3,7 @@ import { Segmented } from "../../components/controls";
 import { Card, ScreenTitle, Stack } from "../../components/layout";
 import { useActions, useApp } from "../../store/context";
 import { AccountsSection } from "./AccountsSection";
+import { AppSection } from "./AppSection";
 import { BudgetSection } from "./BudgetSection";
 import { CategoriesSection } from "./CategoriesSection";
 import { DataSection } from "./DataSection";
@@ -37,6 +38,7 @@ const SECTIONS: { id: string; title: string; content: ReactNode }[] = [
   { id: "synchronisation", title: "Synchronisation", content: <SyncSection /> },
   { id: "sauvegardes", title: "Sauvegardes", content: <DataSection /> },
   { id: "apparence", title: "Apparence", content: <Appearance /> },
+  { id: "application", title: "Application", content: <AppSection /> },
 ];
 
 export function SettingsScreen() {

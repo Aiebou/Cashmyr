@@ -1,0 +1,48 @@
+# Vérifications à chaque push et à chaque pull request : types, tests TypeScript, tests Rust.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typescript:
+    name: Types et tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Version de pnpm lue dans le champ packageManager du package.json racine.
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  rust:
+    name: Enveloppe Tauri
+    # macOS : le menu natif n'est compilé que là, et aucune bibliothèque système n'est à installer.
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/desktop/src-tauri
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test

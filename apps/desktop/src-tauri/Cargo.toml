@@ -16,14 +16,17 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
+# Utilisé par `tauri::generate_context!` pour la configuration des plugins (updater).
+serde_json = "1"
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+tauri-plugin-process = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-store = "2"
+tauri-plugin-updater = "2"
 
 [dev-dependencies]
-serde_json = "1"
 tempfile = "3"
 
 [profile.release]

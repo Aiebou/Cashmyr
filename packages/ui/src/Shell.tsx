@@ -134,6 +134,29 @@ function Modals() {
   }
 }
 
+/** Nouvelle version prête : l'application propose, l'utilisateur choisit le moment. */
+function UpdateBanner() {
+  const update = useApp((st) => st.update);
+  const { updates } = useActions();
+  if (!update || update.dismissed) return null;
+  const { version, kind } = update.available;
+  const busy = kind === "reload" ? "Rechargement…" : "Installation…";
+  const label = kind === "reload" ? "Recharger" : "Installer et redémarrer";
+  return (
+    <div className={s.update} role="status">
+      <p className={s.updateText}>{version ? `Cashmyr ${version} est disponible.` : "Nouvelle version disponible."}</p>
+      <div className={s.updateActions}>
+        <Button size="small" variant="ghost" onClick={updates.dismiss} disabled={update.applying}>
+          Plus tard
+        </Button>
+        <Button size="small" variant="primary" onClick={() => void updates.apply()} disabled={update.applying}>
+          {update.applying ? busy : label}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /** Question en attente de réponse (synchronisation, restauration, suppression). */
 function ConfirmDialog() {
   const request = useApp((st) => st.confirm);
@@ -244,6 +267,7 @@ export function Shell() {
           </div>
         )}
       </header>
+      <UpdateBanner />
       <main className={s.main}>{fresh ? <Welcome /> : <Screen tab={tab} />}</main>
       {!fresh && (
         <button type="button" className={s.fab} onClick={() => openModal({ kind: "operation", type: "out" })} aria-label="Nouvelle dépense">

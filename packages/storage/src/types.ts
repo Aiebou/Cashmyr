@@ -82,10 +82,27 @@ export interface FileIO {
   openText(accept: readonly string[]): Promise<{ name: string; content: string } | null>;
 }
 
+/** Nouvelle version de l'application, prête à être appliquée. */
+export type AvailableUpdate = {
+  /** Numéro de la nouvelle version, quand la plateforme le connaît (bureau). */
+  version: string | null;
+  /** « reload » : la PWA recharge la page ; « restart » : le bureau installe puis redémarre. */
+  kind: "reload" | "restart";
+  apply(): Promise<void>;
+};
+
+/** Mises à jour de l'application elle-même, jamais des données. */
 export interface AppUpdates {
-  /** Une nouvelle version est prête : l'application propose de recharger. */
-  onAvailable(cb: (apply: () => Promise<void>) => void): () => void;
-  /** Bureau : vérification sur demande seulement. */
+  /** Version en service. */
+  readonly version: string;
+  /** Une nouvelle version est prête. Rappelé aussitôt si elle l'était déjà. L'application propose, ne force jamais. */
+  onAvailable(cb: (update: AvailableUpdate) => void): () => void;
+  /** PWA : la coquille est en cache, l'application marche désormais hors ligne. Rappelé aussitôt si c'est déjà le cas. */
+  onOfflineReady?: (cb: () => void) => () => void;
+  /**
+   * Bureau : vérification sur demande seulement (décision 17), seul appel réseau de
+   * l'application. Une version trouvée est aussi annoncée par `onAvailable`.
+   */
   check?: () => Promise<"none" | "available">;
 }
 
@@ -97,7 +114,7 @@ export interface Platform {
   local: LocalStore;
   sync: SyncFile;
   files: FileIO;
-  /** Branché avec le service worker et l'updater (étape 6). */
+  /** Service worker de la PWA, updater du bureau. Absent en test. */
   updates?: AppUpdates;
   shortcutHint: string | null;
 }

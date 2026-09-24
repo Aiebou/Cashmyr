@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Icône « maskable » de la PWA, et apple-touch-icon : fond plein, sans marge ni coins,
+       le système découpe lui-même la forme. L'anneau de apps/desktop/src-tauri/icons/icon.svg,
+       réduit à 85 % pour tenir largement dans la zone sûre (cercle de 40 % du côté).
+       PNG de public/ : depuis apps/desktop, « pnpm tauri icon ../web/icons/maskable.svg -o <dossier>
+       -p 180,192,512 » (apple-touch-icon, maskable-*), et src-tauri/icons/icon.svg en -p 192,512 (icon-*). -->
+  <rect width="1024" height="1024" fill="#f1f0ea"/>
+  <g transform="translate(76.8 76.8) scale(0.85)">
+    <g fill="none" stroke-width="116" transform="rotate(-90 512 512)">
+      <circle cx="512" cy="512" r="248" stroke="#3e5c76" stroke-dasharray="743.12 815.11" stroke-dashoffset="-18"/>
+      <circle cx="512" cy="512" r="248" stroke="#be8534" stroke-dasharray="431.47 1126.76" stroke-dashoffset="-797.12"/>
+      <circle cx="512" cy="512" r="248" stroke="#4f8468" stroke-dasharray="275.65 1282.58" stroke-dashoffset="-1264.59"/>
+    </g>
+  </g>
+</svg>

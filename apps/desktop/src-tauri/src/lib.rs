@@ -1,5 +1,6 @@
 //! Enveloppe de bureau de Cashmyr : une fenêtre, les plugins de fichiers et de dialogues,
-//! et les commandes du fichier de synchronisation. Aucun accès réseau.
+//! et les commandes du fichier de synchronisation. Seul appel réseau : la recherche de mise
+//! à jour, faite ici côté Rust et seulement quand l'utilisateur la demande.
 
 #[cfg(target_os = "macos")]
 mod menu;
@@ -21,6 +22,10 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::default().build())
+        // `latest.json` de la dernière Release ; un paquet n'est installé que si sa signature
+        // correspond à la clé publique de tauri.conf.json.
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let store = app.path().app_data_dir()?.join(sync_file::TARGET_FILE);
             app.manage(sync_file::SyncTarget::load(store));

@@ -11,7 +11,15 @@ import {
   type PrefKey,
   type Preferences,
 } from "@cashmyr/core";
-import type { DeviceState, Platform, Repository, SyncEngine, SyncOutcome, SyncState } from "@cashmyr/storage";
+import type {
+  AvailableUpdate,
+  DeviceState,
+  Platform,
+  Repository,
+  SyncEngine,
+  SyncOutcome,
+  SyncState,
+} from "@cashmyr/storage";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
 export type Tab = "dashboard" | "month" | "goals" | "debts" | "accounts" | "operations" | "settings";
@@ -60,6 +68,8 @@ export type AppState = {
   modal: Modal;
   confirm: ConfirmRequest | null;
   toasts: Toast[];
+  /** Nouvelle version de l'application prête à être appliquée ; `dismissed` : bandeau fermé pour cette session. */
+  update: { available: AvailableUpdate; dismissed: boolean; applying: boolean } | null;
   actions: AppActions;
 };
 
@@ -87,6 +97,13 @@ export type AppActions = {
     offerMerged(): Promise<"shared" | "downloaded" | "cancelled" | null>;
     createAssistedFile(): Promise<SyncOutcome>;
   };
+  updates: {
+    /** Bureau : vérification sur demande. Une erreur est renvoyée en texte, pour l'afficher. */
+    check(): Promise<"none" | "available" | { error: string }>;
+    /** Termine synchronisation et écritures en cours, puis recharge ou installe. */
+    apply(): Promise<void>;
+    dismiss(): void;
+  };
 };
 
 export type AppStore = StoreApi<AppState>;
@@ -100,6 +117,8 @@ export type AppDeps = {
 };
 
 let toastId = 0;
+
+const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function createAppStore(deps: AppDeps): AppStore {
   const now = deps.now ?? Date.now;
@@ -148,6 +167,7 @@ export function createAppStore(deps: AppDeps): AppStore {
       modal: null,
       confirm: null,
       toasts: [],
+      update: null,
       actions: {
         apply,
         setPreference: (key, value) =>
@@ -183,9 +203,41 @@ export function createAppStore(deps: AppDeps): AppStore {
           offerMerged: () => engine.offerMerged(),
           createAssistedFile: () => report(engine.createAssistedFile()),
         },
+        updates: {
+          check: async () => {
+            const check = get().platform.updates?.check;
+            if (!check) return "none";
+            try {
+              return await check();
+            } catch (e) {
+              return { error: errorText(e) };
+            }
+          },
+          apply: async () => {
+            const update = get().update;
+            if (!update || update.applying) return;
+            set({ update: { ...update, applying: true } });
+            try {
+              // Rien ne reste en route : ce qui attend d'être synchronisé part d'abord, puis les écritures se terminent.
+              const sync = get().sync;
+              if (sync.automatic && sync.status === "ready" && sync.pending > 0) await engine.syncNow();
+              await engine.whenIdle();
+              await get().platform.local.flush();
+              await update.available.apply();
+            } catch (e) {
+              toast(`La mise à jour n'a pas pu être appliquée : ${errorText(e)}`, "error");
+              set((s) => ({ update: s.update && { ...s.update, applying: false } }));
+            }
+          },
+          dismiss: () => set((s) => ({ update: s.update && { ...s.update, dismissed: true } })),
+        },
       },
     };
   });
+
+  const updates = deps.platform.updates;
+  updates?.onAvailable((available) => store.setState({ update: { available, dismissed: false, applying: false } }));
+  updates?.onOfflineReady?.(() => store.getState().actions.toast("Cashmyr est enregistrée sur cet appareil : elle fonctionne désormais hors ligne."));
 
   repo.subscribe((data) => store.setState({ data, device: repo.device, fresh: repo.isFresh }));
   engine.subscribe((sync) => store.setState({ sync, device: repo.device }));

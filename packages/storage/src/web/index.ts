@@ -6,6 +6,7 @@ import { IndexedDbLocalStore } from "./indexeddb";
 export { createAssistedSync, createWebFileIO, downloadText, pickTextFile, type BrowserEnv } from "./assisted";
 export { createFsAccessSync, type FsFileHandle, type FsPickers, type HandleStore } from "./fs-access";
 export { IndexedDbLocalStore } from "./indexeddb";
+export { createPwaUpdates, type RegisterSW } from "./updates";
 
 type WindowLike = {
   showOpenFilePicker?: unknown;

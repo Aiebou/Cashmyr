@@ -1,0 +1,50 @@
+# PWA : chaque push sur main est vérifié, construit, puis publié sur GitHub Pages
+# (https://aiebou.github.io/Cashmyr/). Le service worker propose ensuite la nouvelle
+# version aux appareils qui ont déjà l'application.
+name: Publication de la PWA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Une publication à la fois ; celle en cours va jusqu'au bout.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Construction
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: pnpm install --frozen-lockfile
+      # Rien n'est publié si un test échoue.
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build:web
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: apps/web/dist
+
+  deploy:
+    name: Publication
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

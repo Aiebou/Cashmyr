@@ -9,6 +9,7 @@ import {
 import {
   Repository,
   SyncEngine,
+  type AppUpdates,
   type AssistedSyncFile,
   type DeviceState,
   type FileIO,
@@ -91,7 +92,9 @@ export const accounts = {
 };
 
 /** Application complète sur un stockage en mémoire, avec catégories et comptes de départ. */
-export async function renderApp(options: { seeded?: boolean; target?: Platform["target"]; files?: Partial<FileIO> } = {}) {
+export async function renderApp(
+  options: { seeded?: boolean; target?: Platform["target"]; files?: Partial<FileIO>; updates?: AppUpdates } = {},
+) {
   const local = new MemoryLocalStore();
   const repository = await Repository.open({ local, deviceLabel: "test", now: () => NOW, today: () => TODAY });
   if (options.seeded !== false) {
@@ -109,6 +112,7 @@ export async function renderApp(options: { seeded?: boolean; target?: Platform["
     local,
     sync: noSync,
     files: { saveAs: async () => true, openText: async () => null, ...options.files },
+    ...(options.updates ? { updates: options.updates } : {}),
     shortcutHint: "N",
   };
   const store = createAppStore({ platform, repository, engine, today: () => TODAY, now: () => NOW });

@@ -1,5 +1,6 @@
 import type { Platform } from "@cashmyr/storage";
-import { createWebPlatformParts } from "@cashmyr/storage/web";
+import { createPwaUpdates, createWebPlatformParts } from "@cashmyr/storage/web";
+import { registerSW } from "virtual:pwa-register";
 
 const mobile = () =>
   (navigator as Navigator & { userAgentData?: { mobile?: boolean } }).userAgentData?.mobile ??
@@ -14,5 +15,11 @@ function deviceLabel(ua: string): string {
 
 export async function createWebPlatform(): Promise<Platform> {
   const parts = await createWebPlatformParts(window);
-  return { target: "web", deviceLabel: deviceLabel(navigator.userAgent), shortcutHint: mobile() ? null : "N", ...parts };
+  return {
+    target: "web",
+    deviceLabel: deviceLabel(navigator.userAgent),
+    shortcutHint: mobile() ? null : "N",
+    ...parts,
+    updates: createPwaUpdates(registerSW, __APP_VERSION__),
+  };
 }

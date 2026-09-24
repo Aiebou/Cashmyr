@@ -137,6 +137,32 @@
   cursor: pointer;
 }
 
+/* Bandeau de mise à jour, sous l'en-tête : il reste jusqu'au choix de l'utilisateur. */
+.update {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  max-width: 1120px;
+  margin: 14px auto 0;
+  padding: 10px 12px 10px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  box-sizing: border-box;
+  width: calc(100% - 32px);
+}
+.updateText {
+  margin: 0;
+  font-weight: 560;
+}
+.updateActions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .main {
   max-width: 1120px;
   margin: 0 auto;
