@@ -60,6 +60,8 @@ du bureau.
   `cashmyr-sauvegarde-AAAA-MM-JJ.json`. « Importer un fichier » la fusionne avec l'appareil sans rien écraser de plus
   récent. Les opérations s'exportent aussi en CSV, pour un tableur.
 - Le fichier de synchronisation contient lui aussi toutes tes données.
+- Si l'application de bureau ne démarre plus parce que `data.json` est abîmé, elle n'y touche pas et affiche
+  la marche à suivre pour repartir de la copie la plus récente de `backups/`.
 
 L'export de l'ancienne application (`mes-finances.json`) se reprend par « Reprendre mes données » à l'accueil ou
 « Importer un fichier » : chaque total est vérifié avant d'écrire, et au moindre doute rien n'est repris.

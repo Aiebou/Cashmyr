@@ -115,14 +115,20 @@ describe("dépôt local", () => {
     expect(repo.data.collections.operations.map((o) => o.id).sort()).toEqual(["op-file", "op-local"]);
   });
 
-  it("refuse d'ouvrir un jeu local incohérent", async () => {
+  it("refuse d'ouvrir un jeu local incohérent, sans en prendre de copie", async () => {
     const { open, fs } = setup();
     const repo = await open();
     await repo.apply(seed);
+    await open(); // ouverture réussie : une bonne copie
+    const backups = () => new Map([...fs.files].filter(([k]) => k.startsWith("backups/")));
+    const good = backups();
+    expect(good.size).toBe(1);
     const broken = JSON.parse(fs.files.get("data.json")!);
     broken.collections.operations.push(op("op-x", "2026-09-01", 12.5, "cat-courses", "acc-courant", 2));
     fs.files.set("data.json", JSON.stringify(broken));
     await expect(open()).rejects.toThrow(ValidationError);
+    // La copie restante est celle d'avant : localRecoverySteps peut y renvoyer.
+    expect(backups()).toEqual(good);
   });
 
   it("un import remplace tout et rend tout à synchroniser", async () => {
