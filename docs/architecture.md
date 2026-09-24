@@ -512,7 +512,7 @@ Enveloppe Tauri, choix validés le 23/09/2026 :
 - L'updater (clés, `latest.json`, bouton « Rechercher une mise à jour ») arrive avec la première
   Release, à l'étape 6, comme prévu au §5.
 
-Reprise, choix d'interface à valider :
+Reprise, choix d'interface validés le 24/09/2026 :
 - L'accueil gagne une troisième carte, « Reprendre mes données » ; Paramètres, « Importer un fichier ».
   Les deux passent par le même parcours, qui reconnaît le type de fichier.
 - Un refus s'affiche dans une fenêtre, jusqu'à six raisons avec leur chemin dans le fichier, et non dans un
