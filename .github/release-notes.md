@@ -1,16 +1,13 @@
 Cashmyr pour ordinateur. La version web, qui s'installe aussi sur téléphone, est sur https://aiebou.github.io/Cashmyr/.
 
-## Nouveautés de la 0.2.0
+## Nouveautés de la 0.3.0
 
-- Montants au centime partout, gros chiffres compris.
-- Tableau de bord : total des comptes au choix, en valeur déclarée par défaut, et cibles du mois en cours.
-- Mes comptes : valeurs déclarées, filtre, ordre des comptes modifiable et synchronisé.
-- Mois : camemberts des dépenses et des revenus, masquables ; dépassement des besoins et des envies en rouge.
-- Dettes : échéancier calculé.
-- Opérations : un tag par opération, avec filtre, totaux sur la période affichée, report sur les récurrences et colonne dans l'export CSV.
-- Paramètres : remise à zéro de cet appareil ou partout ; recherche de mise à jour au lancement, désactivable.
+- **Profils** : plusieurs budgets sur un même appareil, le tien, celui du foyer, celui d'un proche. Chaque profil a ses comptes, ses opérations, ses réglages et son propre fichier de synchronisation. Paramètres → Profils les crée, les renomme et les supprime.
+- Dès deux profils, Cashmyr demande à chaque lancement qui l'utilise ; le nom du profil ouvert, en haut de l'écran, permet d'en changer.
+- Pour partager un profil, celui du foyer par exemple, crée un profil sur chaque appareil concerné et fais-leur rejoindre le même fichier de synchronisation.
+- Tes données actuelles deviennent le profil « Mon budget », sans être déplacées. Tant que tu ne crées pas d'autre profil, rien ne change.
 
-**Format des données.** Au premier lancement, la 0.2.0 passe tes données au format 2. Les versions 0.1 ne savent pas le lire : elles affichent « Mets l'application à jour » sans rien modifier. Si tu synchronises plusieurs appareils, mets-les tous à jour ; la version web propose d'elle-même la nouvelle version.
+**Format des données.** Inchangé depuis la 0.2.0. Un appareil encore en 0.1 doit être mis à jour : il affiche « Mets l'application à jour » sans rien modifier.
 
 ## Télécharger
 
