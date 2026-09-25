@@ -1,6 +1,6 @@
+import { startingCategories } from "@cashmyr/core";
 import { Button } from "../components/controls";
 import { Card, Stack } from "../components/layout";
-import { defaultCategories } from "../lib/data";
 import { importFromFile } from "../lib/import";
 import { useActions, useApp, useStoreApi } from "../store/context";
 import s from "./Welcome.module.css";
@@ -12,7 +12,9 @@ export function Welcome() {
   const { apply, openModal, sync: syncActions } = useActions();
 
   const start = async () => {
-    if (await apply({ categories: defaultCategories() }, undefined, "Catégories par défaut créées")) {
+    // Après une remise à zéro partout, les catégories effacées reviennent avec un horodatage plus récent.
+    const categories = startingCategories(store.getState().data, Date.now());
+    if (await apply({ categories }, undefined, "Catégories par défaut créées")) {
       openModal({ kind: "create-account" });
     }
   };

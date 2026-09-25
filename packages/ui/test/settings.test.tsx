@@ -1,7 +1,7 @@
 import { createRecord, emptyDataset, serializeBackup, type Debt, type Operation, type Recurrence } from "@cashmyr/core";
-import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultCategories } from "../src/lib/data";
 import { csvAmount, operationsCsv } from "../src/lib/export";
 import { parsePercent, percentText } from "../src/screens/settings/BudgetSection";
@@ -332,5 +332,48 @@ describe("sauvegardes (décisions 32 et 33)", () => {
     expect([byId("shop-1").deletedAt, byId("shop-2").deletedAt]).toEqual([null, null]);
     // Une copie de l'état d'avant la restauration a été prise.
     expect(local.snapshots).toHaveLength(2);
+  });
+});
+
+describe("remise à zéro (décision 45)", () => {
+  it("effacer cet appareil : confirmation, copie de sauvegarde, données retirées, relance sur l'accueil", async () => {
+    const user = userEvent.setup();
+    const restart = vi.fn();
+    const { local } = await openSettings({ restart });
+    await user.click(within(card("Remise à zéro")).getByRole("button", { name: "Effacer cet appareil…" }));
+    expect(within(dialog()).getByText(/Une copie de sauvegarde est prise juste avant\./)).toBeTruthy();
+    await user.click(within(dialog()).getByRole("button", { name: "Effacer cet appareil" }));
+    await waitFor(() => expect(restart).toHaveBeenCalledTimes(1));
+    expect(await local.load()).toBeNull();
+    expect(local.snapshots[0]!.data.collections.operations.length).toBeGreaterThan(0);
+    expect(local.device).toMatchObject({ dirty: {}, sync: { fileId: null } });
+  });
+
+  it("annuler ne touche à rien", async () => {
+    const user = userEvent.setup();
+    const restart = vi.fn();
+    const { repository } = await openSettings({ restart });
+    await user.click(within(card("Remise à zéro")).getByRole("button", { name: "Tout effacer, partout…" }));
+    await user.click(within(dialog()).getByRole("button", { name: "Annuler" }));
+    expect(repository.data.collections.operations.some((o) => o.deletedAt === null)).toBe(true);
+    expect(restart).not.toHaveBeenCalled();
+  });
+
+  it("tout effacer partout : tout supprimé, réglages par défaut, l'accueil revient ; les catégories par défaut repartent", async () => {
+    const user = userEvent.setup();
+    const { repository, local, actions } = await openSettings();
+    await act(async () => void (await actions.setPreference("averageWindow", 12)));
+    await user.click(within(card("Remise à zéro")).getByRole("button", { name: "Tout effacer, partout…" }));
+    expect(within(dialog()).getByText(/Restaurer la remet partout/)).toBeTruthy();
+    await user.click(within(dialog()).getByRole("button", { name: "Tout effacer, partout" }));
+    expect(await screen.findByRole("heading", { name: "Bienvenue" })).toBeTruthy();
+    const collections = repository.data.collections;
+    expect(Object.values(collections).every((rows) => rows.every((r) => r.deletedAt !== null))).toBe(true);
+    expect(repository.data.preferences.averageWindow).toBe(emptyDataset().preferences.averageWindow);
+    expect(local.snapshots[0]!.data.preferences.averageWindow).toBe(12);
+
+    await user.click(screen.getByRole("button", { name: "Commencer avec les catégories par défaut" }));
+    await screen.findByRole("dialog", { name: "Nouveau compte" });
+    expect(repository.data.collections.categories.filter((c) => c.deletedAt === null)).toHaveLength(defaultCategories().length);
   });
 });

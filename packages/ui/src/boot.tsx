@@ -60,7 +60,7 @@ export async function startApp(
   // Le moteur naît avant le store qui affiche ses questions : celles-ci passent par une référence tardive.
   let ask: AppActions["ask"] = async () => false;
   const engine = new SyncEngine({ repository, sync: platform.sync, hooks: syncHooks(() => ask) });
-  const store = createAppStore({ platform, repository, engine, today });
+  const store = createAppStore({ platform, repository, engine, today, ...(options.restart ? { restart: options.restart } : {}) });
   ask = store.getState().actions.ask;
   createRoot(element).render(
     <StrictMode>

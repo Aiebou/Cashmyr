@@ -12,6 +12,7 @@ import {
   type AppUpdates,
   type AssistedSyncFile,
   type DeviceState,
+  type DisplayPrefs,
   type FileIO,
   type LocalStore,
   type Platform,
@@ -119,13 +120,22 @@ export const accounts = {
 
 /** Application complète sur un stockage en mémoire, avec catégories et comptes de départ. */
 export async function renderApp(
-  options: { seeded?: boolean; target?: Platform["target"]; files?: Partial<FileIO>; updates?: AppUpdates } = {},
+  options: {
+    seeded?: boolean;
+    target?: Platform["target"];
+    files?: Partial<FileIO>;
+    updates?: AppUpdates;
+    /** Choix d'affichage de l'appareil au démarrage. */
+    display?: Partial<DisplayPrefs>;
+    restart?: () => void;
+  } = {},
 ) {
   const local = new MemoryLocalStore();
   const repository = await Repository.open({ local, deviceLabel: "test", now: () => NOW, today: () => TODAY });
   if (options.seeded !== false) {
     await repository.apply({ categories: defaultCategories(), accounts: [accounts.courant, accounts.livret] });
   }
+  if (options.display) await repository.updateDevice({ display: options.display });
   const engine = new SyncEngine({
     repository,
     sync: noSync,
@@ -141,7 +151,14 @@ export async function renderApp(
     ...(options.updates ? { updates: options.updates } : {}),
     shortcutHint: "N",
   };
-  const store = createAppStore({ platform, repository, engine, today: () => TODAY, now: () => NOW });
+  const store = createAppStore({
+    platform,
+    repository,
+    engine,
+    today: () => TODAY,
+    now: () => NOW,
+    restart: options.restart ?? (() => undefined),
+  });
   const view = render(<App store={store} />);
   const actions = store.getState().actions;
   return { store, repository, local, view, actions, act };

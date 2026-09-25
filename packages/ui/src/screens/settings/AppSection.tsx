@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Button } from "../../components/controls";
+import { Button, Checkbox } from "../../components/controls";
 import { Card } from "../../components/layout";
+import { displayOf } from "../../store/app-store";
 import { useActions, useApp } from "../../store/context";
 import s from "./Settings.module.css";
 
@@ -10,7 +11,8 @@ type Check = { kind: "idle" } | { kind: "checking" } | { kind: "none" } | { kind
 export function AppSection() {
   const updates = useApp((st) => st.platform.updates);
   const update = useApp((st) => st.update);
-  const { updates: actions } = useActions();
+  const onLaunch = displayOf(useApp((st) => st.device)).checkUpdatesOnLaunch;
+  const { updates: actions, setDisplay } = useActions();
   const [check, setCheck] = useState<Check>({ kind: "idle" });
 
   const search = async () => {
@@ -45,9 +47,15 @@ export function AppSection() {
               Vérification impossible ({check.message}). Vérifie ta connexion, puis réessaie.
             </p>
           )}
+          <Checkbox
+            label="Rechercher une mise à jour au lancement"
+            checked={onLaunch}
+            onChange={(e) => void setDisplay({ checkUpdatesOnLaunch: e.target.checked })}
+          />
           <p className={s.muted}>
-            Cashmyr ne se connecte à Internet que lorsque tu cliques sur ce bouton, pour lire la dernière version publiée sur GitHub.
-            Une mise à jour n'est installée que si sa signature est valide ; tes données ne sont pas touchées.
+            Cashmyr ne se connecte à Internet que pour lire la dernière version publiée sur GitHub : au lancement si la case est
+            cochée, et quand tu cliques sur ce bouton. Hors ligne, rien ne s'affiche. Une mise à jour ne s'installe que sur ton clic,
+            et seulement si sa signature est valide ; tes données ne sont pas touchées.
           </p>
         </>
       ) : (

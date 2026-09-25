@@ -84,19 +84,52 @@ describe("mise à jour de la PWA", () => {
 });
 
 describe("mise à jour du bureau", () => {
-  it("ne vérifie que sur clic, et dit quand Cashmyr est à jour", async () => {
+  it("vérifie au lancement (décision 46), puis sur clic, et dit quand Cashmyr est à jour", async () => {
+    const answer = vi.fn(async () => null);
+    const app = await renderApp({ target: "desktop", updates: desktop(answer).updates });
+    expect(answer).toHaveBeenCalledTimes(1);
+    act(() => app.actions.setTab("settings"));
+    expect(within(settingsCard()).queryByRole("status")).toBeNull();
+    await userEvent.click(within(settingsCard()).getByRole("button", { name: "Rechercher une mise à jour" }));
+    expect(answer).toHaveBeenCalledTimes(2);
+    expect(within(settingsCard()).getByRole("status").textContent).toBe("Cashmyr est à jour.");
+  });
+
+  it("au lancement, une version trouvée est proposée ; hors ligne, rien ne s'affiche", async () => {
+    const d = desktop(async () => ({ version: "0.2.0" }));
+    await renderApp({ target: "desktop", updates: d.updates });
+    expect(await screen.findByText("Cashmyr 0.2.0 est disponible.", { selector: "p" })).toBeTruthy();
+    expect(d.apply).not.toHaveBeenCalled();
+    cleanup();
+
+    await renderApp({
+      target: "desktop",
+      updates: desktop(async () => {
+        throw new Error("hors ligne");
+      }).updates,
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText(/hors ligne/)).toBeNull();
+  });
+
+  it("la recherche au lancement se désactive, pour cet appareil seulement", async () => {
     const answer = vi.fn(async () => null);
     const app = await renderApp({ target: "desktop", updates: desktop(answer).updates });
     act(() => app.actions.setTab("settings"));
-    expect(answer).not.toHaveBeenCalled();
-    await userEvent.click(within(settingsCard()).getByRole("button", { name: "Rechercher une mise à jour" }));
-    expect(answer).toHaveBeenCalledTimes(1);
-    expect(within(settingsCard()).getByRole("status").textContent).toBe("Cashmyr est à jour.");
+    await userEvent.click(within(settingsCard()).getByLabelText("Rechercher une mise à jour au lancement"));
+    expect(app.local.device?.display).toEqual({ checkUpdatesOnLaunch: false });
+    cleanup();
+
+    const again = vi.fn(async () => null);
+    await renderApp({ target: "desktop", updates: desktop(again).updates, display: { checkUpdatesOnLaunch: false } });
+    expect(again).not.toHaveBeenCalled();
   });
 
   it("une vérification impossible le dit, sans rien casser", async () => {
     const app = await renderApp({
       target: "desktop",
+      display: { checkUpdatesOnLaunch: false },
       updates: desktop(async () => {
         throw new Error("hors ligne");
       }).updates,
@@ -109,7 +142,7 @@ describe("mise à jour du bureau", () => {
 
   it("une version trouvée s'installe sur demande ; un échec est affiché et le bouton revient", async () => {
     const d = desktop(async () => ({ version: "0.2.0" }));
-    const app = await renderApp({ target: "desktop", updates: d.updates });
+    const app = await renderApp({ target: "desktop", updates: d.updates, display: { checkUpdatesOnLaunch: false } });
     act(() => app.actions.setTab("settings"));
     await userEvent.click(within(settingsCard()).getByRole("button", { name: "Rechercher une mise à jour" }));
 

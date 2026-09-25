@@ -1,4 +1,6 @@
 import {
+  eraseEverything,
+  hasLiveRecords,
   monthOf,
   setPreference,
   ValidationError,
@@ -11,19 +13,25 @@ import {
   type PrefKey,
   type Preferences,
 } from "@cashmyr/core";
-import type {
-  AvailableUpdate,
-  DeviceState,
-  DisplayPrefs,
-  Platform,
-  Repository,
-  SyncEngine,
-  SyncOutcome,
-  SyncState,
+import {
+  resetDevice,
+  type AvailableUpdate,
+  type DeviceState,
+  type DisplayPrefs,
+  type Platform,
+  type Repository,
+  type SyncEngine,
+  type SyncOutcome,
+  type SyncState,
 } from "@cashmyr/storage";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
-export const DEFAULT_DISPLAY: DisplayPrefs = { bannerTotal: "declared", accountRoles: [] };
+export const DEFAULT_DISPLAY: DisplayPrefs = {
+  bannerTotal: "declared",
+  accountRoles: [],
+  hideMonthCharts: false,
+  checkUpdatesOnLaunch: true,
+};
 
 /** Choix d'affichage de l'appareil, complétés par les valeurs par défaut. */
 export const displayOf = (device: DeviceState): DisplayPrefs => ({ ...DEFAULT_DISPLAY, ...device.display });
@@ -105,6 +113,13 @@ export type AppActions = {
     offerMerged(): Promise<"shared" | "downloaded" | "cancelled" | null>;
     createAssistedFile(): Promise<SyncOutcome>;
   };
+  /** Remise à zéro (décision 45). */
+  reset: {
+    /** Cet appareil : passage de synchronisation s'il reste des modifications, fichier oublié, copie, données retirées, relancement. */
+    device(): Promise<void>;
+    /** Partout : passage de synchronisation, copie, tout supprimé et réglages par défaut, puis passage aussitôt. */
+    everywhere(): Promise<boolean>;
+  };
   updates: {
     /** Bureau : vérification sur demande. Une erreur est renvoyée en texte, pour l'afficher. */
     check(): Promise<"none" | "available" | { error: string }>;
@@ -122,7 +137,12 @@ export type AppDeps = {
   engine: SyncEngine;
   now?: () => number;
   today: () => Day;
+  /** Relance l'application (après une remise à zéro de l'appareil) ; par défaut, recharge la page. */
+  restart?: () => void;
 };
+
+/** L'écran d'accueil : rien n'a jamais été écrit sur l'appareil, ou il ne reste aucune ligne vivante. */
+const welcome = (repo: Repository) => repo.isFresh || !hasLiveRecords(repo.data);
 
 let toastId = 0;
 
@@ -130,6 +150,7 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function createAppStore(deps: AppDeps): AppStore {
   const now = deps.now ?? Date.now;
+  const restart = deps.restart ?? (() => window.location.reload());
   const { repository: repo, engine } = deps;
   const today = deps.today();
 
@@ -166,7 +187,7 @@ export function createAppStore(deps: AppDeps): AppStore {
       platform: deps.platform,
       data: repo.data,
       device: repo.device,
-      fresh: repo.isFresh,
+      fresh: welcome(repo),
       sync: engine.state,
       today,
       tab: "dashboard",
@@ -215,6 +236,28 @@ export function createAppStore(deps: AppDeps): AppStore {
           offerMerged: () => engine.offerMerged(),
           createAssistedFile: () => report(engine.createAssistedFile()),
         },
+        reset: {
+          device: async () => {
+            const sync = get().sync;
+            // Ce qui a été saisi ici et attend encore part d'abord dans le fichier : rien ne se perd.
+            if (sync.automatic && sync.status === "ready" && sync.pending > 0) await report(engine.syncNow());
+            await engine.whenIdle();
+            await engine.disconnect();
+            await repo.flush();
+            await resetDevice(get().platform.local, now());
+            restart();
+          },
+          everywhere: async () => {
+            // Un passage d'abord : l'effacement couvre aussi ce que les autres appareils ont écrit.
+            const ready = () => get().sync.automatic && get().sync.status === "ready";
+            if (ready()) await report(engine.syncNow());
+            await get().platform.local.snapshot(now());
+            const { changes, preferences } = eraseEverything(get().data, now());
+            const ok = await apply(changes, preferences, "Tout est effacé");
+            if (ok && ready()) await report(engine.syncNow());
+            return ok;
+          },
+        },
         updates: {
           check: async () => {
             const check = get().platform.updates?.check;
@@ -251,7 +294,10 @@ export function createAppStore(deps: AppDeps): AppStore {
   updates?.onAvailable((available) => store.setState({ update: { available, dismissed: false, applying: false } }));
   updates?.onOfflineReady?.(() => store.getState().actions.toast("Cashmyr est enregistrée sur cet appareil : elle fonctionne désormais hors ligne."));
 
-  repo.subscribe((data) => store.setState({ data, device: repo.device, fresh: repo.isFresh }));
+  // Bureau : recherche au lancement, désactivable (décision 46). Hors ligne, elle échoue sans rien dire.
+  if (updates?.check && displayOf(repo.device).checkUpdatesOnLaunch) void updates.check().catch(() => undefined);
+
+  repo.subscribe((data) => store.setState({ data, device: repo.device, fresh: welcome(repo) }));
   engine.subscribe((sync) => store.setState({ sync, device: repo.device }));
   return store;
 }

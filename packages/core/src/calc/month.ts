@@ -11,6 +11,11 @@ export type MonthAggregates = {
   income: Cents;
   /** Revenus groupés par catégorie, du plus gros au plus petit. */
   incomeBySource: { categoryId: string; amount: Cents }[];
+  /**
+   * Dépenses groupées par catégorie, toutes les dépenses (besoins, envies, épargne), du plus gros
+   * au plus petit ; les transferts n'en sont pas. Catégorie introuvable : clé "".
+   */
+  spendingByCategory: { categoryId: string; amount: Cents }[];
   needs: Cents;
   wants: Cents;
   saved: Cents;
@@ -21,7 +26,13 @@ export type MonthAggregates = {
 };
 
 /** Effet d'une opération sur les agrégats du mois. */
-function accumulate(op: Operation, ix: DatasetIndex, acc: MonthAggregates, sources: Map<string, Cents>): void {
+function accumulate(
+  op: Operation,
+  ix: DatasetIndex,
+  acc: MonthAggregates,
+  sources: Map<string, Cents>,
+  spending: Map<string, Cents>,
+): void {
   switch (op.type) {
     case "in": {
       acc.income += op.amount;
@@ -30,6 +41,8 @@ function accumulate(op: Operation, ix: DatasetIndex, acc: MonthAggregates, sourc
       return;
     }
     case "out": {
+      const key = op.categoryId ?? "";
+      spending.set(key, (spending.get(key) ?? 0) + op.amount);
       const bucket = op.categoryId ? ix.categories.get(op.categoryId)?.bucket : undefined;
       if (bucket === "besoin") acc.needs += op.amount;
       else if (bucket === "envie") acc.wants += op.amount;
@@ -55,6 +68,7 @@ export function monthAggregates(data: Dataset, month: Month): MonthAggregates {
     count: ops.length,
     income: 0,
     incomeBySource: [],
+    spendingByCategory: [],
     needs: 0,
     wants: 0,
     saved: 0,
@@ -63,13 +77,19 @@ export function monthAggregates(data: Dataset, month: Month): MonthAggregates {
     unclassified: 0,
   };
   const sources = new Map<string, Cents>();
-  for (const op of ops) accumulate(op, ix, acc, sources);
+  const spending = new Map<string, Cents>();
+  for (const op of ops) accumulate(op, ix, acc, sources, spending);
   acc.spent = acc.needs + acc.wants;
   acc.balance = acc.income - acc.spent - acc.saved;
-  acc.incomeBySource = [...sources]
+  acc.incomeBySource = byAmount(sources);
+  acc.spendingByCategory = byAmount(spending);
+  return acc;
+}
+
+function byAmount(totals: Map<string, Cents>): { categoryId: string; amount: Cents }[] {
+  return [...totals]
     .map(([categoryId, amount]) => ({ categoryId, amount }))
     .sort((a, b) => b.amount - a.amount || a.categoryId.localeCompare(b.categoryId));
-  return acc;
 }
 
 /** Les six dernières opérations du mois, par date puis écriture décroissantes. */
