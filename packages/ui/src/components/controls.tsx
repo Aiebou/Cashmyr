@@ -272,6 +272,35 @@ export function Segmented<T extends string>({ label, value, options, onChange }:
   );
 }
 
+type ToggleChipsProps<T extends string> = {
+  label: string;
+  /** Valeurs retenues ; vide = toutes, et la puce « Tous » est active. */
+  value: readonly T[];
+  options: readonly { value: T; label: string }[];
+  allLabel?: string;
+  onChange(value: T[]): void;
+};
+
+/**
+ * Filtre à puces, plusieurs choix possibles. Sans choix, tout est montré ; une puce seule
+ * choisie puis retirée revient à « Tous ».
+ */
+export function ToggleChips<T extends string>({ label, value, options, allLabel = "Tous", onChange }: ToggleChipsProps<T>) {
+  const toggle = (v: T) => onChange(value.includes(v) ? value.filter((x) => x !== v) : options.map((o) => o.value).filter((x) => x === v || value.includes(x)));
+  return (
+    <div className={s.chips} role="group" aria-label={label}>
+      <button type="button" className={s.chip} aria-pressed={value.length === 0} onClick={() => onChange([])}>
+        {allLabel}
+      </button>
+      {options.map((o) => (
+        <button key={o.value} type="button" className={s.chip} aria-pressed={value.includes(o.value)} onClick={() => toggle(o.value)}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 type CheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { label: ReactNode };
 
 export function Checkbox({ label, className, ...rest }: CheckboxProps) {

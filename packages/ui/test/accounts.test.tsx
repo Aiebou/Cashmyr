@@ -1,4 +1,4 @@
-import { createRecord, type Operation } from "@cashmyr/core";
+import { createRecord, type Account, type Operation } from "@cashmyr/core";
 import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
@@ -72,16 +72,55 @@ describe("Mes comptes", () => {
     expect(plain(frame("Mouvements de l'année").textContent)).toContain("Variation de l'ensemble depuis le 1er janvier : +1 700,00 €");
   });
 
-  it("vos comptes : solde, départ, entrés, sortis, valeur déclarée et écart", async () => {
+  it("vos comptes : solde, départ, entrés, sortis ; valeur déclarée en avant, capital injecté dessous", async () => {
     await openAccounts();
     const list = within(frame("Vos comptes")).getByRole("list");
     // 1 250 + 1 000 + 2 000 − 300 − 500 = 3 450 €.
     expect(plain(row(list, "Compte courant").textContent)).toBe("Compte courant3 450,00 €Départ 1 250,00 € · 3 000,00 € entrés · 800,00 € sortis");
     // Le type n'est pas répété quand le nom le dit ; la précaution est signalée.
     expect(plain(row(list, "Livret A").textContent)).toBe(
-      "Livret AÉpargne · épargne de précaution3 500,00 €Départ 3 000,00 € · 500,00 € entrés · 0,00 € sortis" +
-        "Valeur déclarée 3 900,00 € le 1er septembre 2026 · écart +400,00 € avec le capital injecté",
+      "Livret AÉpargne · épargne de précaution3 900,00 €valeur déclarée" +
+        "Capital injecté 3 500,00 € · écart +400,00 € · déclarée le 1er septembre 2026" +
+        "Départ 3 000,00 € · 500,00 € entrés · 0,00 € sortis",
     );
+  });
+
+  it("filtre par type de compte, propre à l'appareil : les deux listes suivent, pas le bandeau", async () => {
+    const user = userEvent.setup();
+    const { repository, local } = await openAccounts();
+    const pea = createRecord<Account>("acc-pea", { name: "PEA", role: "invest", opening: 80_000, safety: false, color: 2 }, 1);
+    await act(() => repository.apply({ accounts: [pea] }));
+    const pending = repository.pending;
+    const names = (title: string) => within(within(frame(title)).getByRole("list")).getAllByRole("listitem").map((li) => li.textContent?.match(/^(Compte courant|Livret A|PEA)/)?.[1]);
+    const chips = screen.getByRole("group", { name: "Types de comptes affichés" });
+    // Seuls les types présents sont proposés.
+    expect(within(chips).getAllByRole("button").map((b) => b.textContent)).toEqual(["Tous", "Comptes courants", "Épargne", "Placements"]);
+
+    await user.click(within(chips).getByRole("button", { name: "Épargne" }));
+    expect(names("Vos comptes")).toEqual(["Livret A"]);
+    expect(names("Mouvements de l'année")).toEqual(["Livret A"]);
+    expect(plain(frame("Mouvements de l'année").textContent)).toContain("Variation de ces comptes depuis le 1er janvier : +500,00 €");
+    await user.click(within(chips).getByRole("button", { name: "Placements" }));
+    expect(names("Vos comptes")).toEqual(["Livret A", "PEA"]);
+    expect(within(chips).getByRole("button", { name: "Tous" }).getAttribute("aria-pressed")).toBe("false");
+    // Le bandeau garde tous les comptes.
+    expect(screen.getByText("Total de mes comptes aujourd'hui").closest("section")!.textContent).toContain("Compte courant");
+    expect(local.device?.display?.accountRoles).toEqual(["epargne", "invest"]);
+    expect(repository.pending).toBe(pending);
+
+    await user.click(within(chips).getByRole("button", { name: "Tous" }));
+    expect(names("Vos comptes")).toEqual(["Compte courant", "Livret A", "PEA"]);
+  });
+
+  it("un compte épargne, placement ou autre sans valeur déclarée le signale", async () => {
+    const { repository, store } = await openAccounts();
+    const pea = createRecord<Account>("acc-pea", { name: "PEA", role: "invest", opening: 80_000, safety: false, color: 2 }, 1);
+    await act(() => repository.apply({ accounts: [pea] }));
+    const list = within(frame("Vos comptes")).getByRole("list");
+    expect(plain(row(list, "PEA").textContent)).toBe("PEAPlacement800,00 €valeur non déclaréeDépart 800,00 € · 0,00 € entrés · 0,00 € sortis");
+    // Au 31 décembre 2025, le livret déclaré en septembre 2026 compte pour son capital injecté.
+    act(() => store.getState().actions.setYear(2025));
+    expect(plain(row(within(frame("Vos comptes")).getByRole("list"), "Livret A").textContent)).toContain("valeur déclarée après cette date");
   });
 
   it("année passée : soldes et mouvements au 31 décembre", async () => {

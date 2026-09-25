@@ -65,23 +65,32 @@ function AccountItem({ account }: { account: Account }) {
         <Field label="Solde de départ" htmlFor={`${id}-opening`}>
           <InlineAmount label="Solde de départ" allowNegative value={account.opening} onCommit={(opening) => save({ opening })} />
         </Field>
-        <Field
-          label="Valeur déclarée"
-          htmlFor={`${id}-declared`}
-          hint={account.declaredAt ? `Déclarée le ${dayLong(account.declaredAt)}` : "Valeur de marché, affichée seulement"}
-        >
-          <InlineOptionalAmount
+        {/* Un compte courant ne compte jamais que son solde (décision 42) ; une valeur reprise reste modifiable. */}
+        {(account.role !== "courant" || account.declaredValue !== undefined) && (
+          <Field
             label="Valeur déclarée"
-            placeholder="Aucune"
-            value={account.declaredValue ?? null}
-            onCommit={(v) => {
-              // Sans valeur, les deux champs disparaissent ; une nouvelle valeur est datée du jour.
-              const { declaredValue: _v, declaredAt: _d, ...rest } = account;
-              const next: Account = v === null ? rest : { ...rest, declaredValue: v, declaredAt: today };
-              void apply({ accounts: [{ ...next, updatedAt: nextStamp(Date.now(), account) }] });
-            }}
-          />
-        </Field>
+            htmlFor={`${id}-declared`}
+            hint={
+              account.role === "courant"
+                ? "Ignorée pour un compte courant : seul son solde compte"
+                : account.declaredAt
+                  ? `Déclarée le ${dayLong(account.declaredAt)} ; comptée dans le total des comptes`
+                  : "Valeur de marché, comptée dans le total des comptes à la place du capital injecté"
+            }
+          >
+            <InlineOptionalAmount
+              label="Valeur déclarée"
+              placeholder="Aucune"
+              value={account.declaredValue ?? null}
+              onCommit={(v) => {
+                // Sans valeur, les deux champs disparaissent ; une nouvelle valeur est datée du jour.
+                const { declaredValue: _v, declaredAt: _d, ...rest } = account;
+                const next: Account = v === null ? rest : { ...rest, declaredValue: v, declaredAt: today };
+                void apply({ accounts: [{ ...next, updatedAt: nextStamp(Date.now(), account) }] });
+              }}
+            />
+          </Field>
+        )}
       </div>
       <div className={s.itemFoot}>
         <Checkbox label="Épargne de précaution" checked={account.safety} onChange={(e) => save({ safety: e.target.checked })} />

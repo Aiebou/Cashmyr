@@ -3,6 +3,21 @@
   gap: 10px;
   padding: 6px 0 8px;
 }
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+.mode {
+  width: auto;
+  min-height: 34px;
+  padding: 0 30px 0 10px;
+  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+  font-size: 13px;
+  font-weight: 560;
+}
 .eyebrow {
   font-size: 14px;
   font-weight: 560;

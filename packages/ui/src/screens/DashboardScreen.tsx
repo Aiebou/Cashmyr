@@ -5,10 +5,15 @@ import {
   dashboardGoals,
   debtView,
   goalView,
+  monthAggregates,
+  monthOf,
   monthRange,
+  monthTargets,
   normalizeDashOrder,
   safetyStatus,
+  yearOf,
   yearSummary,
+  type Bucket,
   type DashBlock,
   type Dataset,
   type Day,
@@ -20,11 +25,12 @@ import { RankingChart } from "../components/charts/RankingChart";
 import { SavingsChart } from "../components/charts/SavingsChart";
 import { Button } from "../components/controls";
 import { Gauge, Stat } from "../components/figures";
-import { Empty, Grid } from "../components/layout";
+import { Card, Empty, Grid } from "../components/layout";
 import { dropBefore, moveAmongVisible, ReorderableBlock } from "../components/Reorderable";
 import { debtSentence } from "../lib/debt-text";
-import { categoryName } from "../lib/data";
-import { count, dayLong, money, oneDecimal, ratio, timeLeft } from "../lib/format";
+import { BUCKET_LABELS, categoryName } from "../lib/data";
+import { count, dayLong, money, ofMonth, oneDecimal, ratio, timeLeft } from "../lib/format";
+import { targetCaption } from "../lib/targets-text";
 import type { Tab } from "../store/app-store";
 import { useActions, useApp } from "../store/context";
 import { AccountsBanner } from "./AccountsBanner";
@@ -189,6 +195,55 @@ function CategoriesBlock({ data, year, today }: { data: Dataset; year: number; t
   );
 }
 
+/**
+ * Ce qui reste avant chaque cible du mois en cours : besoins et envies en rouge au-delà,
+ * épargne encore à mettre de côté. Mêmes jauges que la Répartition de l'écran Mois.
+ */
+function MonthTargetsCard({ data, today }: { data: Dataset; today: Day }) {
+  const { setMonth, setTab } = useActions();
+  const month = monthOf(today);
+  const agg = useMemo(() => monthAggregates(data, month), [data, month]);
+  const targets = useMemo(() => monthTargets(data, month), [data, month]);
+  const prefs = data.preferences;
+  const open = () => {
+    setMonth(month);
+    setTab("month");
+  };
+  return (
+    <Card
+      title={`Cibles ${ofMonth(month)}`}
+      subtitle="Encore à atteindre ce mois-ci"
+      actions={
+        <Button variant="ghost" size="small" onClick={open}>
+          Voir le mois
+        </Button>
+      }
+    >
+      {targets.base === 0 ? (
+        <p className={s.note}>Pas encore de revenus ce mois-ci : les cibles se calculent à partir des revenus.</p>
+      ) : (
+        <div className={s.items}>
+          {(["besoin", "envie", "invest"] as Bucket[]).map((bucket) => {
+            const value = bucket === "besoin" ? agg.needs : bucket === "envie" ? agg.wants : agg.saved;
+            const target = targets.targets[bucket];
+            return (
+              <Gauge
+                key={bucket}
+                label={bucket === "invest" ? "Épargne" : BUCKET_LABELS[bucket]}
+                color={colorFor(prefs, { kind: "bucket", bucket })}
+                value={value}
+                target={target}
+                caption={targetCaption(bucket, value, target)}
+                warnOver={bucket !== "invest"}
+              />
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // ── Écran ──────────────────────────────────────────────────────────────────
 
 export function DashboardScreen() {
@@ -229,6 +284,7 @@ export function DashboardScreen() {
   return (
     <div className={s.screen}>
       <AccountsBanner data={data} asOf={asOf} today={today} year={year} />
+      {year === yearOf(today) && <MonthTargetsCard data={data} today={today} />}
       {visible.map((key, i) => (
         <ReorderableBlock
           key={key}

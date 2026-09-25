@@ -38,7 +38,7 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │   │   │   ├── month.ts         income, incomeBySource, needs, wants, saved, spent, balance
 │   │   │   ├── averages.ts      revenu moyen, dépenses moyennes
 │   │   │   ├── targets.ts       base et cibles par enveloppe
-│   │   │   ├── accounts.ts      soldes, entrées/sorties, écart à la valeur déclarée
+│   │   │   ├── accounts.ts      soldes, entrées/sorties, valeur déclarée dans les totaux (décisions 42 à 44)
 │   │   │   ├── safety.ts        constituée, objectif, capacité
 │   │   │   ├── goals.ts         cible, avancement, échéance, mensualité, filtrage
 │   │   │   ├── debts.ts         total, réglé, reste, échéancier, charge, total dû, filtrage
@@ -136,7 +136,7 @@ export type Account = Meta & {
   name: string; role: Role;
   opening: Cents;             // peut être négatif
   safety: boolean;
-  declaredValue?: Cents; declaredAt?: Day;
+  declaredValue?: Cents; declaredAt?: Day;   // épargne, placement, autre : entre dans le total (décisions 42 à 44)
   color: SeriesColor;         // ÉCART
 };
 
@@ -237,6 +237,8 @@ export type DeviceState = {
   sync: { fileId: string | null; targetName: string | null;
           lastMergeAt: number | null; lastOfferAt: number | null; lastError: string | null };
   dirty: Record<string, number>;   // "operations:<id>" ou "pref:<clé>" → updatedAt de la version modifiée
+  display?: { bannerTotal?: "declared" | "injected" | "injectedOutsideCurrent"; accountRoles?: Role[] };
+                                   // choix d'affichage de l'appareil (0.2.0), absents = valeurs par défaut
 };
 ```
 
@@ -505,6 +507,9 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | # | Sujet | Décision |
 |---|---|---|
 | 41 | Montant total, montant par échéance et nombre d'échéances d'une dette | Deux champs remplis donnent le troisième, à la création comme à la modification, en mode échéancier seulement. Montant = total ÷ nombre, arrondi au centime supérieur : la dernière échéance est réduite, comme l'échéancier le fait déjà (1 000 € en 3 → 333,34 €, la dernière 333,32 €). Nombre = total ÷ montant, arrondi à l'entier supérieur (1 000 € par 300 € → 4, la dernière 100 €). Total = montant × nombre. Le total ne dépasse donc jamais l'échéancier. |
+| 42 | Total du bandeau des comptes | Trois totaux au choix, propre à chaque appareil : **par défaut**, soldes des comptes courants plus valeur déclarée des comptes épargne, placement et autre ; tout en capital injecté (le total d'avant) ; capital injecté hors comptes courants. Un compte courant ne compte jamais que son solde. Un compte épargne, placement ou autre sans valeur déclarée compte pour son capital injecté, et le bandeau comme Mes comptes le signalent (« valeur non déclarée », rouge discret). La ligne « Valeur déclarée : écart » devient « Valeur injectée (hors comptes courants) ». |
+| 43 | Valeur déclarée et date affichée | Elle n'a pas d'historique : elle ne compte que si elle a été déclarée au plus tard à la date affichée (31/12 d'une année passée), sinon le capital injecté. Une valeur sans date, reprise de l'ancienne application, ne compte que pour aujourd'hui. |
+| 44 | Patrimoine net | Total en valeurs déclarées (décision 42, quel que soit le total choisi) moins le total dû. L'épargne de précaution, la courbe d'épargne et les indicateurs de l'année restent en capital injecté. |
 
 Lectures validées avec la section dettes :
 - Total : `principal` s'il est > 0.
@@ -627,6 +632,18 @@ Version 0.2.0, choix validés le 25/09/2026 :
   à l'euro de l'étape 4. Seules les graduations des axes des graphiques restent rondes.
 - **Répartition** : au-delà de sa cible, la jauge des besoins ou des envies passe en rouge pour la part qui dépasse,
   et sa légende dit « dépassée de … » en rouge, avec une icône. L'épargne au-delà de sa cible n'est pas un avertissement.
+- **Tableau de bord** : sous le bandeau, « Cibles de <mois> » reprend les trois jauges de la Répartition du mois en
+  cours (besoins et envies : reste ou dépassement ; épargne : encore à mettre de côté), pour l'année en cours seulement,
+  avec « Voir le mois ». Ce bloc n'entre pas dans l'ordre des blocs (`dashOrder`), qui ne change pas de format.
+- **Bandeau des comptes** : un sélecteur « Total affiché » à droite du titre (décision 42). Dans la légende, un
+  compte épargne, placement ou autre montre sa valeur déclarée, et dessous « injecté … » ou « valeur non déclarée ».
+- **Mes comptes** : chaque compte dans sa propre tuile. Un filtre à puces (« Tous », puis les types présents) agit sur
+  « Mouvements de l'année » et « Vos comptes », pas sur le bandeau. La valeur déclarée passe en avant, avec le
+  capital injecté, l'écart et la date dessous.
+- **Choix d'affichage propres à l'appareil** : total du bandeau et filtre de Mes comptes vivent dans l'état de
+  l'appareil (`DeviceState.display`), jamais synchronisés et jamais comptés comme modifications en attente.
+- **Paramètres → Comptes** : un compte courant n'a plus de champ « Valeur déclarée », sauf s'il en porte une (reprise),
+  signalée comme ignorée.
 - **Échéancier calculé** (décision 41) : quand les trois champs sont remplis, c'est celui modifié le moins
   récemment qui se recalcule. Sur une dette enregistrée dont un seul champ est modifié, le total est gardé en
   priorité, puis le montant par échéance. Le champ calculé le dit sous le champ (« Calculé… »), avec le montant de

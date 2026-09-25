@@ -4,12 +4,15 @@ import {
   accountFlows,
   asOfForYear,
   currentAccountsOverview,
+  declaredAsOf,
+  netWorth,
   savingsOverview,
   safetyStatus,
   setPreference,
   tombstone,
+  worthOverview,
 } from "../src";
-import { account, dataset, eur, expense, income, TODAY, transfer, world } from "./fixtures";
+import { account, dataset, debt, eur, expense, income, TODAY, transfer, world } from "./fixtures";
 
 describe("soldes de comptes", () => {
   const { cats, accs, build } = world();
@@ -46,7 +49,7 @@ describe("soldes de comptes", () => {
     expect(accountFigures(data, "2026-09-05").get(courant.id)?.balance).toBe(eur(3200));
   });
 
-  it("affiche l'écart avec la valeur déclarée sans l'utiliser ailleurs", () => {
+  it("écart avec la valeur déclarée ; les regroupements restent en capital injecté", () => {
     expect(f.get(pea.id)).toMatchObject({ declaredValue: eur(350), declaredGap: eur(50) });
     expect(f.get(accs.livret.id)?.declaredGap).toBeNull();
     const s = savingsOverview(data, TODAY);
@@ -71,6 +74,57 @@ describe("soldes de comptes", () => {
     expect(asOfForYear(2025, TODAY)).toBe("2025-12-31");
     expect(asOfForYear(2026, TODAY)).toBe(TODAY);
     expect(asOfForYear(2027, TODAY)).toBe(TODAY);
+  });
+});
+
+describe("valeur déclarée dans les totaux (décisions 42 à 44)", () => {
+  const { cats } = world();
+  const courant = account("Compte courant", "courant", { opening: eur(1000), declaredValue: eur(9999), declaredAt: "2026-09-01" });
+  const livret = account("Livret A", "epargne", { opening: eur(3000), declaredValue: eur(3100), declaredAt: "2026-09-01" });
+  const pea = account("PEA", "invest", { opening: eur(800) });
+  const crypto = account("Crypto", "autre", { opening: eur(40), declaredValue: eur(55), declaredAt: "2026-09-20" });
+  const gone = tombstone(account("Fermé", "epargne", { opening: eur(500), declaredValue: eur(600), declaredAt: "2026-09-01" }), 9);
+  const data = dataset({
+    categories: Object.values(cats),
+    accounts: [courant, livret, pea, crypto, gone],
+    operations: [transfer("2026-09-10", eur(100), courant.id, pea.id)],
+  });
+
+  it("par défaut : comptes courants en solde, les autres en valeur déclarée, sinon en capital injecté", () => {
+    const w = worthOverview(data, TODAY, TODAY, "declared");
+    // Le compte courant ignore sa valeur déclarée ; le PEA, sans valeur déclarée, compte pour 900 € injectés.
+    expect(w.total).toBe(eur(900 + 3100 + 900 + 55));
+    expect(w).toMatchObject({ current: eur(900), savings: eur(3100 + 900), others: eur(55), undeclared: 1 });
+    expect(w.injectedOutsideCurrent).toBe(eur(3000 + 900 + 40));
+    expect(w.byAccount.map((b) => [b.account.name, b.balance, b.declared, b.value])).toEqual([
+      ["Compte courant", eur(900), null, eur(900)],
+      ["Livret A", eur(3000), eur(3100), eur(3100)],
+      ["PEA", eur(900), null, eur(900)],
+      ["Crypto", eur(40), eur(55), eur(55)],
+    ]);
+  });
+
+  it("tout en capital injecté, ou capital injecté hors comptes courants", () => {
+    const all = worthOverview(data, TODAY, TODAY, "injected");
+    expect(all.total).toBe(eur(900 + 3000 + 900 + 40));
+    expect(all.undeclared).toBe(0);
+    const outside = worthOverview(data, TODAY, TODAY, "injectedOutsideCurrent");
+    expect(outside.total).toBe(eur(3000 + 900 + 40));
+    expect(outside.byAccount.map((b) => b.account.name)).toEqual(["Livret A", "PEA", "Crypto"]);
+  });
+
+  it("une valeur déclarée après la date affichée n'est pas utilisée ; sans date, elle ne vaut que pour aujourd'hui", () => {
+    const early = worthOverview(data, "2026-09-15", TODAY, "declared");
+    expect(early.byAccount.find((b) => b.account.name === "Crypto")).toMatchObject({ declared: null, value: eur(40) });
+    expect(early.undeclared).toBe(2);
+    const legacy = account("Assurance-vie", "invest", { declaredValue: eur(700) });
+    expect(declaredAsOf(legacy, TODAY, TODAY)).toBe(eur(700));
+    expect(declaredAsOf(legacy, "2025-12-31", TODAY)).toBeNull();
+  });
+
+  it("patrimoine net : total en valeurs déclarées − total dû", () => {
+    const withDebt = dataset({ ...data.collections, debts: [debt({ installmentAmount: eur(100), installmentCount: 3 })] });
+    expect(netWorth(withDebt, TODAY, TODAY)).toBe(eur(900 + 3100 + 900 + 55 - 300));
   });
 });
 

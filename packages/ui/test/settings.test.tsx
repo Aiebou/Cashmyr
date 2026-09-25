@@ -103,7 +103,10 @@ describe("comptes (décision 30)", () => {
   it("valeur déclarée datée du jour, retirée en vidant le champ", async () => {
     const user = userEvent.setup();
     const { repository } = await openSettings();
-    const field = within(card("Comptes")).getAllByLabelText("Valeur déclarée")[1]!;
+    // Le compte courant n'a pas de champ : seul son solde compte (décision 42).
+    const fields = within(card("Comptes")).getAllByLabelText("Valeur déclarée");
+    expect(fields).toHaveLength(1);
+    const field = fields[0]!;
     await user.type(field, "3 100{Enter}");
     expect(repository.data.collections.accounts.find((a) => a.id === livret.id)).toMatchObject({ declaredValue: 310_000, declaredAt: TODAY });
     await user.clear(field);

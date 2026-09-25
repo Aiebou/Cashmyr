@@ -34,7 +34,10 @@ export type Account = Meta & {
   opening: Cents;
   /** Entre dans l'épargne de précaution. */
   safety: boolean;
-  /** Valeur saisie à la main, jamais calculée ni utilisée dans un calcul. */
+  /**
+   * Valeur saisie à la main, jamais calculée. Pour un compte épargne, placement ou autre, elle
+   * remplace le capital injecté dans le total des comptes et le patrimoine net (décisions 42 à 44).
+   */
   declaredValue?: Cents;
   declaredAt?: Day;
   color: SeriesColor;

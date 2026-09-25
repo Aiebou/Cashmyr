@@ -9,7 +9,6 @@ import {
   plannedOccurrences,
   type AverageWindow,
   type Bucket,
-  type Cents,
 } from "@cashmyr/core";
 import { useMemo } from "react";
 import { Select } from "../components/controls";
@@ -19,24 +18,11 @@ import { OperationList, OperationRow } from "../components/OperationRow";
 import { PlannedList } from "../components/PlannedList";
 import { categoryName, liveAccounts, BUCKET_LABELS } from "../lib/data";
 import { money, monthLong, monthTitle, ofMonth } from "../lib/format";
+import { targetCaption } from "../lib/targets-text";
 import { useActions, useApp } from "../store/context";
 import s from "./MonthScreen.module.css";
 
 const WINDOWS: AverageWindow[] = [3, 6, 12];
-
-/** Texte sous une jauge : écart à la cible, dit dans le sens de l'usage. */
-function gaugeCaption(bucket: Bucket, value: Cents, target: Cents) {
-  const gap = target - value;
-  if (target === 0) return `cible ${money(0)}`;
-  if (bucket === "invest") {
-    return gap > 0
-      ? `cible ${money(target)} · encore ${money(gap)} à mettre de côté`
-      : `cible ${money(target)} · dépassée de ${money(-gap)}`;
-  }
-  return gap >= 0
-    ? `cible ${money(target)} · reste ${money(gap)}`
-    : `cible ${money(target)} · dépassée de ${money(-gap)}`;
-}
 
 export function MonthScreen() {
   const data = useApp((st) => st.data);
@@ -161,7 +147,7 @@ export function MonthScreen() {
                     color={colorFor(prefs, { kind: "bucket", bucket })}
                     value={value}
                     target={target}
-                    caption={gaugeCaption(bucket, value, target)}
+                    caption={targetCaption(bucket, value, target)}
                     warnOver={bucket !== "invest"}
                   />
                 );

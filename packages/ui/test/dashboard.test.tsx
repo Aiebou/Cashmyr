@@ -47,28 +47,55 @@ const loan = (extra: Partial<Debt> = {}): Debt =>
 const blocks = () => screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
 
 describe("bandeau du tableau de bord", () => {
-  it("total de tous les comptes, détail au quotidien / épargne, sans ligne dettes tant qu'il n'y en a pas", async () => {
+  it("par défaut, courants et valeurs déclarées ; un compte sans valeur déclarée compte pour son capital injecté, signalé", async () => {
     await renderApp();
     const banner = screen.getByText("Total de mes comptes aujourd'hui").closest("section")!;
     expect(within(banner).getByText(/^4\s250,00\s€$/)).toBeTruthy();
     expect(banner.textContent).toMatch(/Dont 1\s250,00\s€ disponibles au quotidien et 3\s000,00\s€ d'épargne et de placements\./);
+    expect(banner.textContent).toMatch(/Valeur injectée \(hors comptes courants\) : 3\s000,00\s€\./);
+    expect(banner.textContent).toMatch(/Un compte sans valeur déclarée compte pour son capital injecté\./);
+    const legend = within(banner).getAllByRole("listitem").map((li) => li.textContent);
+    expect(legend).toEqual([expect.stringMatching(/^Compte courant1\s250,00\s€$/), expect.stringMatching(/^Livret A3\s000,00\s€valeur non déclarée$/)]);
     expect(banner.textContent).not.toMatch(/Dettes restantes/);
-    expect(banner.textContent).not.toMatch(/Valeur déclarée/);
   });
 
-  it("ajoute la valeur déclarée, puis les dettes et le patrimoine net dès qu'une dette existe", async () => {
+  it("valeur déclarée en avant, capital injecté dessous ; patrimoine net en valeurs déclarées (décisions 42 et 44)", async () => {
     const { repository } = await renderApp();
     await act(() =>
       repository.apply({
-        accounts: [{ ...accounts.livret, declaredValue: 310_000, updatedAt: 2 }],
+        accounts: [{ ...accounts.livret, declaredValue: 310_000, declaredAt: TODAY, updatedAt: 2 }],
         debts: [loan()],
         operations: [op("op-1", "2026-07-10", 20_000, "out", { categoryId: cat("Crédit"), accountId: accounts.courant.id, debtId: "debt-1" })],
       }),
     );
     const banner = screen.getByText("Total de mes comptes aujourd'hui").closest("section")!;
-    expect(banner.textContent).toMatch(/Valeur déclarée : \+100,00\s€ par rapport au capital injecté\./);
-    // 1 250 − 200 + 3 000 = 4 050 € sur les comptes ; 800 € restent dus.
-    expect(banner.textContent).toMatch(/Dettes restantes : 800,00\s€\. Patrimoine net : 3\s250,00\s€\./);
+    // 1 250 − 200 sur le courant, 3 100 déclarés sur le livret.
+    expect(within(banner).getByText(/^4\s150,00\s€$/)).toBeTruthy();
+    const legend = within(banner).getAllByRole("listitem").map((li) => li.textContent);
+    expect(legend[1]).toMatch(/^Livret A3\s100,00\s€injecté 3\s000,00\s€$/);
+    expect(banner.textContent).toMatch(/Valeur injectée \(hors comptes courants\) : 3\s000,00\s€\./);
+    expect(banner.textContent).not.toMatch(/sans valeur déclarée/);
+    // 800 € restent dus.
+    expect(banner.textContent).toMatch(/Dettes restantes : 800,00\s€\. Patrimoine net : 3\s350,00\s€\./);
+  });
+
+  it("le total se choisit, propre à l'appareil : rien ne part en synchronisation", async () => {
+    const user = userEvent.setup();
+    const { repository, local } = await renderApp();
+    await act(() => repository.apply({ accounts: [{ ...accounts.livret, declaredValue: 310_000, declaredAt: TODAY, updatedAt: 2 }] }));
+    const pending = repository.pending;
+    await user.selectOptions(screen.getByLabelText("Total affiché"), "Capital injecté");
+    let banner = screen.getByText("Total de mes comptes en capital injecté aujourd'hui").closest("section")!;
+    expect(within(banner).getByText(/^4\s250,00\s€$/)).toBeTruthy();
+    expect(banner.textContent).not.toMatch(/injecté 3\s000/);
+    await user.selectOptions(screen.getByLabelText("Total affiché"), "Injecté hors comptes courants");
+    banner = screen.getByText("Capital injecté hors comptes courants aujourd'hui").closest("section")!;
+    // Le gros chiffre, puis la légende du seul compte retenu.
+    expect(within(banner).getAllByText(/^3\s000,00\s€$/).map((el) => el.tagName)).toEqual(["P", "SPAN"]);
+    expect(within(banner).getAllByRole("listitem").map((li) => li.textContent)).toEqual([expect.stringMatching(/^Livret A/)]);
+    expect(banner.textContent).not.toMatch(/Valeur injectée/);
+    expect(local.device?.display).toEqual({ bannerTotal: "injectedOutsideCurrent" });
+    expect(repository.pending).toBe(pending);
   });
 
   it("n'affiche que les comptes au solde positif dans la barre et la légende", async () => {
@@ -84,10 +111,11 @@ describe("blocs réordonnables", () => {
   it("sans dette, le bloc Dettes n'apparaît pas ; les flèches déplacent et l'ordre est enregistré", async () => {
     const user = userEvent.setup();
     const { repository } = await renderApp();
-    expect(blocks()).toEqual(["Objectifs", "Indicateurs de l'année", "Douze mois", "Progression de l'épargne", "Postes de dépense"]);
+    // Les cibles du mois restent en tête, hors des blocs réordonnables.
+    expect(blocks()).toEqual(["Cibles de septembre 2026", "Objectifs", "Indicateurs de l'année", "Douze mois", "Progression de l'épargne", "Postes de dépense"]);
     expect(screen.getByRole("button", { name: "Monter « Objectifs »" }).hasAttribute("disabled")).toBe(true);
     await user.click(screen.getByRole("button", { name: "Descendre « Objectifs »" }));
-    expect(blocks().slice(0, 2)).toEqual(["Indicateurs de l'année", "Objectifs"]);
+    expect(blocks().slice(1, 3)).toEqual(["Indicateurs de l'année", "Objectifs"]);
     // Le bloc Dettes, masqué, garde sa place dans l'ordre enregistré.
     expect(repository.data.preferences.dashOrder).toEqual(["stats", "debts", "goals", "months", "savings", "cats"]);
   });
@@ -98,6 +126,27 @@ describe("blocs réordonnables", () => {
     expect(moveAmongVisible(order, ["goals", "stats", "months"], "goals", -1)).toEqual(order);
     expect(dropBefore(order, "months", "goals", false)).toEqual(["months", "goals", "debts", "stats"]);
     expect(dropBefore(order, "goals", "stats", true)).toEqual(["debts", "stats", "goals", "months"]);
+  });
+});
+
+describe("cibles du mois en cours", () => {
+  it("ce qui reste avant chaque cible, dépassement des besoins en rouge ; seulement pour l'année en cours", async () => {
+    const { repository, store } = await renderApp();
+    await act(() =>
+      repository.apply({
+        operations: [
+          op("in-1", "2026-09-01", 200_000, "in", { categoryId: cat("Salaire"), accountId: accounts.courant.id }),
+          op("out-1", "2026-09-02", 110_000, "out", { categoryId: cat("Loyer et charges"), accountId: accounts.courant.id }),
+          op("out-2", "2026-09-03", 20_000, "out", { categoryId: cat("Restaurants et bars"), accountId: accounts.courant.id }),
+        ],
+      }),
+    );
+    const card = screen.getByRole("heading", { name: "Cibles de septembre 2026" }).closest("section")!;
+    expect(within(card).getByText(/cible 1\s000,00\s€ · dépassée de 100,00\s€/).querySelector("svg")).not.toBeNull();
+    expect(within(card).getByText(/cible 600,00\s€ · reste 400,00\s€/)).toBeTruthy();
+    expect(within(card).getByText(/cible 400,00\s€ · encore 400,00\s€ à mettre de côté/)).toBeTruthy();
+    act(() => store.getState().actions.setYear(2025));
+    expect(screen.queryByRole("heading", { name: /^Cibles/ })).toBeNull();
   });
 });
 
