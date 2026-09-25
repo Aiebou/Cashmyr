@@ -1,8 +1,20 @@
-import { COLLECTION_NAMES, type Changes, type Collections, type Dataset, type Preferences } from "@cashmyr/core";
+import {
+  COLLECTION_NAMES,
+  SCHEMA_VERSION,
+  upgradeSchema,
+  type Changes,
+  type CollectionName,
+  type Collections,
+  type Dataset,
+  type Preferences,
+} from "@cashmyr/core";
 import { openDB, type IDBPDatabase } from "idb";
 import type { DeviceState, LocalStore, SetAsideInfo, SnapshotInfo } from "../types";
 
-const DB_VERSION = 1;
+/** 2 : magasin des tags (format 2 des données, version 0.2.0). */
+const DB_VERSION = 2;
+/** Collections de la première version de la base ; celles d'après ont chacune leur étape. */
+const FIRST_STORES: readonly CollectionName[] = ["categories", "accounts", "operations", "goals", "goalSteps", "debts", "recurrences", "skips"];
 const META = "meta";
 const SNAPSHOTS = "snapshots";
 const KEEP_SNAPSHOTS = 5;
@@ -27,10 +39,13 @@ export class IndexedDbLocalStore implements LocalStore {
 
   static async open(name = "cashmyr"): Promise<IndexedDbLocalStore> {
     const db = await openDB(name, DB_VERSION, {
-      upgrade(database) {
-        for (const collection of COLLECTION_NAMES) database.createObjectStore(collection, { keyPath: "id" });
-        database.createObjectStore(META);
-        database.createObjectStore(SNAPSHOTS, { keyPath: "id" });
+      upgrade(database, oldVersion) {
+        if (oldVersion < 1) {
+          for (const collection of FIRST_STORES) database.createObjectStore(collection, { keyPath: "id" });
+          database.createObjectStore(META);
+          database.createObjectStore(SNAPSHOTS, { keyPath: "id" });
+        }
+        if (oldVersion < 2) database.createObjectStore("tags", { keyPath: "id" });
       },
     });
     return new IndexedDbLocalStore(db);
@@ -58,7 +73,7 @@ export class IndexedDbLocalStore implements LocalStore {
     }
     if (preferences) {
       writes.push(tx.objectStore(META).put(preferences, "preferences"));
-      writes.push(tx.objectStore(META).put(1, "schemaVersion"));
+      writes.push(tx.objectStore(META).put(SCHEMA_VERSION, "schemaVersion"));
     }
     await Promise.all([...writes, tx.done]);
   }
@@ -97,7 +112,8 @@ export class IndexedDbLocalStore implements LocalStore {
   async readSnapshot(id: string): Promise<Dataset> {
     const snap = (await this.db.get(SNAPSHOTS, id)) as StoredSnapshot | undefined;
     if (!snap) throw new Error(`Copie de sauvegarde introuvable : ${id}`);
-    return JSON.parse(snap.json) as Dataset;
+    // Une copie prise par une version précédente est mise au format courant.
+    return upgradeSchema(JSON.parse(snap.json) as Dataset);
   }
 
   async getDevice(): Promise<DeviceState | null> {

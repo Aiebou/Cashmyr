@@ -137,6 +137,8 @@
   display: grid;
   gap: 2px;
   min-width: 0;
+  /* Montant (et flèches du mode « Modifier l'ordre ») serrés à droite. */
+  margin-right: auto;
 }
 .balance {
   font-family: var(--font-display);

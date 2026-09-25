@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  SCHEMA_VERSION,
   accountUsage,
   applyChanges,
   BackupError,
@@ -108,7 +109,7 @@ describe("export et import JSON (décision 32)", () => {
     };
     expect(code("{ tronqué")).toBe("unreadable");
     expect(code(JSON.stringify({ settings: {}, months: {} }))).toBe("legacy");
-    expect(code(JSON.stringify({ ...base, schemaVersion: 2 }))).toBe("newer-schema");
+    expect(code(JSON.stringify({ ...base, schemaVersion: SCHEMA_VERSION + 1 }))).toBe("newer-schema");
     const broken = { ...base, collections: { ...base.collections, operations: [{ ...base.collections.operations[0], amount: 12.5 }] } };
     expect(code(JSON.stringify(broken))).toBe("invalid");
     expect(code(JSON.stringify([1, 2]))).toBe("unknown");

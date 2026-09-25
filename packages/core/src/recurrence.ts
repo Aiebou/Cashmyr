@@ -31,6 +31,7 @@ function occurrenceFields(rec: Recurrence, month: Month, amount: Cents): Occurre
   }
   if (rec.goalId) fields.goalId = rec.goalId;
   if (rec.debtId) fields.debtId = rec.debtId;
+  if (rec.tagId) fields.tagId = rec.tagId;
   return fields;
 }
 

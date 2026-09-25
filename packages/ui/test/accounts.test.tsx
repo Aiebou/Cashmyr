@@ -112,6 +112,28 @@ describe("Mes comptes", () => {
     expect(names("Vos comptes")).toEqual(["Compte courant", "Livret A", "PEA"]);
   });
 
+  it("l'ordre des comptes se modifie ici et vaut partout (décision 49)", async () => {
+    const user = userEvent.setup();
+    const { repository, store } = await openAccounts();
+    expect(within(frame("Vos comptes")).queryByRole("button", { name: "Descendre « Compte courant »" })).toBeNull();
+    await user.click(within(frame("Vos comptes")).getByRole("button", { name: "Modifier l'ordre" }));
+    await user.click(within(frame("Vos comptes")).getByRole("button", { name: "Descendre « Compte courant »" }));
+    const names = within(within(frame("Vos comptes")).getByRole("list"))
+      .getAllByRole("listitem")
+      .map((li) => li.textContent?.match(/^(Compte courant|Livret A)/)?.[1]);
+    expect(names).toEqual(["Livret A", "Compte courant"]);
+    expect(repository.data.collections.accounts.map((a) => [a.name, a.position])).toEqual([
+      ["Compte courant", 2],
+      ["Livret A", 1],
+    ]);
+    // Ailleurs aussi : la légende du bandeau et la saisie d'une opération.
+    const legend = within(screen.getByText("Total de mes comptes aujourd'hui").closest("section")!).getAllByRole("listitem");
+    expect(legend[0]!.textContent).toMatch(/^Livret A/);
+    act(() => store.getState().actions.openModal({ kind: "operation", type: "out" }));
+    const dialog = await screen.findByRole("dialog", { name: "Nouvelle opération" });
+    expect(within(within(dialog).getByLabelText("Compte")).getAllByRole("option").map((o) => o.textContent)).toEqual(["Livret A", "Compte courant"]);
+  });
+
   it("un compte épargne, placement ou autre sans valeur déclarée le signale", async () => {
     const { repository, store } = await openAccounts();
     const pea = createRecord<Account>("acc-pea", { name: "PEA", role: "invest", opening: 80_000, safety: false, color: 2 }, 1);

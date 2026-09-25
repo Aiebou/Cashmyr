@@ -1,12 +1,14 @@
 import {
   compareOpsDesc,
   indexOf,
+  liveTags,
   monthOf,
   occurrenceAmount,
   occurrenceDate,
   plannedOccurrences,
   restoreOccurrence,
   skippedInMonth,
+  tagTotals,
   type Dataset,
   type Month,
   type Operation,
@@ -22,7 +24,7 @@ import { OperationList, OperationRow } from "../components/OperationRow";
 import { PlannedList } from "../components/PlannedList";
 import { expenseGroups, liveAccounts, liveCategories } from "../lib/data";
 import { hasFilters, matchesFilters, NO_FILTERS, type OperationFilters } from "../lib/filters";
-import { count, dayHeading, dayShort, monthLong, money, ofMonth } from "../lib/format";
+import { count, dayHeading, dayShort, monthLong, money, moneySigned, ofMonth } from "../lib/format";
 import { useActions, useApp } from "../store/context";
 import s from "./OperationsScreen.module.css";
 
@@ -38,7 +40,7 @@ const TOTAL_LABELS: Record<OpType, string> = { out: "Dépenses", in: "Revenus", 
 const byName = <T extends { name: string }>(a: T, b: T) => a.name.localeCompare(b.name, "fr");
 
 /** Objectifs et dettes non supprimés, archivés compris : leurs opérations restent dans l'historique. */
-const tagOptions = <T extends { id: string; name: string; deletedAt: number | null; archived: boolean }>(items: readonly T[]) =>
+const linkOptions = <T extends { id: string; name: string; deletedAt: number | null; archived: boolean }>(items: readonly T[]) =>
   items
     .filter((i) => i.deletedAt === null)
     .sort(byName)
@@ -48,8 +50,9 @@ const tagOptions = <T extends { id: string; name: string; deletedAt: number | nu
 
 function Filters({ data, value, onChange }: { data: Dataset; value: OperationFilters; onChange(f: OperationFilters): void }) {
   const set = (patch: Partial<OperationFilters>) => onChange({ ...value, ...patch });
-  const goals = tagOptions(data.collections.goals);
-  const debts = tagOptions(data.collections.debts);
+  const goals = linkOptions(data.collections.goals);
+  const debts = linkOptions(data.collections.debts);
+  const tags = liveTags(data);
   const incomes = liveCategories(data, "in");
   const groups = expenseGroups(data);
 
@@ -120,6 +123,16 @@ function Filters({ data, value, onChange }: { data: Dataset; value: OperationFil
             {debts.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.label}
+              </option>
+            ))}
+          </Select>
+        )}
+        {tags.length > 0 && (
+          <Select aria-label="Tag" value={value.tagId} onChange={(e) => set({ tagId: e.target.value })}>
+            <option value="">Tags</option>
+            {tags.map((tag) => (
+              <option key={tag.id} value={tag.id}>
+                {tag.name}
               </option>
             ))}
           </Select>
@@ -196,10 +209,18 @@ export function OperationsScreen() {
   }
 
   const totals = shown.reduce<Record<OpType, number>>((t, op) => ({ ...t, [op.type]: t[op.type] + op.amount }), { out: 0, in: 0, tx: 0 });
-  const summary = [
-    filtered ? `${count(shown.length, "opération", "opérations")} sur ${all.length}` : count(shown.length, "opération", "opérations"),
-    ...(["out", "in", "tx"] as OpType[]).filter((t) => totals[t] > 0).map((t) => `${TOTAL_LABELS[t]} ${money(totals[t])}`),
-  ].join(" · ");
+  const counted = filtered ? `${count(shown.length, "opération", "opérations")} sur ${all.length}` : count(shown.length, "opération", "opérations");
+  // Filtre sur un tag (décision 48) : entrées, sorties et solde du mois ; les transferts sont listés sans compter.
+  const byTag = filters.tagId ? tagTotals(shown) : null;
+  const summary = byTag
+    ? [
+        counted,
+        `Entrées ${money(byTag.inflow)}`,
+        `Sorties ${money(byTag.outflow)}`,
+        `Solde ${moneySigned(byTag.net)}`,
+        ...(byTag.transfers > 0 ? [count(byTag.transfers, "transfert non compté", "transferts non comptés")] : []),
+      ].join(" · ")
+    : [counted, ...(["out", "in", "tx"] as OpType[]).filter((t) => totals[t] > 0).map((t) => `${TOTAL_LABELS[t]} ${money(totals[t])}`)].join(" · ");
 
   let list;
   if (all.length === 0) {

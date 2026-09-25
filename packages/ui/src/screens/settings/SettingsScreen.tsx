@@ -10,6 +10,7 @@ import { DataSection } from "./DataSection";
 import { RecurrencesSection } from "./RecurrencesSection";
 import s from "./Settings.module.css";
 import { SyncSection } from "./SyncSection";
+import { TagsSection } from "./TagsSection";
 
 function Appearance() {
   const theme = useApp((st) => st.data.preferences.theme);
@@ -35,6 +36,7 @@ const SECTIONS: { id: string; title: string; content: ReactNode }[] = [
   { id: "comptes", title: "Comptes", content: <AccountsSection /> },
   { id: "recurrences", title: "Récurrences", content: <RecurrencesSection /> },
   { id: "categories", title: "Catégories et couleurs", content: <CategoriesSection /> },
+  { id: "tags", title: "Tags", content: <TagsSection /> },
   { id: "synchronisation", title: "Synchronisation", content: <SyncSection /> },
   { id: "sauvegardes", title: "Sauvegardes", content: <DataSection /> },
   { id: "apparence", title: "Apparence", content: <Appearance /> },

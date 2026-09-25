@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  SCHEMA_VERSION,
   applyChanges,
   COLLECTION_NAMES,
   dropRecords,
@@ -178,7 +179,7 @@ describe("lecture du fichier", () => {
   });
 
   it("écrit par une version plus récente : refusé", () => {
-    expect(code(JSON.stringify({ ...written, schemaVersion: 2 }))).toBe("newer-schema");
+    expect(code(JSON.stringify({ ...written, schemaVersion: SCHEMA_VERSION + 1 }))).toBe("newer-schema");
   });
 
   it("contenu invalide : refusé avec le détail", () => {

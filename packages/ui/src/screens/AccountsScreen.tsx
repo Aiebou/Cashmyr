@@ -6,17 +6,19 @@ import {
   declaredAsOf,
   formatCents,
   isFluctuatingRole,
+  reorderAccounts,
   type Account,
   type Cents,
   type Dataset,
   type Day,
   type Role,
 } from "@cashmyr/core";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Button, cx, ToggleChips } from "../components/controls";
 import { Dot } from "../components/figures";
 import { PlusIcon } from "../components/icons";
 import { Card, Empty, ScreenTitle, Stack } from "../components/layout";
+import { dropBefore, MoveBar, moveAmongVisible, useReorderDrag } from "../components/Reorderable";
 import { liveAccounts, ROLE_LABELS } from "../lib/data";
 import { dayLong, money } from "../lib/format";
 import { displayOf } from "../store/app-store";
@@ -94,59 +96,104 @@ function YearFlows({ data, accounts, year, asOf }: { data: Dataset; accounts: Ac
 
 // ── Vos comptes ────────────────────────────────────────────────────────────
 
+type TileProps = {
+  data: Dataset;
+  account: Account;
+  asOf: Day;
+  today: Day;
+  figures: ReturnType<typeof accountFigures>;
+  /** Mode « Modifier l'ordre » : poignée et flèches sur chaque tuile. */
+  ordering: { index: number; count: number; onMove(id: string, delta: -1 | 1): void; onDropOn(dragged: string, target: string, after: boolean): void } | null;
+};
+
 /**
- * Comptes épargne, placement et autre : la valeur déclarée en avant, le capital injecté dessous
- * (décision 42). Sans valeur déclarée à cette date, le capital injecté, sur fond rouge discret.
+ * Un compte. Épargne, placement et autre : la valeur déclarée en avant, le capital injecté dessous
+ * (décision 42) ; sans valeur déclarée à cette date, le capital injecté, sur fond rouge discret.
  */
-function AccountList({ data, accounts, asOf, today }: { data: Dataset; accounts: Account[]; asOf: Day; today: Day }) {
+function AccountTile({ data, account, asOf, today, figures, ordering }: TileProps) {
+  const drag = useReorderDrag(account.id, "application/x-cashmyr-account", (dragged, target, after) => ordering?.onDropOn(dragged, target, after));
+  const f = figures.get(account.id);
+  if (!f) return null;
+  const fluctuating = isFluctuatingRole(account.role);
+  const declared = declaredAsOf(account, asOf, today);
+  const missing = fluctuating && declared === null;
+  const shown = declared ?? f.balance;
+  // Le type n'est pas répété quand le nom le dit déjà (« Compte courant »).
+  const role = [account.name === ROLE_LABELS[account.role] ? "" : ROLE_LABELS[account.role], account.safety ? "épargne de précaution" : ""]
+    .filter(Boolean)
+    .join(" · ");
+  const draggable = ordering ? drag.container : {};
+  return (
+    <li className={cx(s.account, missing && s.undeclared, ordering && drag.overClass)} {...draggable}>
+      <div className={s.accountHead}>
+        <div className={s.titles}>
+          <span className={s.name}>
+            <Dot color={colorFor(data.preferences, { kind: "series", color: account.color })} />
+            {account.name}
+          </span>
+          {role && <span className={s.muted}>{role}</span>}
+        </div>
+        <div className={s.figure}>
+          <span className={cx(s.balance, shown < 0 && s.negative)}>{money(shown)}</span>
+          {declared !== null && <span className={s.figureNote}>valeur déclarée</span>}
+          {missing && (
+            <span className={s.missing}>{account.declaredValue !== undefined ? "valeur déclarée après cette date" : "valeur non déclarée"}</span>
+          )}
+        </div>
+        {ordering && (
+          <MoveBar
+            name={account.name}
+            what="le compte"
+            index={ordering.index}
+            count={ordering.count}
+            grip={drag.grip}
+            onMove={(delta) => ordering.onMove(account.id, delta)}
+          />
+        )}
+      </div>
+      {declared !== null && (
+        <p className={s.detail}>
+          Capital injecté {money(f.balance)} · écart <strong>{signed(declared - f.balance)}</strong>
+          {account.declaredAt ? ` · déclarée le ${dayLong(account.declaredAt)}` : ""}
+        </p>
+      )}
+      <p className={s.detail}>
+        Départ {money(f.opening)} · {money(f.inflow)} entrés · {money(f.outflow)} sortis
+      </p>
+    </li>
+  );
+}
+
+function AccountList({ data, accounts, asOf, today, ordering }: { data: Dataset; accounts: Account[]; asOf: Day; today: Day; ordering: boolean }) {
   const figures = useMemo(() => accountFigures(data, asOf), [data, asOf]);
-  const prefs = data.preferences;
+  const { apply } = useActions();
+  // Décision 49 : l'ordre est celui de tous les comptes ; un filtre actif ne déplace que parmi ceux qu'il montre.
+  const order = liveAccounts(data).map((a) => a.id);
+  const visible = accounts.map((a) => a.id);
+  const save = (ids: string[]) => void apply(reorderAccounts(data, ids, Date.now()));
   return (
     <>
       <ul className={s.accounts}>
-        {accounts.map((account) => {
-          const f = figures.get(account.id);
-          if (!f) return null;
-          const fluctuating = isFluctuatingRole(account.role);
-          const declared = declaredAsOf(account, asOf, today);
-          const missing = fluctuating && declared === null;
-          const shown = declared ?? f.balance;
-          // Le type n'est pas répété quand le nom le dit déjà (« Compte courant »).
-          const role = [account.name === ROLE_LABELS[account.role] ? "" : ROLE_LABELS[account.role], account.safety ? "épargne de précaution" : ""]
-            .filter(Boolean)
-            .join(" · ");
-          return (
-            <li key={account.id} className={cx(s.account, missing && s.undeclared)}>
-              <div className={s.accountHead}>
-                <div className={s.titles}>
-                  <span className={s.name}>
-                    <Dot color={colorFor(prefs, { kind: "series", color: account.color })} />
-                    {account.name}
-                  </span>
-                  {role && <span className={s.muted}>{role}</span>}
-                </div>
-                <div className={s.figure}>
-                  <span className={cx(s.balance, shown < 0 && s.negative)}>{money(shown)}</span>
-                  {declared !== null && <span className={s.figureNote}>valeur déclarée</span>}
-                  {missing && (
-                    <span className={s.missing}>
-                      {account.declaredValue !== undefined ? "valeur déclarée après cette date" : "valeur non déclarée"}
-                    </span>
-                  )}
-                </div>
-              </div>
-              {declared !== null && (
-                <p className={s.detail}>
-                  Capital injecté {money(f.balance)} · écart <strong>{signed(declared - f.balance)}</strong>
-                  {account.declaredAt ? ` · déclarée le ${dayLong(account.declaredAt)}` : ""}
-                </p>
-              )}
-              <p className={s.detail}>
-                Départ {money(f.opening)} · {money(f.inflow)} entrés · {money(f.outflow)} sortis
-              </p>
-            </li>
-          );
-        })}
+        {accounts.map((account, index) => (
+          <AccountTile
+            key={account.id}
+            data={data}
+            account={account}
+            asOf={asOf}
+            today={today}
+            figures={figures}
+            ordering={
+              ordering
+                ? {
+                    index,
+                    count: accounts.length,
+                    onMove: (id, delta) => save(moveAmongVisible(order, visible, id, delta)),
+                    onDropOn: (dragged, target, after) => save(dropBefore(order, dragged, target, after)),
+                  }
+                : null
+            }
+          />
+        ))}
       </ul>
       <p className={s.muted}>
         Capital injecté = solde de départ, plus tout ce qui est entré, moins tout ce qui est sorti : jamais une valeur de marché. Pour
@@ -171,6 +218,7 @@ export function AccountsScreen() {
   const today = useApp((st) => st.today);
   const roles = displayOf(useApp((st) => st.device)).accountRoles;
   const { openModal, setDisplay } = useActions();
+  const [ordering, setOrdering] = useState(false);
   const asOf = asOfForYear(year, today);
   const accounts = liveAccounts(data);
   // Filtre par type, propre à l'appareil ; seuls les types présents sont proposés.
@@ -211,8 +259,19 @@ export function AccountsScreen() {
       <Card title="Mouvements de l'année" subtitle={period}>
         <YearFlows data={data} accounts={shown} year={year} asOf={asOf} />
       </Card>
-      <Card title="Vos comptes" subtitle={asOf === today ? "Soldes aujourd'hui" : `Soldes au ${dayLong(asOf)}`}>
-        <AccountList data={data} accounts={shown} asOf={asOf} today={today} />
+      <Card
+        title="Vos comptes"
+        subtitle={asOf === today ? "Soldes aujourd'hui" : `Soldes au ${dayLong(asOf)}`}
+        actions={
+          shown.length > 1 && (
+            <Button variant="ghost" size="small" aria-pressed={ordering} onClick={() => setOrdering((o) => !o)}>
+              {ordering ? "Terminé" : "Modifier l'ordre"}
+            </Button>
+          )
+        }
+      >
+        {ordering && <p className={s.muted}>L'ordre choisi vaut partout, sur tous tes appareils : bandeau, listes et saisie.</p>}
+        <AccountList data={data} accounts={shown} asOf={asOf} today={today} ordering={ordering} />
       </Card>
     </Stack>
   );

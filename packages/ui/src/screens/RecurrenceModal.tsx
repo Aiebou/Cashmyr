@@ -10,13 +10,16 @@ import {
   type Cents,
   type Month,
   type OpType,
+  type Changes,
   type Recurrence,
 } from "@cashmyr/core";
 import { useId, useMemo, useState, type FormEvent } from "react";
 import { AmountInput, Button, Field, FieldRow, Segmented, Select, submitOnEnter, TextInput } from "../components/controls";
 import { Modal } from "../components/Modal";
+import { TagField } from "../components/TagField";
 import { expenseGroups, liveAccounts, liveCategories, liveDebts, liveGoals } from "../lib/data";
 import { count, dayLong, monthLong, ofMonth } from "../lib/format";
+import { tagChoice, tagText } from "../lib/tags";
 import { useActions, useApp } from "../store/context";
 import s from "./OperationModal.module.css";
 
@@ -58,6 +61,7 @@ export function RecurrenceModal({ editId }: { editId?: string }) {
   const [toId, setToId] = useState(existing?.toAccountId ?? "");
   const [goalId, setGoalId] = useState(existing?.goalId ?? "");
   const [debtId, setDebtId] = useState(existing?.debtId ?? "");
+  const [tag, setTag] = useState(() => tagText(data, existing?.tagId));
   const [day, setDay] = useState(existing?.dayOfMonth ?? 1);
   const [startMonth, setStartMonth] = useState<Month>(existing?.startMonth ?? addMonths(current, 1));
   const [endMonth, setEndMonth] = useState<Month | "">(existing?.endMonth ?? "");
@@ -70,10 +74,13 @@ export function RecurrenceModal({ editId }: { editId?: string }) {
   const goals = liveGoals(data);
   const debts = liveDebts(data);
 
-  const build = (): Recurrence | null => {
+  /** La récurrence à écrire, et le tag à créer avec elle s'il est nouveau. */
+  const build = (): { rec: Recurrence; tagChanges: Changes } | null => {
     if (amount === null || amount <= 0 || !label.trim()) return null;
     if (isTransfer ? !fromId || !toId || fromId === toId : !categoryOk || !accountId) return null;
     if (endMonth !== "" && endMonth < startMonth) return null;
+    const now = Date.now();
+    const tagged = tagChoice(data, tag, existing?.tagId, now);
     const fields: Omit<Recurrence, "id" | "updatedAt" | "deletedAt"> = {
       label: label.trim(),
       amount,
@@ -81,19 +88,20 @@ export function RecurrenceModal({ editId }: { editId?: string }) {
       ...(isTransfer ? { fromAccountId: fromId, toAccountId: toId } : { categoryId, accountId }),
       ...(goalId ? { goalId } : {}),
       ...(debtId ? { debtId } : {}),
+      ...(tagged.tagId ? { tagId: tagged.tagId } : {}),
       dayOfMonth: day,
       startMonth,
       endMonth: endMonth === "" ? null : endMonth,
       active: existing?.active ?? true,
     };
-    const now = Date.now();
-    return existing
+    const rec = existing
       ? { id: existing.id, updatedAt: nextStamp(now, existing), deletedAt: null, ...fields }
       : createRecord<Recurrence>(newId(), fields, now);
+    return { rec, tagChanges: tagged.changes };
   };
 
   // Ce que l'enregistrement créerait tout de suite : les mois dont le jour est déjà passé.
-  const candidate = build();
+  const candidate = build()?.rec;
   const created =
     candidate && candidate.active
       ? materializeRecurrences(applyChanges(data, { recurrences: [candidate] }), today, 0).filter((op) => op.recurrenceId === candidate.id)
@@ -114,9 +122,10 @@ export function RecurrenceModal({ editId }: { editId?: string }) {
     }
     if (endMonth !== "" && endMonth < startMonth) found.end = "Le dernier mois précède le premier.";
     setErrors(found);
-    const rec = build();
-    if (Object.keys(found).length > 0 || !rec) return;
-    if (await apply({ recurrences: [rec] }, undefined, existing ? "Récurrence modifiée" : "Récurrence créée")) closeModal();
+    const built = build();
+    if (Object.keys(found).length > 0 || !built) return;
+    const changes: Changes = { ...built.tagChanges, recurrences: [built.rec] };
+    if (await apply(changes, undefined, existing ? "Récurrence modifiée" : "Récurrence créée")) closeModal();
   };
 
   const first = created[0];
@@ -264,6 +273,8 @@ export function RecurrenceModal({ editId }: { editId?: string }) {
             </Field>
           </FieldRow>
         )}
+
+        <TagField id={`${id}-tag`} data={data} value={tag} onChange={setTag} />
 
         {existing && <p className={s.notice}>Les opérations déjà créées ne changent pas : seules les prochaines suivent ces réglages.</p>}
         {first && last && (
