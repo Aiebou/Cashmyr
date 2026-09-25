@@ -6,6 +6,7 @@ import {
   isValidDay,
   mergeChanges,
   newId,
+  parseAmount,
   type Cents,
   type Changes,
   type Dataset,
@@ -14,6 +15,7 @@ import {
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { AmountInput, Checkbox, Field, FieldRow, Segmented, Select, TextInput } from "../components/controls";
 import { expenseGroups, liveAccounts, liveCategories, nextColor } from "../lib/data";
+import { computedHint, editSchedule, initialSchedule, type ScheduleState } from "../lib/schedule-fields";
 import { useActions, useApp } from "../store/context";
 
 export type Direction = Debt["direction"];
@@ -77,10 +79,8 @@ export function useDebtForm({ full, onCreated }: Options): { fields: ReactNode; 
   const [direction, setDirection] = useState<Direction>("owe");
   const [name, setName] = useState("");
   const [creditor, setCreditor] = useState("");
-  const [total, setTotal] = useState<Cents | null>(0);
+  const [schedule, setSchedule] = useState<ScheduleState>(() => initialSchedule({ total: "", installment: "", count: "" }));
   const [paid, setPaid] = useState<Cents | null>(0);
-  const [installment, setInstallment] = useState<Cents | null>(null);
-  const [count, setCount] = useState("");
   const [start, setStart] = useState(today);
   const [withRecurrence, setWithRecurrence] = useState(false);
   const [categoryId, setCategoryId] = useState(() => defaultCategory(data, "owe"));
@@ -88,8 +88,14 @@ export function useDebtForm({ full, onCreated }: Options): { fields: ReactNode; 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const lent = direction === "lent";
 
+  const { texts } = schedule;
+  const onSchedule = (field: keyof typeof texts) => (text: string) => setSchedule((st) => editSchedule(st, field, text));
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    const total: Cents | null = texts.total.trim() === "" ? 0 : parseAmount(texts.total);
+    const installment: Cents | null = texts.installment.trim() === "" ? null : parseAmount(texts.installment);
+    const count = texts.count;
     const n = count.trim() === "" ? 0 : Number(count);
     const hasSchedule = (installment ?? 0) > 0 || count.trim() !== "";
     const found: Record<string, string> = {};
@@ -187,19 +193,29 @@ export function useDebtForm({ full, onCreated }: Options): { fields: ReactNode; 
         )}
       </FieldRow>
       <FieldRow>
-        <Field label="Montant total" htmlFor={`${id}-total`} hint="Vide : calculé depuis les échéances" error={errors.total}>
-          <AmountInput id={`${id}-total`} onAmount={(c, t) => setTotal(t.trim() === "" ? 0 : c)} />
+        <Field
+          label="Montant total"
+          htmlFor={`${id}-total`}
+          hint={computedHint(schedule, "total") ?? "Remplis deux des trois montants : le troisième se calcule"}
+          error={errors.total}
+        >
+          <AmountInput id={`${id}-total`} text={texts.total} onAmount={(_, t) => onSchedule("total")(t)} />
         </Field>
         <Field label={lent ? "Déjà remboursé" : "Déjà réglé"} htmlFor={`${id}-paid`} error={errors.paid}>
           <AmountInput id={`${id}-paid`} initial={0} onAmount={(c, t) => setPaid(t.trim() === "" ? 0 : c)} />
         </Field>
       </FieldRow>
       <FieldRow>
-        <Field label="Montant par échéance" htmlFor={`${id}-inst`} hint={full ? "Vide : remboursement libre" : undefined} error={errors.installment}>
-          <AmountInput id={`${id}-inst`} onAmount={(c, t) => setInstallment(t.trim() === "" ? null : c)} />
+        <Field
+          label="Montant par échéance"
+          htmlFor={`${id}-inst`}
+          hint={computedHint(schedule, "installment") ?? (full ? "Vide : remboursement libre" : undefined)}
+          error={errors.installment}
+        >
+          <AmountInput id={`${id}-inst`} text={texts.installment} onAmount={(_, t) => onSchedule("installment")(t)} />
         </Field>
-        <Field label="Nombre d'échéances" htmlFor={`${id}-count`} error={errors.count}>
-          <TextInput id={`${id}-count`} inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} autoComplete="off" />
+        <Field label="Nombre d'échéances" htmlFor={`${id}-count`} hint={computedHint(schedule, "count") ?? undefined} error={errors.count}>
+          <TextInput id={`${id}-count`} inputMode="numeric" value={texts.count} onChange={(e) => onSchedule("count")(e.target.value)} autoComplete="off" />
         </Field>
       </FieldRow>
       <Field label="Première échéance" htmlFor={`${id}-start`} error={errors.start}>

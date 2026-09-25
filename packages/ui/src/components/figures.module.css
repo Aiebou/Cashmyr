@@ -40,9 +40,28 @@
   background: var(--ink);
   box-shadow: 0 0 0 2px var(--panel);
 }
+/* Part au-delà de la cible, quand le dépassement est signalé. */
+.excess {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 0 999px 999px 0;
+  background: var(--negative);
+}
 .caption {
   font-size: 13px;
   color: var(--ink-2);
+}
+.captionOver {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--negative);
+  font-weight: 560;
+}
+.captionOver svg {
+  flex: none;
 }
 
 .segmentedWrap {

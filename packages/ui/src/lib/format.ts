@@ -1,9 +1,7 @@
 import { formatCents, type Cents, type Day, type Month } from "@cashmyr/core";
 
-/** Gros chiffres : sans décimales. */
-export const money = (cents: Cents) => formatCents(cents, { decimals: 0 });
-/** Listes : deux décimales. */
-export const moneyExact = (cents: Cents) => formatCents(cents, { decimals: 2 });
+/** Tous les montants, gros chiffres compris : deux décimales (choix du 25/09/2026). */
+export const money = (cents: Cents) => formatCents(cents, { decimals: 2 });
 export const moneySigned = (cents: Cents) => formatCents(cents, { decimals: 2, signed: true });
 
 const utc = (day: Day) => new Date(`${day}T12:00:00Z`);

@@ -11,7 +11,7 @@ import { Button, cx } from "../../components/controls";
 import { PlusIcon } from "../../components/icons";
 import { Card } from "../../components/layout";
 import { accountName, categoryName } from "../../lib/data";
-import { count, monthLong, moneyExact, ofMonth } from "../../lib/format";
+import { count, monthLong, money, ofMonth } from "../../lib/format";
 import { useActions, useApp } from "../../store/context";
 import s from "./Settings.module.css";
 
@@ -26,7 +26,7 @@ function describe(data: Dataset, rec: Recurrence): string {
       ? `${accountName(data, rec.fromAccountId)} → ${accountName(data, rec.toAccountId)}`
       : `${categoryName(data, rec.categoryId)} · ${accountName(data, rec.accountId)}`;
   const span = rec.endMonth ? `${ofMonth(rec.startMonth)} à ${monthLong(rec.endMonth)}` : `depuis ${monthLong(rec.startMonth)}`;
-  return `${sign}${moneyExact(rec.amount)} le ${rec.dayOfMonth} de chaque mois · ${where} · ${span}`;
+  return `${sign}${money(rec.amount)} le ${rec.dayOfMonth} de chaque mois · ${where} · ${span}`;
 }
 
 function RecurrenceItem({ rec }: { rec: Recurrence }) {

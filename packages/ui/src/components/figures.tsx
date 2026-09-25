@@ -1,6 +1,7 @@
 import type { Cents } from "@cashmyr/core";
 import type { ReactNode } from "react";
 import { money } from "../lib/format";
+import { AlertIcon } from "./icons";
 import s from "./figures.module.css";
 
 type GaugeProps = {
@@ -11,16 +12,19 @@ type GaugeProps = {
   target: Cents | null;
   /** Texte sous la jauge ; par défaut « cible … » ; false pour ne rien afficher. */
   caption?: ReactNode | false;
+  /** Cible dépassée à signaler (besoins, envies) : la part au-delà passe en rouge, le texte aussi, avec une icône. */
+  warnOver?: boolean;
 };
 
 /**
  * Jauge : le remplissage porte le réalisé, un trait vertical marque la cible.
  * La piste est un éclaircissement de la même teinte.
  */
-export function Gauge({ label, color, value, target, caption }: GaugeProps) {
+export function Gauge({ label, color, value, target, caption, warnOver = false }: GaugeProps) {
   const scale = Math.max(value, target ?? 0, 1);
   const fill = Math.max(0, Math.min(1, value / scale));
   const mark = target !== null && target > 0 ? target / scale : null;
+  const over = warnOver && target !== null && value > target;
   const summary =
     target !== null
       ? `${label} : ${money(value)} sur une cible de ${money(target)}`
@@ -38,11 +42,15 @@ export function Gauge({ label, color, value, target, caption }: GaugeProps) {
       {target !== null && (
         <div className={s.track} style={{ ["--c" as string]: color }} role="img" aria-label={summary}>
           <div className={s.fill} style={{ width: `${fill * 100}%` }} />
+          {over && <div className={s.excess} style={{ left: `${(mark ?? 0) * 100}%` }} />}
           {mark !== null && <div className={s.mark} style={{ left: `${mark * 100}%` }} />}
         </div>
       )}
       {caption !== false && (
-        <p className={s.caption}>{caption ?? (target !== null ? <>cible {money(target)}</> : "pas encore de cible")}</p>
+        <p className={over ? `${s.caption} ${s.captionOver}` : s.caption}>
+          {over && <AlertIcon size={15} />}
+          {caption ?? (target !== null ? <>cible {money(target)}</> : "pas encore de cible")}
+        </p>
       )}
     </div>
   );

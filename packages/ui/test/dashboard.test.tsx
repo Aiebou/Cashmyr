@@ -50,8 +50,8 @@ describe("bandeau du tableau de bord", () => {
   it("total de tous les comptes, détail au quotidien / épargne, sans ligne dettes tant qu'il n'y en a pas", async () => {
     await renderApp();
     const banner = screen.getByText("Total de mes comptes aujourd'hui").closest("section")!;
-    expect(within(banner).getByText(/^4\s250\s€$/)).toBeTruthy();
-    expect(banner.textContent).toMatch(/Dont 1\s250\s€ disponibles au quotidien et 3\s000\s€ d'épargne et de placements\./);
+    expect(within(banner).getByText(/^4\s250,00\s€$/)).toBeTruthy();
+    expect(banner.textContent).toMatch(/Dont 1\s250,00\s€ disponibles au quotidien et 3\s000,00\s€ d'épargne et de placements\./);
     expect(banner.textContent).not.toMatch(/Dettes restantes/);
     expect(banner.textContent).not.toMatch(/Valeur déclarée/);
   });
@@ -66,9 +66,9 @@ describe("bandeau du tableau de bord", () => {
       }),
     );
     const banner = screen.getByText("Total de mes comptes aujourd'hui").closest("section")!;
-    expect(banner.textContent).toMatch(/Valeur déclarée : \+100\s€ par rapport au capital injecté\./);
+    expect(banner.textContent).toMatch(/Valeur déclarée : \+100,00\s€ par rapport au capital injecté\./);
     // 1 250 − 200 + 3 000 = 4 050 € sur les comptes ; 800 € restent dus.
-    expect(banner.textContent).toMatch(/Dettes restantes : 800\s€\. Patrimoine net : 3\s250\s€\./);
+    expect(banner.textContent).toMatch(/Dettes restantes : 800,00\s€\. Patrimoine net : 3\s250,00\s€\./);
   });
 
   it("n'affiche que les comptes au solde positif dans la barre et la légende", async () => {
@@ -113,7 +113,7 @@ describe("graphiques et textes", () => {
     const d = loan({ paidManual: 95_000 });
     const data = applyChanges(emptyDataset(), { debts: [d] });
     const text = debtSentence(debtView(data, d, TODAY, TODAY), TODAY).replace(/ | /g, " ");
-    expect(text).toBe("reste 1 échéance de 50 € · prochaine le 10 novembre 2026 · soldée en novembre 2026.");
+    expect(text).toBe("reste 1 échéance de 50,00 € · prochaine le 10 novembre 2026 · soldée en novembre 2026.");
   });
 
   it("phrase de dette : échéance en retard, dernière réduite", () => {
@@ -121,7 +121,7 @@ describe("graphiques et textes", () => {
     const data = applyChanges(emptyDataset(), { debts: [d] });
     const text = debtSentence(debtView(data, d, TODAY, TODAY), TODAY).replace(/ | /g, " ");
     expect(text).toBe(
-      "reste 5 échéances, 4 de 200 € puis 50 € · en retard depuis le 10 juillet 2026 · soldée en novembre 2026.",
+      "reste 5 échéances, 4 de 200,00 € puis 50,00 € · en retard depuis le 10 juillet 2026 · soldée en novembre 2026.",
     );
   });
 });

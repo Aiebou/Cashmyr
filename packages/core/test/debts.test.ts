@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyChanges,
+  completeSchedule,
   createDebtRecurrence,
   dashboardDebts,
   DebtActionError,
@@ -438,5 +439,43 @@ describe("intégrité", () => {
     const data = build({ debts: [tombstone(d, NOW)], operations: [pay(d, "2026-09-01", 10)] });
     const r = syncWithDocument({ local: data, remote: newSyncDocument("f"), device: { id: "a", label: "A" }, now: NOW + 100 * DAY });
     expect(r.document.collections.debts.map((x) => x.id)).toEqual([d.id]);
+  });
+});
+
+describe("calcul automatique de l'échéancier (décision 41)", () => {
+  it("montant par échéance : total ÷ nombre, au centime supérieur", () => {
+    expect(completeSchedule("installment", { total: 200_000, count: 5 })).toBe(40_000);
+    // 1 000 € en 3 : 333,34 €, la dernière échéance réduite à 333,32 € par l'échéancier.
+    expect(completeSchedule("installment", { total: 100_000, count: 3 })).toBe(33_334);
+  });
+
+  it("nombre d'échéances : total ÷ montant, à l'entier supérieur", () => {
+    expect(completeSchedule("count", { total: 123_000, installment: 12_300 })).toBe(10);
+    expect(completeSchedule("count", { total: 100_000, installment: 30_000 })).toBe(4);
+  });
+
+  it("montant total : montant × nombre", () => {
+    expect(completeSchedule("total", { installment: 12_300, count: 10 })).toBe(123_000);
+  });
+
+  it("le total ne dépasse jamais ce que couvrent les échéances, et la dernière est réduite", () => {
+    const debt = loan({ principal: 100_000, installmentAmount: completeSchedule("installment", { total: 100_000, count: 3 })!, installmentCount: 3 });
+    expect(validateDataset(build({ debts: [debt] }))).toEqual([]);
+    const view = debtView(build({ debts: [debt] }), debt, TODAY, TODAY);
+    expect(view.installmentsLeft).toBe(3);
+    expect(view.lastAmount).toBe(33_332);
+
+    const byAmount = loan({ principal: 100_000, installmentAmount: 30_000, installmentCount: completeSchedule("count", { total: 100_000, installment: 30_000 })! });
+    expect(debtView(build({ debts: [byAmount] }), byAmount, TODAY, TODAY).lastAmount).toBe(10_000);
+  });
+
+  it("rien quand le calcul n'a pas de sens", () => {
+    expect(completeSchedule("installment", { total: 100_000, count: null })).toBeNull();
+    expect(completeSchedule("installment", { total: 0, count: 3 })).toBeNull();
+    expect(completeSchedule("count", { total: 100_000, installment: 0 })).toBeNull();
+    // Plus de 1 200 échéances.
+    expect(completeSchedule("count", { total: 1_000_000, installment: 1 })).toBeNull();
+    expect(completeSchedule("total", { installment: 100, count: 1_201 })).toBeNull();
+    expect(completeSchedule("total", { installment: Number.MAX_SAFE_INTEGER, count: 2 })).toBeNull();
   });
 });

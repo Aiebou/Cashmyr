@@ -119,3 +119,10 @@ export const GripIcon = (p: IconProps) => (
     <circle cx="15" cy="18" r="1" fill="currentColor" />
   </Icon>
 );
+export const AlertIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 4 2.8 19.5h18.4Z" />
+    <path d="M12 10v4.2" />
+    <circle cx="12" cy="17" r="0.6" fill="currentColor" />
+  </Icon>
+);

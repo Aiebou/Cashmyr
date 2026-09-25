@@ -20,7 +20,7 @@ import { Button, cx, IconButton, InlineText, Select, TextInput } from "../../com
 import { TrashIcon } from "../../components/icons";
 import { Card } from "../../components/layout";
 import { BUCKET_LABELS, expenseGroups, liveCategories, nextColor } from "../../lib/data";
-import { count, moneyExact } from "../../lib/format";
+import { count, money } from "../../lib/format";
 import { useActions, useApp } from "../../store/context";
 import s from "./Settings.module.css";
 
@@ -140,7 +140,7 @@ function ExpenseCategories() {
       const ok = await ask({
         title: `Passer « ${c.name} » en ${BUCKET_LABELS[bucket]} ?`,
         message:
-          `Les mois passés changent aussi : ${count(weight.count, "opération", "opérations")}, ${moneyExact(weight.amount)} en tout, ` +
+          `Les mois passés changent aussi : ${count(weight.count, "opération", "opérations")}, ${money(weight.amount)} en tout, ` +
           `passent de ${BUCKET_LABELS[c.bucket!]} à ${BUCKET_LABELS[bucket]}.`,
         confirmLabel: "Changer l'usage",
       });

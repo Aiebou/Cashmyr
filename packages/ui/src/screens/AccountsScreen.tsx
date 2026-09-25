@@ -5,7 +5,7 @@ import { Dot } from "../components/figures";
 import { PlusIcon } from "../components/icons";
 import { Card, Empty, ScreenTitle, Stack } from "../components/layout";
 import { liveAccounts, ROLE_LABELS } from "../lib/data";
-import { dayLong, moneyExact } from "../lib/format";
+import { dayLong, money } from "../lib/format";
 import { useActions, useApp } from "../store/context";
 import { AccountsBanner } from "./AccountsBanner";
 import s from "./AccountsScreen.module.css";
@@ -52,7 +52,7 @@ function YearFlows({ data, year, asOf }: { data: Dataset; year: number; asOf: Da
               </div>
               <div className={s.flowBody}>
                 <span className={s.flowOut}>
-                  <span className={s.flowLabel}>Sorties</span> {moneyExact(outflow)}
+                  <span className={s.flowLabel}>Sorties</span> {money(outflow)}
                 </span>
                 <div className={s.butterfly} style={{ ["--c" as string]: color }} aria-hidden="true">
                   <div className={s.side}>
@@ -63,7 +63,7 @@ function YearFlows({ data, year, asOf }: { data: Dataset; year: number; asOf: Da
                   </div>
                 </div>
                 <span className={s.flowIn}>
-                  <span className={s.flowLabel}>Entrées</span> {moneyExact(inflow)}
+                  <span className={s.flowLabel}>Entrées</span> {money(inflow)}
                 </span>
               </div>
             </li>
@@ -102,14 +102,14 @@ function AccountList({ data, asOf }: { data: Dataset; asOf: Day }) {
                   </span>
                   {role && <span className={s.muted}>{role}</span>}
                 </div>
-                <span className={cx(s.balance, f.balance < 0 && s.negative)}>{moneyExact(f.balance)}</span>
+                <span className={cx(s.balance, f.balance < 0 && s.negative)}>{money(f.balance)}</span>
               </div>
               <p className={s.detail}>
-                Départ {moneyExact(f.opening)} · {moneyExact(f.inflow)} entrés · {moneyExact(f.outflow)} sortis
+                Départ {money(f.opening)} · {money(f.inflow)} entrés · {money(f.outflow)} sortis
               </p>
               {f.declaredValue !== null && f.declaredGap !== null && (
                 <p className={s.detail}>
-                  Valeur déclarée {moneyExact(f.declaredValue)}
+                  Valeur déclarée {money(f.declaredValue)}
                   {account.declaredAt ? ` le ${dayLong(account.declaredAt)}` : ""} · écart <strong>{signed(f.declaredGap)}</strong> avec le
                   capital injecté
                 </p>

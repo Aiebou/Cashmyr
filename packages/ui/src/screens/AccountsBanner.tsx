@@ -2,7 +2,6 @@ import {
   allAccountsOverview,
   colorFor,
   currentAccountsOverview,
-  formatCents,
   netWorth,
   savingsOverview,
   totalOwed,
@@ -10,7 +9,7 @@ import {
   type Day,
 } from "@cashmyr/core";
 import { SegmentedBar } from "../components/figures";
-import { money } from "../lib/format";
+import { money, moneySigned } from "../lib/format";
 import s from "./AccountsBanner.module.css";
 
 type Props = { data: Dataset; asOf: Day; today: Day; year: number };
@@ -46,7 +45,7 @@ export function AccountsBanner({ data, asOf, today, year }: Props) {
         </p>
         {all.declaredGap !== null && (
           <p>
-            Valeur déclarée : {formatCents(all.declaredGap, { decimals: 0, signed: true })} par rapport au capital injecté.
+            Valeur déclarée : {moneySigned(all.declaredGap)} par rapport au capital injecté.
           </p>
         )}
         {hasDebt && (

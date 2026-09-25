@@ -1,5 +1,5 @@
 import type { PlannedOccurrence } from "@cashmyr/core";
-import { dayShort, moneyExact } from "../lib/format";
+import { dayShort, money } from "../lib/format";
 import { Card } from "./layout";
 import s from "./PlannedList.module.css";
 
@@ -15,7 +15,7 @@ export function PlannedList({ planned, future }: { planned: PlannedOccurrence[];
             <span className={s.label}>{p.recurrence.label}</span>
             <span className={s.amount}>
               {p.recurrence.type === "out" ? "−" : p.recurrence.type === "in" ? "+" : ""}
-              {moneyExact(p.amount)}
+              {money(p.amount)}
             </span>
           </li>
         ))}

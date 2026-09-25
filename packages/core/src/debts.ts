@@ -2,7 +2,8 @@ import { debtSchedule, debtView } from "./calc/debts";
 import { indexOf } from "./dataset";
 import { monthOf } from "./dates";
 import { derivedId, newId } from "./ids";
-import type { Cents, Changes, Dataset, Day, Debt, Operation, Recurrence } from "./model";
+import { MAX_INSTALLMENTS, type Cents, type Changes, type Dataset, type Day, type Debt, type Operation, type Recurrence } from "./model";
+import { ceilDiv } from "./money";
 import { createRecord, revive, tombstone, touch } from "./records";
 
 export class DebtActionError extends Error {
@@ -136,4 +137,38 @@ export function deleteDebt(data: Dataset, debtId: string, now: number): Changes 
   const recurrences = debtRecurrences(data, debtId);
   if (recurrences.length > 0) changes.recurrences = recurrences.map((r) => tombstone(r, now));
   return changes;
+}
+
+/** Les trois champs liés de l'échéancier d'une dette. */
+export type ScheduleField = "total" | "installment" | "count";
+
+/**
+ * Calcul automatique du troisième champ de l'échéancier à partir des deux autres (décision 41) :
+ * - montant par échéance = total ÷ nombre, arrondi au centime supérieur : la dernière échéance
+ *   est réduite, comme l'échéancier le fait déjà (1 000 € en 3 → 333,34 €, la dernière 333,32 €) ;
+ * - nombre = total ÷ montant, arrondi à l'entier supérieur (1 000 € par 300 € → 4, la dernière 100 €) ;
+ * - total = montant × nombre.
+ * Le total ne dépasse donc jamais ce que couvrent les échéances. Renvoie null quand le calcul n'a
+ * pas de sens : une donnée manquante ou nulle, plus de 1 200 échéances, un montant hors limites.
+ */
+export function completeSchedule(
+  target: ScheduleField,
+  known: { total?: Cents | null; installment?: Cents | null; count?: number | null },
+): number | null {
+  const positive = (v: number | null | undefined): v is number => typeof v === "number" && Number.isSafeInteger(v) && v > 0;
+  const { total, installment, count } = known;
+  switch (target) {
+    case "installment":
+      return positive(total) && positive(count) && count <= MAX_INSTALLMENTS ? ceilDiv(total, count) : null;
+    case "count": {
+      if (!positive(total) || !positive(installment)) return null;
+      const n = ceilDiv(total, installment);
+      return n <= MAX_INSTALLMENTS ? n : null;
+    }
+    case "total": {
+      if (!positive(installment) || !positive(count) || count > MAX_INSTALLMENTS) return null;
+      const product = installment * count;
+      return Number.isSafeInteger(product) ? product : null;
+    }
+  }
 }

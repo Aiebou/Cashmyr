@@ -45,6 +45,7 @@ import { Card, ScreenTitle, SectionTitle, Stack } from "../components/layout";
 import { debtSentence } from "../lib/debt-text";
 import { liveAccounts } from "../lib/data";
 import { dayLong, money, monthLong, monthShort, ofMonth, ratio } from "../lib/format";
+import { computedHint, editSchedule, type ScheduleState } from "../lib/schedule-fields";
 import { useActions, useApp } from "../store/context";
 import { DebtCategoryOptions, DIRECTION_LABELS, useDebtForm, type Direction } from "./DebtForm";
 import s from "./DebtsScreen.module.css";
@@ -457,6 +458,8 @@ function DebtSettings({ debt }: { debt: Debt }) {
   const currentKey = JSON.stringify(current);
   const [draft, setDraft] = useState(current);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Décision 41 : deux des trois montants donnent le troisième, en mode échéancier.
+  const [calc, setCalc] = useState<Pick<ScheduleState, "touched" | "computed">>({ touched: [], computed: null });
   const base = useRef(currentKey);
   const lent = draft.direction === "lent";
   const rec = liveRecurrence(data, debt);
@@ -465,11 +468,27 @@ function DebtSettings({ debt }: { debt: Debt }) {
 
   // Modifiée ailleurs (autre carte, synchronisation) : on suit, sauf saisie en cours.
   useEffect(() => {
-    setDraft((d) => (JSON.stringify(d) === base.current ? (JSON.parse(currentKey) as Draft) : d));
+    setDraft((d) => {
+      if (JSON.stringify(d) !== base.current) return d;
+      setCalc({ touched: [], computed: null });
+      return JSON.parse(currentKey) as Draft;
+    });
     base.current = currentKey;
   }, [currentKey]);
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }));
+  const schedule: ScheduleState = {
+    texts: { total: draft.principal, installment: draft.installmentAmount, count: draft.installmentCount },
+    ...calc,
+  };
+  const editScheduleField = (field: keyof ScheduleState["texts"], text: string) => {
+    const next =
+      draft.mode === "installments"
+        ? editSchedule(schedule, field, text)
+        : { ...schedule, texts: { ...schedule.texts, [field]: text } };
+    setCalc({ touched: next.touched, computed: next.computed });
+    setDraft((d) => ({ ...d, principal: next.texts.total, installmentAmount: next.texts.installment, installmentCount: next.texts.count }));
+  };
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
@@ -477,7 +496,10 @@ function DebtSettings({ debt }: { debt: Debt }) {
     setErrors(found);
     if (!patch) return;
     // Le brouillon repart de la version enregistrée, au format d'affichage (« 300,00 »).
-    if (await apply({ debts: [touch(debt, patch, Date.now())] }, undefined, "Dette mise à jour")) setDraft(toDraft({ ...debt, ...patch }));
+    if (await apply({ debts: [touch(debt, patch, Date.now())] }, undefined, "Dette mise à jour")) {
+      setDraft(toDraft({ ...debt, ...patch }));
+      setCalc({ touched: [], computed: null });
+    }
   };
 
   return (
@@ -518,8 +540,22 @@ function DebtSettings({ debt }: { debt: Debt }) {
         </Field>
 
         <FieldRow>
-          <Field label="Montant total" htmlFor={`${id}-principal`} hint="Vide : calculé depuis les échéances" error={errors.principal}>
-            <TextInput id={`${id}-principal`} inputMode="decimal" value={draft.principal} onChange={(e) => set("principal", e.target.value)} autoComplete="off" />
+          <Field
+            label="Montant total"
+            htmlFor={`${id}-principal`}
+            hint={
+              computedHint(schedule, "total") ??
+              (draft.mode === "installments" ? "Remplis deux des trois montants : le troisième se calcule" : undefined)
+            }
+            error={errors.principal}
+          >
+            <TextInput
+              id={`${id}-principal`}
+              inputMode="decimal"
+              value={draft.principal}
+              onChange={(e) => editScheduleField("total", e.target.value)}
+              autoComplete="off"
+            />
           </Field>
           <Field
             label={lent ? "Déjà remboursé hors application" : "Déjà réglé hors application"}
@@ -544,11 +580,23 @@ function DebtSettings({ debt }: { debt: Debt }) {
         </Field>
         <div className={s.scheduleFields} hidden={draft.mode !== "installments"}>
           <FieldRow>
-            <Field label="Montant par échéance" htmlFor={`${id}-inst`} error={errors.installmentAmount}>
-              <TextInput id={`${id}-inst`} inputMode="decimal" value={draft.installmentAmount} onChange={(e) => set("installmentAmount", e.target.value)} autoComplete="off" />
+            <Field label="Montant par échéance" htmlFor={`${id}-inst`} hint={computedHint(schedule, "installment") ?? undefined} error={errors.installmentAmount}>
+              <TextInput
+                id={`${id}-inst`}
+                inputMode="decimal"
+                value={draft.installmentAmount}
+                onChange={(e) => editScheduleField("installment", e.target.value)}
+                autoComplete="off"
+              />
             </Field>
-            <Field label="Nombre d'échéances" htmlFor={`${id}-count`} error={errors.installmentCount}>
-              <TextInput id={`${id}-count`} inputMode="numeric" value={draft.installmentCount} onChange={(e) => set("installmentCount", e.target.value)} autoComplete="off" />
+            <Field label="Nombre d'échéances" htmlFor={`${id}-count`} hint={computedHint(schedule, "count") ?? undefined} error={errors.installmentCount}>
+              <TextInput
+                id={`${id}-count`}
+                inputMode="numeric"
+                value={draft.installmentCount}
+                onChange={(e) => editScheduleField("count", e.target.value)}
+                autoComplete="off"
+              />
             </Field>
           </FieldRow>
           <FieldRow>

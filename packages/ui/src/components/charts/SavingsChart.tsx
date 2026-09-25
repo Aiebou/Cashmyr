@@ -1,6 +1,6 @@
 import { lastDayOf, type Cents, type Day, type Month } from "@cashmyr/core";
 import { useState } from "react";
-import { dayLong, money, moneyExact, monthName } from "../../lib/format";
+import { dayLong, money, monthName } from "../../lib/format";
 import { axisLabel, niceTicks, useWidth } from "./scale";
 import s from "./charts.module.css";
 
@@ -85,7 +85,7 @@ export function SavingsChart({ months, points, color, today }: Props) {
               height={plotH}
               className={s.hit}
               tabIndex={0}
-              aria-label={`${dateOf(p.month)} : ${moneyExact(p.total)}`}
+              aria-label={`${dateOf(p.month)} : ${money(p.total)}`}
               onMouseEnter={() => setActive(i)}
               onMouseLeave={() => setActive(null)}
               onFocus={() => setActive(i)}
@@ -96,7 +96,7 @@ export function SavingsChart({ months, points, color, today }: Props) {
         {current && active !== null && (
           <div className={s.tooltip} style={{ left: Math.min(Math.max(x(idx(current.month)), 90), width - 90) }} role="presentation">
             <p className={s.tooltipTitle}>{dateOf(current.month)}</p>
-            <p>{moneyExact(current.total)}</p>
+            <p>{money(current.total)}</p>
           </div>
         )}
       </div>
@@ -113,7 +113,7 @@ export function SavingsChart({ months, points, color, today }: Props) {
             {points.map((p) => (
               <tr key={p.month}>
                 <th scope="row">{dateOf(p.month)}</th>
-                <td>{moneyExact(p.total)}</td>
+                <td>{money(p.total)}</td>
               </tr>
             ))}
           </tbody>

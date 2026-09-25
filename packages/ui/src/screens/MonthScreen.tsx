@@ -18,7 +18,7 @@ import { Card, Empty, Grid, ScreenTitle } from "../components/layout";
 import { OperationList, OperationRow } from "../components/OperationRow";
 import { PlannedList } from "../components/PlannedList";
 import { categoryName, liveAccounts, BUCKET_LABELS } from "../lib/data";
-import { money, moneyExact, monthLong, monthTitle, ofMonth } from "../lib/format";
+import { money, monthLong, monthTitle, ofMonth } from "../lib/format";
 import { useActions, useApp } from "../store/context";
 import s from "./MonthScreen.module.css";
 
@@ -35,7 +35,7 @@ function gaugeCaption(bucket: Bucket, value: Cents, target: Cents) {
   }
   return gap >= 0
     ? `cible ${money(target)} · reste ${money(gap)}`
-    : `cible ${money(target)} · ${money(-gap)} au-delà`;
+    : `cible ${money(target)} · dépassée de ${money(-gap)}`;
 }
 
 export function MonthScreen() {
@@ -162,6 +162,7 @@ export function MonthScreen() {
                     value={value}
                     target={target}
                     caption={gaugeCaption(bucket, value, target)}
+                    warnOver={bucket !== "invest"}
                   />
                 );
               })}
@@ -176,7 +177,7 @@ export function MonthScreen() {
 
           {agg.unclassified > 0 && (
             <p className={s.warning} role="alert">
-              {moneyExact(agg.unclassified)} de dépenses n'ont pas de catégorie reconnue et ne comptent dans aucun usage.
+              {money(agg.unclassified)} de dépenses n'ont pas de catégorie reconnue et ne comptent dans aucun usage.
             </p>
           )}
         </>
