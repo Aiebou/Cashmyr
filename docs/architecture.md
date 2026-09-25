@@ -533,7 +533,7 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | 49 | Ordre des comptes | Choisi dans Mes comptes, synchronisé (une position par compte, comme les objectifs et les dettes), et suivi partout : bandeau, listes, saisie, Paramètres. Un compte sans position vient après, dans l'ordre d'arrivée ; à position égale (deux appareils qui réordonnent en même temps), l'ordre alphabétique départage. |
 | 50 | Format 2 des données | Collection `tags`, `tagId` sur les opérations et les récurrences, `position` sur les comptes. Données locales, copies de sauvegarde, sauvegardes importées et fichier de synchronisation du format 1 sont mis à niveau à la lecture, puis réécrits au format 2. Une version 0.1.x refuse un fichier au format 2 (« Mets l'application à jour ») sans rien écrire ni perdre : chaque appareil doit passer en 0.2.0. |
 
-### Validées le 25/09/2026 (profils, version 0.3.0)
+### Validées les 25 et 26/09/2026 (profils, version 0.3.0)
 
 | # | Sujet | Décision |
 |---|---|---|
@@ -543,6 +543,10 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | 54 | Ouverture | Avec un seul profil, il s'ouvre directement. Avec au moins deux, l'écran « Qui utilise Cashmyr ? » s'affiche à chaque lancement. Changer de profil en cours de route relance l'application sur l'autre profil sans repasser par ce choix ; un rechargement pour mise à jour garde aussi le profil ouvert. |
 | 55 | Premier profil | Les données déjà présentes deviennent le profil « Mon budget », sans être déplacées. On le renomme dans Paramètres → Profils, et la création du deuxième profil propose de le nommer. |
 | 56 | Supprimer un profil | Le profil n'est retiré que de cet appareil. En synchronisation automatique, les modifications en attente partent d'abord dans le fichier. Ensuite, ses données locales quittent l'appareil, copies de sauvegarde et versions mises de côté comprises. Le fichier et les autres appareils ne changent pas : rejoindre le fichier depuis un nouveau profil le fait revenir. Sans fichier, la confirmation propose d'abord d'enregistrer une sauvegarde et demande de taper le nom du profil. Le dernier profil ne se supprime pas : la remise à zéro (décision 45) le remplace. |
+| 57 | Un fichier, un profil | Sur un appareil, un fichier de synchronisation ne sert qu'à un profil. Rejoindre depuis un profil le fichier d'un autre profil de l'appareil (même `fileId`) est refusé, en nommant ce profil ; sinon les deux profils se fondraient l'un dans l'autre au fil des synchronisations. |
+| 58 | Supprimer un profil en synchronisation assistée | S'il reste des modifications qui ne sont pas dans le fichier, c'est le cas « sans fichier » de la décision 56 : sauvegarde proposée d'abord, nom du profil à taper. |
+| 59 | Réglages de l'appareil ou du profil | La recherche de mise à jour au lancement vaut pour tout l'appareil. Le total du bandeau, le filtre de Mes comptes et les camemberts masqués sont propres à chaque profil sur l'appareil. |
+| 60 | Version des profils | 0.3.0, sans changement de format des données : un appareil en 0.2.0 peut rejoindre le fichier de n'importe quel profil. |
 
 Lectures validées avec la section dettes :
 - Total : `principal` s'il est > 0.
@@ -706,9 +710,9 @@ Version 0.2.0, choix validés le 25/09/2026 :
 
 ## 9. Profils (version 0.3.0)
 
-Décisions 51 à 56. Chaque profil a son propre stockage local, avec la même forme qu'aujourd'hui : `LocalStore`,
-`SyncFile`, `Repository` et `SyncEngine` ne changent pas et ne voient jamais qu'un profil. Au-dessus d'eux, un
-registre propre à l'appareil dit quels profils existent.
+Décisions 51 à 60. Chaque profil a son propre stockage local, avec la même forme qu'aujourd'hui : `LocalStore`,
+`SyncFile`, `Repository` et `SyncEngine` ne voient jamais qu'un profil, et seul le moteur gagne un crochet
+(décision 57). Au-dessus d'eux, un registre propre à l'appareil dit quels profils existent.
 
 ### Registre des profils
 
@@ -722,7 +726,7 @@ type ProfileEntry = {
 type ProfileRegistry = {
   version: 1;
   profiles: ProfileEntry[];
-  checkUpdatesOnLaunch: boolean;  // bureau : réglage de l'appareil, plus d'un profil (décision 46)
+  checkUpdatesOnLaunch: boolean;  // bureau : réglage de l'appareil, plus d'un profil (décisions 46 et 59)
 };
 ```
 
@@ -779,20 +783,14 @@ Nouvelle section, visible même avec un seul profil.
 - **« Nouveau profil »** demande un nom. Pour le deuxième profil, elle propose aussi de renommer « Mon
   budget ». Le registre est ensuite enregistré, puis l'application se relance sur le nouveau profil, qui
   arrive sur l'accueil : catégories par défaut, reprise ou sauvegarde, ou fichier à rejoindre.
-- **Supprimer** suit la décision 56. Le profil ouvert se supprime aussi : l'application se relance sur le
+- **Supprimer** suit les décisions 56 et 58. Le profil ouvert se supprime aussi : l'application se relance sur le
   choix, ou directement sur le profil qui reste.
 - **Remise à zéro** (décision 45) : elle porte sur le profil ouvert, et ses libellés le nomment dès qu'il
   y a deux profils.
 
-### À valider
+### Synchronisation
 
-- **Un fichier, un profil par appareil** : rejoindre depuis un profil un fichier déjà utilisé par un autre
-  profil de l'appareil (même `fileId`) est refusé, en nommant ce profil. Sans cette règle, les deux profils
-  se fondraient l'un dans l'autre au fil des synchronisations.
-- **Suppression en synchronisation assistée** : quand des modifications en attente ne sont pas dans le fichier,
-  le cas est traité comme « sans fichier ». La confirmation propose d'abord une sauvegarde et demande de taper
-  le nom.
-- **Réglages** : la recherche de mise à jour au lancement vaut pour tout l'appareil. Le total du bandeau, le
-  filtre de Mes comptes et les camemberts masqués sont propres à chaque profil sur l'appareil.
-- **Version 0.3.0** : les données ne changent pas de format. Un appareil en 0.2.0 peut rejoindre le fichier
-  de n'importe quel profil.
+- **Un fichier, un profil** (décision 57) : le registre garde le `fileId` du fichier de chaque profil. Avant la
+  première fusion avec un fichier, le moteur appelle un nouveau crochet, `checkFileFree(fileId)` ; si un autre
+  profil de l'appareil a ce `fileId`, le passage s'arrête sans rien écrire et le message nomme ce profil.
+- Le reste ne change pas : chaque profil se synchronise seul, avec son fichier, au rythme du §6.
