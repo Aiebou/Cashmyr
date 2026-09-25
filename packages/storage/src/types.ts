@@ -6,6 +6,10 @@ export type DisplayPrefs = {
   bannerTotal: WorthMode;
   /** Types de comptes montrés dans Mes comptes ; vide = tous. */
   accountRoles: Role[];
+  /** Camemberts de l'écran Mois masqués. */
+  hideMonthCharts: boolean;
+  /** Bureau : recherche d'une mise à jour au lancement (décision 46). */
+  checkUpdatesOnLaunch: boolean;
 };
 
 /** État propre à l'appareil, jamais synchronisé. */
@@ -128,8 +132,9 @@ export interface AppUpdates {
   /** PWA : la coquille est en cache, l'application marche désormais hors ligne. Rappelé aussitôt si c'est déjà le cas. */
   onOfflineReady?: (cb: () => void) => () => void;
   /**
-   * Bureau : vérification sur demande seulement (décision 17), seul appel réseau de
-   * l'application. Une version trouvée est aussi annoncée par `onAvailable`.
+   * Bureau : vérification au lancement, sauf si l'appareil l'a désactivée, et sur demande
+   * (décision 46, qui remplace la 17). Seul appel réseau de l'application. Une version trouvée
+   * est aussi annoncée par `onAvailable`.
    */
   check?: () => Promise<"none" | "available">;
 }

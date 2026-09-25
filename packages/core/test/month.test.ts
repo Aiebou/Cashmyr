@@ -30,6 +30,15 @@ describe("agrégats d'un mois", () => {
     ]);
   });
 
+  it("groupe toutes les dépenses par catégorie, épargne comprise, sans les transferts", () => {
+    expect(a.spendingByCategory).toEqual([
+      { categoryId: cats.loyer.id, amount: eur(800) },
+      { categoryId: cats.courses.id, amount: eur(200) },
+      { categoryId: cats.resto.id, amount: eur(150) },
+      { categoryId: cats.pea.id, amount: eur(100) },
+    ]);
+  });
+
   it("classe les dépenses par enveloppe", () => {
     expect(a.needs).toBe(eur(1000));
     expect(a.wants).toBe(eur(150));

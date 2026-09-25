@@ -45,6 +45,7 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │   │   │   └── year.ts          indicateurs annuels, séries 12 mois, classement
 │   │   ├── debts.ts             versement ponctuel, prélèvement créé depuis une dette
 │   │   ├── colors.ts            accesseur unique de couleur, choix et réinitialisation
+│   │   ├── reset.ts             remise à zéro partout, catégories de l'accueil (décision 45)
 │   │   ├── defaults.ts          catégories par défaut, aux identifiants de l'ancienne application
 │   │   ├── recurrence.ts        matérialisation idempotente, annulation, rétablissement
 │   │   ├── merge.ts             fusion ligne à ligne, préférences clé à clé
@@ -62,6 +63,7 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │       ├── repository.ts        Repository : jeu en mémoire, validation, récurrences, modifications en attente
 │       ├── engine.ts            SyncEngine : lire → fusionner → adopter → écrire, différé 2 s, état affiché
 │       ├── recovery.ts          écran de secours : copies vérifiées, restauration, retour à zéro (décisions 38 à 40)
+│       ├── reset.ts             remise à zéro de cet appareil (décision 45)
 │       ├── web/                 entrée « @cashmyr/storage/web » : IndexedDB, File System Access,
 │       │                        mode assisté, exports, détection du mode, service worker (updates.ts)
 │       └── tauri/               entrée « @cashmyr/storage/tauri » : fichier local atomique,
@@ -96,7 +98,8 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 
 **Sens des dépendances** : `core` ← `storage` ← `ui` ← `apps/*`. `storage` a trois entrées : la racine (types,
 dépôt, moteur), `web` et `tauri`. La PWA n'importe jamais l'entrée `tauri`, et inversement. `ui` n'importe de `storage` que les
-*types*. Chaque `apps/*/src/platform.ts` instancie les implémentations et les passe à `<App platform />`.
+*types*, plus les fonctions qui agissent sur le stockage local sans passer par le dépôt : écran de secours
+(`recoverLocalData`, `recoveryCopies`) et remise à zéro de l'appareil (`resetDevice`). Chaque `apps/*/src/platform.ts` instancie les implémentations et les passe à `<App platform />`.
 Un écran qui doit se comporter différemment lit une capacité de `platform` (par exemple
 `platform.sync.mode === "assisted"`), jamais la cible.
 
@@ -237,7 +240,8 @@ export type DeviceState = {
   sync: { fileId: string | null; targetName: string | null;
           lastMergeAt: number | null; lastOfferAt: number | null; lastError: string | null };
   dirty: Record<string, number>;   // "operations:<id>" ou "pref:<clé>" → updatedAt de la version modifiée
-  display?: { bannerTotal?: "declared" | "injected" | "injectedOutsideCurrent"; accountRoles?: Role[] };
+  display?: { bannerTotal?: "declared" | "injected" | "injectedOutsideCurrent"; accountRoles?: Role[];
+              hideMonthCharts?: boolean; checkUpdatesOnLaunch?: boolean };
                                    // choix d'affichage de l'appareil (0.2.0), absents = valeurs par défaut
 };
 ```
@@ -335,7 +339,7 @@ Les définitions font foi dans [`packages/storage/src/types.ts`](../packages/sto
   - `AssistedSyncFile` (`pickAndRead`, `offer`), implémentée par `createAssistedSync`.
 - **`FileIO`** : exports et imports hors synchronisation.
 - **`AppUpdates`** : version en service, `onAvailable` (une nouvelle version est prête, `kind` « reload » ou
-  « restart »), `onOfflineReady` (PWA) et `check` (bureau, sur clic). `createPwaUpdates` enveloppe le
+  « restart »), `onOfflineReady` (PWA) et `check` (bureau, au lancement et sur clic, décision 46). `createPwaUpdates` enveloppe le
   `registerSW` de vite-plugin-pwa, `createTauriUpdates` les plugins `updater` et `process`.
 - **`Platform`** : ce que chaque point d'entrée assemble et passe à `<App />`.
 
@@ -368,7 +372,7 @@ Les définitions font foi dans [`packages/storage/src/types.ts`](../packages/sto
 | Sync | auto : lancement, focus, 2 s après modification | auto, même rythme ; permission redemandée si expirée | assistée, sur bouton |
 | Écriture atomique | commande Rust : `.tmp` dans le même dossier, `fsync`, `rename` | `createWritable()` écrit dans un fichier d'échange que Chromium substitue à `close()`. L'API web ne permet pas de renommer un fichier de l'utilisateur, c'est le seul mécanisme atomique disponible. | le navigateur livre le fichier complet ; c'est l'utilisateur qui écrase l'original |
 | Choix du mode | fixe | détection de `showOpenFilePicker`, hors mobile | par défaut |
-| Mise à jour de l'application | sur clic (« Rechercher une mise à jour ») : `latest.json` de la dernière Release, paquet vérifié par sa signature, installé puis redémarrage | le navigateur regarde à l'ouverture si le service worker a changé ; la nouvelle version attend, un bandeau propose « Recharger » | idem |
+| Mise à jour de l'application | au lancement, désactivable, et sur clic (« Rechercher une mise à jour ») : `latest.json` de la dernière Release, paquet vérifié par sa signature, installé sur clic puis redémarrage (décision 46) | le navigateur regarde à l'ouverture si le service worker a changé ; la nouvelle version attend, un bandeau propose « Recharger » | idem |
 
 **Déroulé d'une synchronisation automatique.** Lire le fichier. S'il est illisible (JSON tronqué par
 un cloud en cours d'envoi, par exemple), abandonner sans rien écrire et réessayer au prochain focus.
@@ -399,7 +403,8 @@ ne peut pas en produire un valide. Le front ne peut donc pas rediriger la synchr
 fichier. `build.rs` déclare les six commandes : seules celles que liste la capacité sont appelables.
 Un fichier choisi pour un export ou un import n'est accessible que pendant la session où il a été choisi.
 La CSP n'autorise que les fichiers de l'application et l'IPC de Tauri : aucune requête réseau n'est
-possible, même par erreur. La recherche de mise à jour passe par Rust (plugin `updater`), sur clic seulement.
+possible, même par erreur. La recherche de mise à jour passe par Rust (plugin `updater`), au lancement si
+l'appareil ne l'a pas désactivée, et sur clic (décision 46).
 La PWA porte la même CSP, en balise meta puisque GitHub Pages ne permet pas d'en-têtes.
 
 **Premier lancement.** Données vides, un écran d'accueil et trois choix : commencer avec les catégories
@@ -476,7 +481,7 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | 14 | « Reste sur le courant » | Balance du mois. |
 | 15 | Arrondis | Au centime le plus proche, demi loin de zéro ; répartition en points de base. |
 | 16 | Import | Tout champ ou cas inconnu fait échouer l'import. |
-| 17 | Updater bureau | Vérification sur clic seulement ; plugins `updater` et `process` en plus. |
+| 17 | Updater bureau | Vérification sur clic seulement ; plugins `updater` et `process` en plus. **Remplacée par la décision 46** (0.2.0). |
 | 18 | Noms | Cashmyr · `io.github.aiebou.cashmyr` · dépôt `Aiebou/Cashmyr` · base `/Cashmyr/` · PWA `https://aiebou.github.io/Cashmyr/` · updater `https://github.com/Aiebou/Cashmyr/releases/latest/download/latest.json`. |
 
 | 19 | Moyennes annuelles | Mois en cours exclu, car incomplet. |
@@ -510,6 +515,8 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | 42 | Total du bandeau des comptes | Trois totaux au choix, propre à chaque appareil : **par défaut**, soldes des comptes courants plus valeur déclarée des comptes épargne, placement et autre ; tout en capital injecté (le total d'avant) ; capital injecté hors comptes courants. Un compte courant ne compte jamais que son solde. Un compte épargne, placement ou autre sans valeur déclarée compte pour son capital injecté, et le bandeau comme Mes comptes le signalent (« valeur non déclarée », rouge discret). La ligne « Valeur déclarée : écart » devient « Valeur injectée (hors comptes courants) ». |
 | 43 | Valeur déclarée et date affichée | Elle n'a pas d'historique : elle ne compte que si elle a été déclarée au plus tard à la date affichée (31/12 d'une année passée), sinon le capital injecté. Une valeur sans date, reprise de l'ancienne application, ne compte que pour aujourd'hui. |
 | 44 | Patrimoine net | Total en valeurs déclarées (décision 42, quel que soit le total choisi) moins le total dû. L'épargne de précaution, la courbe d'épargne et les indicateurs de l'année restent en capital injecté. |
+| 45 | Remise à zéro | Deux gestes, chacun confirmé, chacun précédé d'une copie de sauvegarde. **Cet appareil** : les modifications en attente partent d'abord dans le fichier (synchronisation automatique), le fichier est oublié, les données locales et l'état de l'appareil (sauf son identifiant et son nom) sont retirés, l'application repart de l'accueil ; le fichier et les autres appareils ne changent pas. **Partout** : un passage de synchronisation, puis chaque ligne vivante devient une suppression et chaque réglage reprend sa valeur par défaut, horodatés maintenant ; la synchronisation porte l'effacement partout, et une ligne modifiée ailleurs après l'effacement revient (décision 1). Réimporter ensuite une sauvegarde ou l'ancien fichier ne rend rien (décisions 32 et 34) ; « Restaurer » la copie prise juste avant (décision 33) remet tout. L'accueil revient dès qu'il ne reste aucune ligne vivante ; ses catégories par défaut reprennent alors les suppressions qu'il connaît avec un horodatage plus récent. |
+| 46 | Recherche de mise à jour (bureau) | Au lancement, sauf si l'appareil l'a désactivée (Paramètres → Application, activée par défaut), et sur clic. Hors ligne, elle échoue sans rien afficher. Rien ne s'installe sans le clic de l'utilisateur. Remplace la décision 17. |
 
 Lectures validées avec la section dettes :
 - Total : `principal` s'il est > 0.
@@ -644,6 +651,19 @@ Version 0.2.0, choix validés le 25/09/2026 :
   l'appareil (`DeviceState.display`), jamais synchronisés et jamais comptés comme modifications en attente.
 - **Paramètres → Comptes** : un compte courant n'a plus de champ « Valeur déclarée », sauf s'il en porte une (reprise),
   signalée comme ignorée.
+- **Écran Mois, camemberts** : « Dépenses par poste » (toutes les dépenses, épargne comprise, sans les transferts) au-dessus
+  de « Revenus par source ». Grand écran (≥ 980 px) : colonne de droite, figée sous l'en-tête au défilement, les deux
+  cartes tenant dans la fenêtre du bureau ; écran moyen : côte à côte sous l'en-tête du mois ; téléphone : l'une sous
+  l'autre. « Masquer » et « Afficher les graphiques » : choix de l'appareil.
+- **Forme des camemberts** : anneau, total au centre, et au survol ou au focus d'une part (ou de sa ligne de légende) sa
+  valeur et sa part. Cinq parts au plus : les quatre plus gros postes, puis « Autres », hachuré, dont la légende détaille
+  les postes à la demande. La légende sert de tableau : chaque ligne a son montant et son pourcentage. Dépenses rangées
+  par usage, dans la couleur de l'usage : la couleur, puis alternativement plus claire et plus foncée, pour que deux parts
+  voisines tranchent toujours (vérifié au validateur de palettes, en clair et en sombre, dernière part contre première
+  comprise) ; revenus dans la couleur de chaque source, comme le bandeau des revenus.
+- **Paramètres → Sauvegardes** : carte « Remise à zéro », « Effacer cet appareil… » et « Tout effacer, partout… »
+  (décision 45), chacun avec une confirmation qui dit ce qui se passe selon la synchronisation en place.
+- **Paramètres → Application** (bureau) : case « Rechercher une mise à jour au lancement », cochée par défaut (décision 46).
 - **Échéancier calculé** (décision 41) : quand les trois champs sont remplis, c'est celui modifié le moins
   récemment qui se recalcule. Sur une dette enregistrée dont un seul champ est modifié, le total est gardé en
   priorité, puis le montant par échéance. Le champ calculé le dit sous le champ (« Calculé… »), avec le montant de

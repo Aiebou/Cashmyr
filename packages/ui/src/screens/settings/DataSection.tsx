@@ -16,7 +16,8 @@ export function DataSection() {
   const store = useStoreApi();
   const platform = useApp((st) => st.platform);
   const today = useApp((st) => st.today);
-  const { toast, ask } = useActions();
+  const { toast, ask, reset } = useActions();
+  const sync = useApp((st) => st.sync);
   const [snapshots, setSnapshots] = useState<SnapshotInfo[] | null>(null);
   const [setAside, setSetAside] = useState<SetAsideInfo[]>([]);
   const [busy, setBusy] = useState(false);
@@ -56,6 +57,55 @@ export function DataSection() {
     await platform.local.removeSetAside(v.id);
     toast("Version abîmée supprimée");
     void refresh();
+  };
+
+  // Décision 45 : deux remises à zéro, chacune après confirmation.
+  const configured = sync.status !== "unconfigured";
+  const eraseDevice = async () => {
+    const ok = await ask({
+      title: "Effacer les données de cet appareil ?",
+      message: [
+        "Cashmyr repart de l'écran d'accueil sur cet appareil" + (configured ? " et oublie le fichier de synchronisation." : "."),
+        configured
+          ? "Le fichier et tes autres appareils ne changent pas : tu pourras rejoindre le fichier de nouveau." +
+            (sync.automatic && sync.pending > 0 ? " Les modifications en attente partent d'abord dans le fichier." : "")
+          : "Sans fichier de synchronisation, ce qui n'est que sur cet appareil disparaît.",
+        "Une copie de sauvegarde est prise juste avant.",
+      ].join("\n\n"),
+      confirmLabel: "Effacer cet appareil",
+      danger: true,
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await reset.device();
+    } catch (e) {
+      toast(`La remise à zéro n'a pas abouti : ${e instanceof Error ? e.message : String(e)}`, "error");
+      setBusy(false);
+    }
+  };
+  const eraseEverywhere = async () => {
+    const ok = await ask({
+      title: "Tout effacer, sur tous les appareils ?",
+      message: [
+        "Opérations, comptes, catégories, objectifs, dettes et récurrences sont supprimés, et les réglages reprennent leurs valeurs par défaut.",
+        configured
+          ? sync.automatic
+            ? "La suppression part dans le fichier de synchronisation : chaque appareil revient à l'écran d'accueil à sa prochaine synchronisation. Un appareil qui modifie une ligne hors ligne après l'effacement la fera revenir."
+            : "Synchronise d'abord, puis enregistre le fichier fusionné après l'effacement : chaque appareil reviendra à l'écran d'accueil à sa prochaine synchronisation."
+          : "Aucun fichier de synchronisation : seul cet appareil est concerné.",
+        "Une copie de sauvegarde est prise juste avant : Paramètres → Sauvegardes → Restaurer la remet partout. Réimporter ensuite une sauvegarde ou l'ancien fichier ne rendrait rien, l'effacement étant plus récent.",
+      ].join("\n\n"),
+      confirmLabel: "Tout effacer, partout",
+      danger: true,
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await reset.everywhere();
+    } finally {
+      setBusy(false);
+    }
   };
 
   // Décision 33 : restaurer une copie la fait gagner partout.
@@ -117,6 +167,20 @@ export function DataSection() {
         <p className={s.muted}>
           Restaurer une copie la fait gagner sur tous tes appareils : ce qui a été saisi depuis est supprimé partout. Une copie de l'état
           actuel est prise juste avant.
+        </p>
+      </Card>
+      <Card title="Remise à zéro" subtitle="Repartir d'un Cashmyr vide, sur cet appareil seulement ou partout.">
+        <div className={s.actions}>
+          <Button disabled={busy} onClick={() => void eraseDevice()}>
+            Effacer cet appareil…
+          </Button>
+          <Button variant="danger" disabled={busy} onClick={() => void eraseEverywhere()}>
+            Tout effacer, partout…
+          </Button>
+        </div>
+        <p className={s.muted}>
+          « Oublier ce fichier » (Synchronisation) arrête seulement la synchronisation : les données restent. Chaque remise à zéro
+          prend d'abord une copie de sauvegarde.
         </p>
       </Card>
       {setAside.length > 0 && (

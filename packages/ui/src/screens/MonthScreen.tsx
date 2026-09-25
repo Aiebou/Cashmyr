@@ -11,14 +11,18 @@ import {
   type Bucket,
 } from "@cashmyr/core";
 import { useMemo } from "react";
-import { Select } from "../components/controls";
+import chartStyles from "../components/charts/charts.module.css";
+import { DonutChart } from "../components/charts/DonutChart";
+import { Button, cx, Select } from "../components/controls";
 import { Gauge, SegmentedBar, Stat } from "../components/figures";
 import { Card, Empty, Grid, ScreenTitle } from "../components/layout";
 import { OperationList, OperationRow } from "../components/OperationRow";
 import { PlannedList } from "../components/PlannedList";
 import { categoryName, liveAccounts, BUCKET_LABELS } from "../lib/data";
 import { money, monthLong, monthTitle, ofMonth } from "../lib/format";
+import { expenseSlices, incomeSlices } from "../lib/month-charts";
 import { targetCaption } from "../lib/targets-text";
+import { displayOf } from "../store/app-store";
 import { useActions, useApp } from "../store/context";
 import s from "./MonthScreen.module.css";
 
@@ -28,7 +32,8 @@ export function MonthScreen() {
   const data = useApp((st) => st.data);
   const month = useApp((st) => st.month);
   const today = useApp((st) => st.today);
-  const { openModal, setPreference } = useActions();
+  const { openModal, setPreference, setDisplay } = useActions();
+  const hideCharts = displayOf(useApp((st) => st.device)).hideMonthCharts;
 
   const future = month > monthOf(today);
   const agg = useMemo(() => monthAggregates(data, month), [data, month]);
@@ -78,12 +83,22 @@ export function MonthScreen() {
         ? `Cibles calculées sur les revenus ${ofMonth(month)}, faute de moyenne.`
         : `Cibles calculées sur les revenus ${ofMonth(month)}.`;
 
+  // Camemberts du mois (version 0.2.0) : à droite et figés sur grand écran, sous l'en-tête sinon.
+  const charts = agg.count > 0 && !hideCharts;
+
   return (
-    <div className={s.screen}>
+    <div className={cx(s.screen, charts && s.withCharts)}>
       <section className={s.hero} aria-labelledby="month-income">
-        <p className={s.eyebrow} id="month-income">
-          Revenus {ofMonth(month)}
-        </p>
+        <div className={s.heroHead}>
+          <p className={s.eyebrow} id="month-income">
+            Revenus {ofMonth(month)}
+          </p>
+          {agg.count > 0 && hideCharts && (
+            <Button variant="ghost" size="small" onClick={() => void setDisplay({ hideMonthCharts: false })}>
+              Afficher les graphiques
+            </Button>
+          )}
+        </div>
         <p className={s.big}>{money(agg.income)}</p>
         <div className={s.average}>
           <label htmlFor="avg-window" className="visually-hidden">
@@ -128,58 +143,82 @@ export function MonthScreen() {
         {sources.length > 0 && <SegmentedBar label="Revenus par source" segments={sources} />}
       </section>
 
-      {agg.count === 0 ? (
-        <Empty
-          message={`Aucune opération en ${monthLong(month)} pour l'instant.`}
-          action={{ label: "Ajouter une opération", onClick: () => openModal({ kind: "operation", type: "out" }) }}
-        />
-      ) : (
-        <>
-          <Card title="Répartition" subtitle={basis}>
-            <div className={s.gauges}>
-              {(["besoin", "envie", "invest"] as Bucket[]).map((bucket) => {
-                const value = bucket === "besoin" ? agg.needs : bucket === "envie" ? agg.wants : agg.saved;
-                const target = targets.targets[bucket];
-                return (
-                  <Gauge
-                    key={bucket}
-                    label={bucket === "invest" ? "Épargne" : BUCKET_LABELS[bucket]}
-                    color={colorFor(prefs, { kind: "bucket", bucket })}
-                    value={value}
-                    target={target}
-                    caption={targetCaption(bucket, value, target)}
-                    warnOver={bucket !== "invest"}
-                  />
-                );
-              })}
-            </div>
+      {charts && (
+        <aside className={s.charts} aria-label="Graphiques du mois">
+          <div className={s.chartsHead}>
+            <span>Graphiques du mois</span>
+            <Button variant="ghost" size="small" onClick={() => void setDisplay({ hideMonthCharts: true })}>
+              Masquer
+            </Button>
+          </div>
+          <Card title="Dépenses par poste" className={chartStyles.donutCard}>
+            <DonutChart
+              label={`Dépenses ${ofMonth(month)} par poste, épargne comprise`}
+              slices={expenseSlices(data, agg.spendingByCategory)}
+              empty="Aucune dépense ce mois-ci."
+            />
           </Card>
-
-          <Grid min={180}>
-            <Stat label="Dépensé" value={money(agg.spent)} note="Besoins et envies" />
-            <Stat label="Mis de côté" value={money(agg.saved)} tone={agg.saved < 0 ? "negative" : "default"} note="Épargne et placements, retraits déduits" />
-            <Stat label="Reste sur le courant" value={money(agg.balance)} tone={agg.balance < 0 ? "negative" : "default"} note="Revenus − dépensé − mis de côté" />
-          </Grid>
-
-          {agg.unclassified > 0 && (
-            <p className={s.warning} role="alert">
-              {money(agg.unclassified)} de dépenses n'ont pas de catégorie reconnue et ne comptent dans aucun usage.
-            </p>
-          )}
-        </>
+          <Card title="Revenus par source" className={chartStyles.donutCard}>
+            <DonutChart label={`Revenus ${ofMonth(month)} par source`} slices={incomeSlices(data, agg.incomeBySource)} empty="Aucun revenu ce mois-ci." />
+          </Card>
+        </aside>
       )}
 
-      {plannedList}
+      <div className={s.body}>
 
-      {latest.length > 0 && (
-        <Card title="Dernières opérations">
-          <OperationList>
-            {latest.map((op) => (
-              <OperationRow key={op.id} data={data} op={op} onOpen={(o) => openModal({ kind: "operation", type: o.type, editId: o.id })} />
-            ))}
-          </OperationList>
-        </Card>
-      )}
+        {agg.count === 0 ? (
+          <Empty
+            message={`Aucune opération en ${monthLong(month)} pour l'instant.`}
+            action={{ label: "Ajouter une opération", onClick: () => openModal({ kind: "operation", type: "out" }) }}
+          />
+        ) : (
+          <>
+            <Card title="Répartition" subtitle={basis}>
+              <div className={s.gauges}>
+                {(["besoin", "envie", "invest"] as Bucket[]).map((bucket) => {
+                  const value = bucket === "besoin" ? agg.needs : bucket === "envie" ? agg.wants : agg.saved;
+                  const target = targets.targets[bucket];
+                  return (
+                    <Gauge
+                      key={bucket}
+                      label={bucket === "invest" ? "Épargne" : BUCKET_LABELS[bucket]}
+                      color={colorFor(prefs, { kind: "bucket", bucket })}
+                      value={value}
+                      target={target}
+                      caption={targetCaption(bucket, value, target)}
+                      warnOver={bucket !== "invest"}
+                    />
+                  );
+                })}
+              </div>
+            </Card>
+
+            <Grid min={180}>
+              <Stat label="Dépensé" value={money(agg.spent)} note="Besoins et envies" />
+              <Stat label="Mis de côté" value={money(agg.saved)} tone={agg.saved < 0 ? "negative" : "default"} note="Épargne et placements, retraits déduits" />
+              <Stat label="Reste sur le courant" value={money(agg.balance)} tone={agg.balance < 0 ? "negative" : "default"} note="Revenus − dépensé − mis de côté" />
+            </Grid>
+
+            {agg.unclassified > 0 && (
+              <p className={s.warning} role="alert">
+                {money(agg.unclassified)} de dépenses n'ont pas de catégorie reconnue et ne comptent dans aucun usage.
+              </p>
+            )}
+          </>
+        )}
+
+        {plannedList}
+
+        {latest.length > 0 && (
+          <Card title="Dernières opérations">
+            <OperationList>
+              {latest.map((op) => (
+                <OperationRow key={op.id} data={data} op={op} onOpen={(o) => openModal({ kind: "operation", type: o.type, editId: o.id })} />
+              ))}
+            </OperationList>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

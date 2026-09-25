@@ -16,7 +16,8 @@ s'enregistre sur l'appareil et fonctionne ensuite hors ligne. Pour l'installer c
 
 **Application de bureau** : dans la [dernière Release](https://github.com/Aiebou/Cashmyr/releases/latest),
 le `.dmg` universel pour macOS 12 ou plus récent, le `-setup.exe` pour Windows, l'`.AppImage`, le `.deb` ou le
-`.rpm` pour Linux. Paramètres → Application → « Rechercher une mise à jour » installe les versions suivantes.
+`.rpm` pour Linux. Les versions suivantes sont proposées au lancement (Paramètres → Application permet de le
+désactiver) et par « Rechercher une mise à jour » ; elles ne s'installent que sur ton clic.
 
 ### Installer l'application de bureau
 
@@ -49,8 +50,9 @@ Paramètres). À chaque fusion, la version la plus récente de chaque élément 
   stockage, séparé de Safari, que Safari n'efface pas après quelques jours sans visite.
 
 Cashmyr n'envoie rien nulle part. Ses seuls accès au réseau : le navigateur qui regarde, à l'ouverture, si une
-nouvelle version web existe (un bandeau propose alors de recharger), et le bouton « Rechercher une mise à jour »
-du bureau.
+nouvelle version web existe (un bandeau propose alors de recharger), et, sur le bureau, la lecture de la dernière
+version publiée, au lancement (désactivable) et par le bouton « Rechercher une mise à jour ». Hors ligne, Cashmyr
+fonctionne de la même façon et ne signale rien.
 
 ## Sauvegarder
 

@@ -1,5 +1,5 @@
 import { addMonths, monthOf, yearOf } from "@cashmyr/core";
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { Button, IconButton } from "./components/controls";
 import { ChevronLeft, ChevronRight, PlusIcon, SyncIcon } from "./components/icons";
 import { Toasts } from "./components/layout";
@@ -225,6 +225,20 @@ export function Shell() {
     return () => window.removeEventListener("keydown", onKey);
   }, [platform.target, openModal]);
 
+  // Hauteur de l'en-tête collant, pour ce qui se fige juste dessous (graphiques de l'écran Mois).
+  const header = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const el = header.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const root = document.documentElement;
+    const observer = new ResizeObserver(() => root.style.setProperty("--header-h", `${Math.round(el.getBoundingClientRect().height)}px`));
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--header-h");
+    };
+  }, []);
+
   // Retour au premier plan : jour courant, occurrences dues, relecture du fichier.
   useEffect(() => {
     const onVisible = () => {
@@ -240,7 +254,7 @@ export function Shell() {
 
   return (
     <div className={s.app}>
-      <header className={s.header}>
+      <header className={s.header} ref={header}>
         <div className={s.brandRow}>
           <h1 className={s.brand}>Cashmyr</h1>
           <div className={s.headerRight}>
