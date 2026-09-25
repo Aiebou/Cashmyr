@@ -1,7 +1,7 @@
 import { indexOf } from "../dataset";
 import { addMonths, clampedDay, daysBetween, monthOf } from "../dates";
 import type { Cents, Dataset, Day, Debt, Operation } from "../model";
-import { allAccountsOverview } from "./accounts";
+import { worthOverview } from "./accounts";
 import { averageIncome } from "./averages";
 
 /** Montant total : le principal s'il est renseigné, sinon montant × nombre d'échéances, sinon 0. */
@@ -146,9 +146,12 @@ export function totalOwed(data: Dataset, asOf: Day): Cents {
   return owedDebts(data).reduce((sum, d) => sum + Math.max(0, debtTotal(d) - debtPaid(data, d, asOf)), 0);
 }
 
-/** Patrimoine net : total des comptes moins le total dû. */
-export function netWorth(data: Dataset, asOf: Day): Cents {
-  return allAccountsOverview(data, asOf).total - totalOwed(data, asOf);
+/**
+ * Patrimoine net : total des comptes moins le total dû. Les comptes épargne, placement et autre y
+ * comptent pour leur valeur déclarée à cette date, sinon pour leur capital injecté (décision 44).
+ */
+export function netWorth(data: Dataset, asOf: Day, today: Day): Cents {
+  return worthOverview(data, asOf, today, "declared").total - totalOwed(data, asOf);
 }
 
 export type DebtsOverview = {

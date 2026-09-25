@@ -1,4 +1,12 @@
-import type { Changes, Dataset, Preferences } from "@cashmyr/core";
+import type { Changes, Dataset, Preferences, Role, WorthMode } from "@cashmyr/core";
+
+/** Choix d'affichage propres à l'appareil, jamais synchronisés (version 0.2.0). */
+export type DisplayPrefs = {
+  /** Total du bandeau des comptes (décision 42). */
+  bannerTotal: WorthMode;
+  /** Types de comptes montrés dans Mes comptes ; vide = tous. */
+  accountRoles: Role[];
+};
 
 /** État propre à l'appareil, jamais synchronisé. */
 export type DeviceState = {
@@ -21,6 +29,8 @@ export type DeviceState = {
    * "collection:id" ou "pref:clé" → updatedAt de la version modifiée.
    */
   dirty: Record<string, number>;
+  /** Absent avant la version 0.2.0 : valeurs par défaut. */
+  display?: Partial<DisplayPrefs>;
 };
 
 export type SnapshotInfo = { id: string; takenAt: number; bytes: number };

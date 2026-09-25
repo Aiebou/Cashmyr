@@ -108,3 +108,79 @@ export const currentAccountsOverview = (data: Dataset, asOf: Day): AccountGroup 
 
 /** Tous les comptes vivants, pour « Total suivi ». */
 export const allAccountsOverview = (data: Dataset, asOf: Day): AccountGroup => group(data, asOf, () => true);
+
+// ── Valeur déclarée dans les totaux (décisions 42 à 44) ────────────────────
+
+/** Comptes dont la valeur fluctue : épargne, placement, autre. Leur valeur déclarée peut entrer dans un total. */
+export const isFluctuatingRole = (role: Role): boolean => role !== "courant";
+
+/**
+ * Valeur déclarée d'un compte utilisable au soir de `asOf` (décision 43) : déclarée ce jour-là ou
+ * avant. Une valeur sans date (reprise de l'ancienne application) ne vaut que pour aujourd'hui.
+ * Toujours null pour un compte courant.
+ */
+export function declaredAsOf(account: Account, asOf: Day, today: Day): Cents | null {
+  if (!isFluctuatingRole(account.role) || account.declaredValue === undefined) return null;
+  return (account.declaredAt ?? today) <= asOf ? account.declaredValue : null;
+}
+
+/**
+ * Total affiché par le bandeau (décision 42) : soldes des comptes courants et valeurs déclarées
+ * des autres (par défaut), tout en capital injecté, ou capital injecté hors comptes courants.
+ */
+export type WorthMode = "declared" | "injected" | "injectedOutsideCurrent";
+
+export type AccountWorth = {
+  account: Account;
+  /** Capital injecté. */
+  balance: Cents;
+  /** Valeur déclarée retenue à cette date ; null pour un compte courant ou sans valeur déclarée à cette date. */
+  declared: Cents | null;
+  /** Ce que le compte pèse dans le total du mode choisi. */
+  value: Cents;
+};
+
+export type WorthOverview = {
+  mode: WorthMode;
+  total: Cents;
+  /** Comptes vivants qui entrent dans ce total, dans l'ordre des comptes. */
+  byAccount: AccountWorth[];
+  /** Répartition du total : comptes courants, épargne et placements, autres comptes. */
+  current: Cents;
+  savings: Cents;
+  others: Cents;
+  /** Capital injecté hors comptes courants, quel que soit le mode. */
+  injectedOutsideCurrent: Cents;
+  /** Mode « declared » : comptes fluctuants comptés pour leur capital injecté, faute de valeur déclarée à cette date. */
+  undeclared: number;
+};
+
+export function worthOverview(data: Dataset, asOf: Day, today: Day, mode: WorthMode): WorthOverview {
+  const figures = accountFigures(data, asOf);
+  const out: WorthOverview = {
+    mode,
+    total: 0,
+    byAccount: [],
+    current: 0,
+    savings: 0,
+    others: 0,
+    injectedOutsideCurrent: 0,
+    undeclared: 0,
+  };
+  for (const account of data.collections.accounts) {
+    if (account.deletedAt !== null) continue;
+    const balance = figures.get(account.id)?.balance ?? 0;
+    const fluctuating = isFluctuatingRole(account.role);
+    if (fluctuating) out.injectedOutsideCurrent += balance;
+    if (mode === "injectedOutsideCurrent" && !fluctuating) continue;
+    const declared = declaredAsOf(account, asOf, today);
+    const value = mode === "declared" && declared !== null ? declared : balance;
+    if (mode === "declared" && fluctuating && declared === null) out.undeclared += 1;
+    out.byAccount.push({ account, balance, declared, value });
+    out.total += value;
+    if (account.role === "courant") out.current += value;
+    else if (isSavingRole(account.role)) out.savings += value;
+    else out.others += value;
+  }
+  return out;
+}

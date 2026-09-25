@@ -56,7 +56,16 @@ export function Gauge({ label, color, value, target, caption, warnOver = false }
   );
 }
 
-export type Segment = { key: string; label: string; value: Cents; color: string };
+export type Segment = {
+  key: string;
+  label: string;
+  value: Cents;
+  color: string;
+  /** Seconde ligne de la légende, sous le montant. */
+  note?: string;
+  /** Légende en rouge discret : une information manque (valeur non déclarée). */
+  warn?: boolean;
+};
 
 type SegmentedBarProps = {
   label: string;
@@ -72,7 +81,11 @@ export function SegmentedBar({ label, segments, legend = true }: SegmentedBarPro
   if (total === 0) return null;
   return (
     <div className={s.segmentedWrap}>
-      <div className={s.segmented} role="img" aria-label={`${label} : ${shown.map((seg) => `${seg.label} ${money(seg.value)}`).join(", ")}`}>
+      <div
+        className={s.segmented}
+        role="img"
+        aria-label={`${label} : ${shown.map((seg) => `${seg.label} ${money(seg.value)}${seg.note ? ` (${seg.note})` : ""}`).join(", ")}`}
+      >
         {shown.map((seg) => (
           <div
             key={seg.key}
@@ -85,10 +98,11 @@ export function SegmentedBar({ label, segments, legend = true }: SegmentedBarPro
       {legend && (
         <ul className={s.legend}>
           {shown.map((seg) => (
-            <li key={seg.key}>
+            <li key={seg.key} className={[seg.note && s.legendStacked, seg.warn && s.legendWarn].filter(Boolean).join(" ") || undefined}>
               <span className={s.swatch} style={{ background: seg.color }} aria-hidden="true" />
               <span className={s.legendLabel}>{seg.label}</span>
               <span className={s.legendValue}>{money(seg.value)}</span>
+              {seg.note && <span className={s.legendNote}>{seg.note}</span>}
             </li>
           ))}
         </ul>

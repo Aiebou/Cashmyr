@@ -14,6 +14,7 @@ import {
 import type {
   AvailableUpdate,
   DeviceState,
+  DisplayPrefs,
   Platform,
   Repository,
   SyncEngine,
@@ -21,6 +22,11 @@ import type {
   SyncState,
 } from "@cashmyr/storage";
 import { createStore, type StoreApi } from "zustand/vanilla";
+
+export const DEFAULT_DISPLAY: DisplayPrefs = { bannerTotal: "declared", accountRoles: [] };
+
+/** Choix d'affichage de l'appareil, complétés par les valeurs par défaut. */
+export const displayOf = (device: DeviceState): DisplayPrefs => ({ ...DEFAULT_DISPLAY, ...device.display });
 
 export type Tab = "dashboard" | "month" | "goals" | "debts" | "accounts" | "operations" | "settings";
 
@@ -77,6 +83,8 @@ export type AppActions = {
   /** Écrit un lot ; en cas de refus, affiche la raison et renvoie false. */
   apply(changes: Changes, preferences?: Preferences, confirmation?: string): Promise<boolean>;
   setPreference<K extends PrefKey>(key: K, value: Preferences[K]): Promise<boolean>;
+  /** Choix d'affichage de cet appareil : jamais synchronisés, ils ne comptent pas comme modifications en attente. */
+  setDisplay(patch: Partial<DisplayPrefs>): Promise<void>;
   setTab(tab: Tab): void;
   setYear(year: number): void;
   setMonth(month: Month): void;
@@ -172,6 +180,10 @@ export function createAppStore(deps: AppDeps): AppStore {
         apply,
         setPreference: (key, value) =>
           apply({}, setPreference(get().data.preferences, key, value, now())),
+        setDisplay: async (patch) => {
+          await repo.updateDevice({ display: { ...repo.device.display, ...patch } });
+          set({ device: repo.device });
+        },
         setTab: (tab) => set({ tab }),
         setYear: (year) => set({ year }),
         setMonth: (month) => set({ month, year: yearOf(month) }),

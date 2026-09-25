@@ -227,7 +227,7 @@ describe("charge mensuelle, total dû, patrimoine net", () => {
   });
 
   it("patrimoine net = total des comptes − total dû", () => {
-    expect(netWorth(data, TODAY)).toBe(eur(5000 - 1900));
+    expect(netWorth(data, TODAY, TODAY)).toBe(eur(5000 - 1900));
   });
 
   it("bandeau : reste par dette et charge rapportée au revenu moyen", () => {
