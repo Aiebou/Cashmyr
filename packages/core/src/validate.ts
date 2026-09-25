@@ -3,6 +3,7 @@ import {
   AVERAGE_WINDOWS,
   COLLECTION_NAMES,
   DASH_BLOCKS,
+  MAX_INSTALLMENTS,
   PREF_KEYS,
   SCHEMA_VERSION,
   SERIES_COLORS,
@@ -31,8 +32,6 @@ const isNat = (v: unknown): v is number => isInt(v) && v >= 0;
 const isPos = (v: unknown): v is number => isInt(v) && v > 0;
 const isColor = (v: unknown) => isInt(v) && v >= 0 && v < SERIES_COLORS;
 const isHex = (v: unknown) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
-/** Plafond de l'échéancier : 100 ans de mensualités. */
-const MAX_INSTALLMENTS = 1200;
 const oneOf =
   <T extends string | number>(values: readonly T[]) =>
   (v: unknown): v is T =>

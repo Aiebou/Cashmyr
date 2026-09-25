@@ -99,6 +99,8 @@ export type Recurrence = Meta & {
 };
 
 export type DebtDirection = "owe" | "lent";
+/** Plafond de l'échéancier : 100 ans de mensualités. */
+export const MAX_INSTALLMENTS = 1200;
 
 export type Debt = Meta & {
   name: string;

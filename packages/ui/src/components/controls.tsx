@@ -95,6 +95,8 @@ export function Select({ className, children, ...rest }: SelectHTMLAttributes<HT
 
 type AmountInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "defaultValue"> & {
   initial?: Cents | null;
+  /** Texte imposé de l'extérieur (champ calculé) ; sinon le champ garde sa saisie. */
+  text?: string;
   onAmount(cents: Cents | null, text: string): void;
   allowNegative?: boolean;
   big?: boolean;
@@ -102,10 +104,11 @@ type AmountInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "o
 
 /** Saisie d'un montant : clavier numérique, virgule acceptée, jamais de flottant renvoyé. */
 export const AmountInput = forwardRef<HTMLInputElement, AmountInputProps>(function AmountInput(
-  { initial = null, onAmount, allowNegative, big, className, ...rest },
+  { initial = null, text: imposed, onAmount, allowNegative, big, className, ...rest },
   ref,
 ) {
-  const [text, setText] = useState(initial === null ? "" : centsToInput(initial));
+  const [own, setText] = useState(initial === null ? "" : centsToInput(initial));
+  const text = imposed ?? own;
   const input = (
     <input
       ref={ref}

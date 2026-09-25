@@ -3,7 +3,7 @@ import { useEffect, useId, useState, type FormEvent } from "react";
 import { Button, Field, Segmented, Select, submitOnEnter, TextInput } from "../../components/controls";
 import { Modal } from "../../components/Modal";
 import { BUCKET_LABELS, expenseGroups, liveCategories, nextColor } from "../../lib/data";
-import { moneyExact } from "../../lib/format";
+import { money } from "../../lib/format";
 import { useActions, useApp } from "../../store/context";
 import { usageText } from "./AccountsSection";
 import { categoryWeight } from "./CategoriesSection";
@@ -138,7 +138,7 @@ export function DeleteCategoryModal({ categoryId }: { categoryId: string }) {
         </Field>
         {shifts && (
           <p className={s.warning} role="status">
-            Les mois passés changent : {moneyExact(weight.amount)} de dépenses passent de {BUCKET_LABELS[category.bucket!]} à{" "}
+            Les mois passés changent : {money(weight.amount)} de dépenses passent de {BUCKET_LABELS[category.bucket!]} à{" "}
             {BUCKET_LABELS[targetBucket]}.
           </p>
         )}

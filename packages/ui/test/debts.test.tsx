@@ -68,16 +68,16 @@ describe("bandeau des dettes", () => {
     );
     const banner = screen.getByText("Reste à rembourser aujourd'hui").closest("section")!;
     // Seules les dettes « je dois » comptent : 1 000 − 600 = 400 €.
-    expect(plain(banner.textContent)).toMatch(/^Reste à rembourser aujourd'hui400 €/);
-    expect(within(banner).getAllByRole("listitem").map((li) => plain(li.textContent))).toEqual(["Prêt auto400 €"]);
+    expect(plain(banner.textContent)).toMatch(/^Reste à rembourser aujourd'hui400,00 €/);
+    expect(within(banner).getAllByRole("listitem").map((li) => plain(li.textContent))).toEqual(["Prêt auto400,00 €"]);
     // 200 € d'échéance pour 2 000 € de revenu moyen (fenêtre tronquée au premier mois d'activité).
-    expect(plain(banner.textContent)).toMatch(/Charge mensuelle : 200 €, soit 10 % du revenu moyen des 6 derniers mois \(2 000 €\)\./);
+    expect(plain(banner.textContent)).toMatch(/Charge mensuelle : 200,00 €, soit 10 % du revenu moyen des 6 derniers mois \(2 000,00 €\)\./);
   });
 
   it("sans revenu moyen, la charge est donnée seule", async () => {
     await openDebts([loan()]);
     const banner = screen.getByText("Reste à rembourser aujourd'hui").closest("section")!;
-    expect(plain(banner.textContent)).toMatch(/Charge mensuelle : 200 €\. Pas encore de revenu moyen pour la comparer\./);
+    expect(plain(banner.textContent)).toMatch(/Charge mensuelle : 200,00 €\. Pas encore de revenu moyen pour la comparer\./);
   });
 });
 
@@ -95,7 +95,7 @@ describe("versement ponctuel", () => {
     await screen.findByText("Versement enregistré dans le budget");
 
     expect(plain(within(card("Prêt auto")).getByText(/^reste/).textContent)).toBe(
-      "reste 1 échéance de 50 € · prochaine le 10 novembre 2026 · soldée en novembre 2026.",
+      "reste 1 échéance de 50,00 € · prochaine le 10 novembre 2026 · soldée en novembre 2026.",
     );
     const [op] = liveOps(app).filter((o) => o.debtId === "debt-1");
     expect(op).toMatchObject({
@@ -134,7 +134,7 @@ describe("versement ponctuel", () => {
     const [op] = liveOps(app).filter((o) => o.debtId === "debt-1");
     expect(op).toMatchObject({ type: "in", amount: 5_000, categoryId: cat("Aides et remboursements") });
     expect(debt(app).categoryId).toBe(cat("Aides et remboursements"));
-    expect(plain(within(card("Avance à Sam")).getByText(/^reste/).textContent)).toBe("reste à recevoir 350 €.");
+    expect(plain(within(card("Avance à Sam")).getByText(/^reste/).textContent)).toBe("reste à recevoir 350,00 €.");
   });
 });
 
@@ -233,24 +233,39 @@ describe("commandes et sections", () => {
 });
 
 describe("configuration et création", () => {
-  it("refuse un total supérieur à l'échéancier, puis enregistre et repart d'un brouillon propre", async () => {
+  it("deux des trois montants donnent le troisième, et le champ calculé le dit (décision 41)", async () => {
+    const user = userEvent.setup();
+    const app = await openDebts([loan()]);
+    const c = card("Prêt auto");
+    const field = (label: string) => within(c).getByLabelText(label) as HTMLInputElement;
+    // 5 × 200 € : le total saisi garde le montant par échéance et recalcule le nombre.
+    await user.type(field("Montant total"), "1200");
+    expect(field("Nombre d'échéances").value).toBe("6");
+    expect(within(c).getByText("Calculé : total ÷ montant par échéance")).toBeTruthy();
+    // Le champ modifié le moins récemment se recalcule : 1 200 € par 250 € → 5 échéances, la dernière de 200 €.
+    await user.clear(field("Montant par échéance"));
+    await user.type(field("Montant par échéance"), "250");
+    expect(field("Nombre d'échéances").value).toBe("5");
+    expect(within(c).getByText("Calculé · dernière échéance réduite à 200,00 €")).toBeTruthy();
+    await user.click(within(c).getByRole("button", { name: "Enregistrer les modifications" }));
+    await screen.findByText("Dette mise à jour");
+    expect(debt(app)).toMatchObject({ principal: 120_000, installmentAmount: 25_000, installmentCount: 5 });
+    expect(within(card("Prêt auto")).getByRole("button", { name: "Enregistrer les modifications" }).hasAttribute("disabled")).toBe(true);
+    expect(within(card("Prêt auto")).queryByText(/^Calculé/)).toBeNull();
+  });
+
+  it("refuse un total supérieur à l'échéancier, saisi en remboursement libre", async () => {
     const user = userEvent.setup();
     const app = await openDebts([loan()]);
     const c = card("Prêt auto");
     const before = debt(app).updatedAt;
+    // En remboursement libre, rien ne se calcule : le total reste celui saisi.
+    await user.click(within(c).getByRole("radio", { name: "Libre" }));
     await user.type(within(c).getByLabelText("Montant total"), "1200");
+    await user.click(within(c).getByRole("radio", { name: "Échéancier" }));
     await user.click(within(c).getByRole("button", { name: "Enregistrer les modifications" }));
     expect(within(c).getByText("Le total dépasse ce que couvrent les échéances.")).toBeTruthy();
     expect(debt(app).updatedAt).toBe(before);
-
-    await user.clear(within(c).getByLabelText("Montant total"));
-    await user.clear(within(c).getByLabelText("Montant par échéance"));
-    await user.type(within(c).getByLabelText("Montant par échéance"), "250");
-    await user.click(within(c).getByRole("button", { name: "Enregistrer les modifications" }));
-    await screen.findByText("Dette mise à jour");
-    expect(debt(app)).toMatchObject({ principal: 0, installmentAmount: 25_000 });
-    expect((within(card("Prêt auto")).getByLabelText("Montant par échéance") as HTMLInputElement).value).toBe("250,00");
-    expect(within(card("Prêt auto")).getByRole("button", { name: "Enregistrer les modifications" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("le sens ne change plus dès qu'une opération est rattachée", async () => {
@@ -300,13 +315,16 @@ describe("configuration et création", () => {
     await user.type(within(dialog).getByLabelText("Intitulé"), "Prêt auto");
     await user.type(within(dialog).getByLabelText("Montant par échéance"), "200");
     await user.type(within(dialog).getByLabelText("Nombre d'échéances"), "5");
+    // Le total se calcule : 5 × 200 €.
+    expect((within(dialog).getByLabelText("Montant total") as HTMLInputElement).value).toBe("1000,00");
+    expect(within(dialog).getByText("Calculé : montant × nombre d'échéances")).toBeTruthy();
     await user.clear(within(dialog).getByLabelText("Première échéance"));
     await user.type(within(dialog).getByLabelText("Première échéance"), "2026-10-10");
     await user.click(within(dialog).getByLabelText("Créer aussi le prélèvement mensuel"));
     await user.click(within(dialog).getByRole("button", { name: "Créer" }));
     await screen.findByText("Dette créée");
     const [created] = repository.data.collections.debts;
-    expect(created).toMatchObject({ mode: "installments", installmentAmount: 20_000, installmentCount: 5, principal: 0, dayOfMonth: 10 });
+    expect(created).toMatchObject({ mode: "installments", installmentAmount: 20_000, installmentCount: 5, principal: 100_000, dayOfMonth: 10 });
     const rec = repository.data.collections.recurrences.find((r) => r.debtId === created!.id)!;
     expect(rec).toMatchObject({ startMonth: "2026-10", endMonth: "2027-02" });
     expect(store.getState().tab).toBe("debts");

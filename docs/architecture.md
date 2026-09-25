@@ -500,6 +500,12 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | 39 | Écran de secours sans copie utilisable | « Repartir de zéro », après confirmation : l'appareil repart vide (écran d'accueil) et la synchronisation, si elle est en place, ramène tout ce qui avait été synchronisé. |
 | 40 | Version abîmée | Gardée de côté automatiquement avant toute restauration (bureau : un fichier par incident ; web : la dernière), et enregistrable depuis l'écran de secours comme depuis Paramètres → Sauvegardes. |
 
+### Validées le 25/09/2026 (version 0.2.0)
+
+| # | Sujet | Décision |
+|---|---|---|
+| 41 | Montant total, montant par échéance et nombre d'échéances d'une dette | Deux champs remplis donnent le troisième, à la création comme à la modification, en mode échéancier seulement. Montant = total ÷ nombre, arrondi au centime supérieur : la dernière échéance est réduite, comme l'échéancier le fait déjà (1 000 € en 3 → 333,34 €, la dernière 333,32 €). Nombre = total ÷ montant, arrondi à l'entier supérieur (1 000 € par 300 € → 4, la dernière 100 €). Total = montant × nombre. Le total ne dépasse donc jamais l'échéancier. |
+
 Lectures validées avec la section dettes :
 - Total : `principal` s'il est > 0.
 - Mode libre : pas d'échéancier.
@@ -615,3 +621,14 @@ Publication (étape 6), choix validés le 24/09/2026 :
   l'application à jour.
 - Paramètres → Sauvegardes gagne une carte « Versions abîmées mises de côté » (Enregistrer, Supprimer après
   confirmation), visible seulement s'il y en a.
+
+Version 0.2.0, choix validés le 25/09/2026 :
+- **Montants au centime partout**, gros chiffres compris (bandeaux, jauges, indicateurs) ; cela remplace l'arrondi
+  à l'euro de l'étape 4. Seules les graduations des axes des graphiques restent rondes.
+- **Répartition** : au-delà de sa cible, la jauge des besoins ou des envies passe en rouge pour la part qui dépasse,
+  et sa légende dit « dépassée de … » en rouge, avec une icône. L'épargne au-delà de sa cible n'est pas un avertissement.
+- **Échéancier calculé** (décision 41) : quand les trois champs sont remplis, c'est celui modifié le moins
+  récemment qui se recalcule. Sur une dette enregistrée dont un seul champ est modifié, le total est gardé en
+  priorité, puis le montant par échéance. Le champ calculé le dit sous le champ (« Calculé… »), avec le montant de
+  la dernière échéance quand elle est réduite. Un champ tout juste calculé ne sert pas de base au calcul suivant
+  pendant la frappe. En remboursement libre, rien ne se calcule.

@@ -1,5 +1,5 @@
 import type { Cents } from "@cashmyr/core";
-import { moneyExact, money } from "../../lib/format";
+import { money } from "../../lib/format";
 import s from "./charts.module.css";
 
 export type RankItem = { key: string; label: string; amount: Cents; bucket: "besoin" | "envie" };
@@ -26,7 +26,7 @@ export function RankingChart({ items, colors, limit = 8 }: Props) {
       </ul>
       <ol className={s.ranking}>
         {head.map((item) => (
-          <li key={item.key} title={`${item.label} : ${moneyExact(item.amount)}`}>
+          <li key={item.key} title={`${item.label} : ${money(item.amount)}`}>
             <span className={s.rankLabel}>{item.label}</span>
             <span className={s.rankTrack}>
               <span className={s.rankBar} style={{ width: `${(item.amount / max) * 100}%`, background: colors[item.bucket] }} />
@@ -35,7 +35,7 @@ export function RankingChart({ items, colors, limit = 8 }: Props) {
           </li>
         ))}
         {rest.length > 0 && (
-          <li title={`${rest.length} autres postes : ${moneyExact(restTotal)}`}>
+          <li title={`${rest.length} autres postes : ${money(restTotal)}`}>
             <span className={s.rankLabel}>
               {rest.length} autre{rest.length > 1 ? "s" : ""} poste{rest.length > 1 ? "s" : ""}
             </span>

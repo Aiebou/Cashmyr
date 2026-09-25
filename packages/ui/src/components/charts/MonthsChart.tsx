@@ -1,6 +1,6 @@
 import type { Cents, Month } from "@cashmyr/core";
 import { useState } from "react";
-import { moneyExact, monthName } from "../../lib/format";
+import { money, monthName } from "../../lib/format";
 import { axisLabel, niceTicks, useWidth } from "./scale";
 import s from "./charts.module.css";
 
@@ -127,7 +127,7 @@ export function MonthsChart({ months, colors }: Props) {
                   height={plotH}
                   className={s.hit}
                   tabIndex={0}
-                  aria-label={`${monthName(m.month)} : revenus ${moneyExact(m.income)}, besoins ${moneyExact(m.needs)}, envies ${moneyExact(m.wants)}, mis de côté ${moneyExact(m.saved)}`}
+                  aria-label={`${monthName(m.month)} : revenus ${money(m.income)}, besoins ${money(m.needs)}, envies ${money(m.wants)}, mis de côté ${money(m.saved)}`}
                   onMouseEnter={() => setActive(i)}
                   onMouseLeave={() => setActive(null)}
                   onFocus={() => setActive(i)}
@@ -146,15 +146,15 @@ export function MonthsChart({ months, colors }: Props) {
             <p className={s.tooltipTitle}>{monthName(current.month)}</p>
             <dl>
               <dt>Revenus</dt>
-              <dd>{moneyExact(current.income)}</dd>
+              <dd>{money(current.income)}</dd>
               <dt>Besoins</dt>
-              <dd>{moneyExact(current.needs)}</dd>
+              <dd>{money(current.needs)}</dd>
               <dt>Envies</dt>
-              <dd>{moneyExact(current.wants)}</dd>
+              <dd>{money(current.wants)}</dd>
               <dt>Mis de côté</dt>
-              <dd>{moneyExact(current.saved)}</dd>
+              <dd>{money(current.saved)}</dd>
               <dt>Reste</dt>
-              <dd>{moneyExact(current.balance)}</dd>
+              <dd>{money(current.balance)}</dd>
             </dl>
           </div>
         )}
@@ -178,11 +178,11 @@ export function MonthsChart({ months, colors }: Props) {
               .map((m) => (
                 <tr key={m.month}>
                   <th scope="row">{monthName(m.month)}</th>
-                  <td>{moneyExact(m.income)}</td>
-                  <td>{moneyExact(m.needs)}</td>
-                  <td>{moneyExact(m.wants)}</td>
-                  <td>{moneyExact(m.saved)}</td>
-                  <td>{moneyExact(m.balance)}</td>
+                  <td>{money(m.income)}</td>
+                  <td>{money(m.needs)}</td>
+                  <td>{money(m.wants)}</td>
+                  <td>{money(m.saved)}</td>
+                  <td>{money(m.balance)}</td>
                 </tr>
               ))}
           </tbody>

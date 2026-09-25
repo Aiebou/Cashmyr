@@ -22,7 +22,7 @@ import { OperationList, OperationRow } from "../components/OperationRow";
 import { PlannedList } from "../components/PlannedList";
 import { expenseGroups, liveAccounts, liveCategories } from "../lib/data";
 import { hasFilters, matchesFilters, NO_FILTERS, type OperationFilters } from "../lib/filters";
-import { count, dayHeading, dayShort, monthLong, moneyExact, ofMonth } from "../lib/format";
+import { count, dayHeading, dayShort, monthLong, money, ofMonth } from "../lib/format";
 import { useActions, useApp } from "../store/context";
 import s from "./OperationsScreen.module.css";
 
@@ -145,7 +145,7 @@ function SkippedList({ data, month, items }: { data: Dataset; month: Month; item
             <li key={skip.id}>
               <span className={s.skippedDate}>{dayShort(occurrenceDate(recurrence, month))}</span>
               <span className={s.skippedLabel}>{recurrence.label}</span>
-              <span className={s.skippedAmount}>{amount !== null ? `${sign}${moneyExact(amount)}` : "—"}</span>
+              <span className={s.skippedAmount}>{amount !== null ? `${sign}${money(amount)}` : "—"}</span>
               <Button
                 size="small"
                 variant="ghost"
@@ -198,7 +198,7 @@ export function OperationsScreen() {
   const totals = shown.reduce<Record<OpType, number>>((t, op) => ({ ...t, [op.type]: t[op.type] + op.amount }), { out: 0, in: 0, tx: 0 });
   const summary = [
     filtered ? `${count(shown.length, "opération", "opérations")} sur ${all.length}` : count(shown.length, "opération", "opérations"),
-    ...(["out", "in", "tx"] as OpType[]).filter((t) => totals[t] > 0).map((t) => `${TOTAL_LABELS[t]} ${moneyExact(totals[t])}`),
+    ...(["out", "in", "tx"] as OpType[]).filter((t) => totals[t] > 0).map((t) => `${TOTAL_LABELS[t]} ${money(totals[t])}`),
   ].join(" · ");
 
   let list;

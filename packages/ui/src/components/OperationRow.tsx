@@ -1,6 +1,6 @@
 import type { Dataset, Operation } from "@cashmyr/core";
 import { operationColor, operationLabel, categoryName, accountName } from "../lib/data";
-import { dayShort, moneyExact } from "../lib/format";
+import { dayShort, money } from "../lib/format";
 import { cx } from "./controls";
 import { Dot } from "./figures";
 import { RepeatIcon } from "./icons";
@@ -21,7 +21,7 @@ export function OperationRow({ data, op, onOpen, showDate = true }: Props) {
     op.type === "tx"
       ? "Transfert"
       : `${op.note.trim() ? `${categoryName(data, op.categoryId)} · ` : ""}${accountName(data, op.accountId)}`;
-  const amount = op.type === "out" ? `−${moneyExact(op.amount)}` : op.type === "in" ? `+${moneyExact(op.amount)}` : moneyExact(op.amount);
+  const amount = op.type === "out" ? `−${money(op.amount)}` : op.type === "in" ? `+${money(op.amount)}` : money(op.amount);
   const content = (
     <>
       <Dot color={operationColor(data, op)} />

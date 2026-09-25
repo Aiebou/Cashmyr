@@ -32,6 +32,16 @@ export function roundDiv(numerator: number, denominator: number): number {
   return toSafe(roundDivBig(BigInt(numerator), BigInt(denominator)));
 }
 
+/** Division entière arrondie à l'entier supérieur, pour des entiers positifs. Exacte, en BigInt. */
+export function ceilDiv(numerator: number, denominator: number): number {
+  if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator) || numerator < 0 || denominator <= 0) {
+    throw new RangeError("ceilDiv attend un entier positif et un diviseur strictement positif");
+  }
+  const n = BigInt(numerator);
+  const d = BigInt(denominator);
+  return toSafe((n + d - 1n) / d);
+}
+
 /** round(a × b ÷ d), même règle d'arrondi, sans dépassement. */
 export function mulDiv(a: number, b: number, d: number): number {
   if (!Number.isSafeInteger(a) || !Number.isSafeInteger(b) || !Number.isSafeInteger(d)) {
