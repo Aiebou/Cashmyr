@@ -33,7 +33,7 @@ const card = (title: string) => screen.getByRole("heading", { name: title, level
 const dialog = () => screen.getByRole("dialog");
 
 describe("écran Paramètres", () => {
-  it("neuf sections, sans sélecteur de période dans l'en-tête", async () => {
+  it("dix sections, sans sélecteur de période dans l'en-tête", async () => {
     await openSettings();
     const toc = screen.getByRole("navigation", { name: "Sections des paramètres" });
     expect(within(toc).getAllByRole("link").map((a) => a.textContent)).toEqual([
@@ -42,6 +42,7 @@ describe("écran Paramètres", () => {
       "Récurrences",
       "Catégories et couleurs",
       "Tags",
+      "Profils",
       "Synchronisation",
       "Sauvegardes",
       "Apparence",

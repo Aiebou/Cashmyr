@@ -1,11 +1,11 @@
 import { startApp } from "@cashmyr/ui";
-import { createDesktopPlatform } from "./platform";
+import { createDesktopHost } from "./platform";
 
 const root = document.getElementById("root")!;
 
 // Des données locales refusées ouvrent l'écran de secours (startApp) ; arrive ici tout le reste.
-createDesktopPlatform()
-  .then((platform) => startApp(platform, root))
+createDesktopHost()
+  .then((host) => startApp(host, root))
   .catch((error: unknown) => {
     // Démarrage impossible : on le dit, sans rien effacer.
     const message = document.createElement("p");

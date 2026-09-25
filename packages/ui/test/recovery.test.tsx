@@ -1,12 +1,11 @@
 import { applyChanges, emptyDataset, type Dataset, type Operation } from "@cashmyr/core";
-import type { AssistedSyncFile, Platform } from "@cashmyr/storage";
 import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { startApp } from "../src/boot";
 import { defaultCategories } from "../src/lib/data";
 import { stamp } from "../src/lib/format";
-import { accounts, MemoryLocalStore, renderApp } from "./helpers";
+import { accounts, MemoryProfileHost, renderApp } from "./helpers";
 
 afterEach(() => {
   cleanup();
@@ -37,29 +36,20 @@ function broken(): Dataset {
   return data;
 }
 
-const noSync: AssistedSyncFile = { mode: "assisted", pickAndRead: async () => null, offer: async () => "cancelled" };
-
 /** Appareil aux données abîmées : une bonne copie (T1), et, si demandé, une copie abîmée plus récente (T2). */
 async function damagedDevice({ goodCopy = true, badCopy = false } = {}) {
-  const local = new MemoryLocalStore();
+  const saveAs = vi.fn(async (_name: string, _mime: string, _content: string) => true);
+  const host = new MemoryProfileHost({ target: "web", deviceLabel: "test", files: { saveAs, openText: async () => null }, shortcutHint: null });
+  const local = host.storeOf("principal");
   if (goodCopy) {
     local.data = valid;
     await local.snapshot(T1);
   }
   local.data = broken();
   if (badCopy) local.snapshots.unshift({ info: { id: "snap-bad", takenAt: T2, bytes: 10 }, data: broken() });
-  const saveAs = vi.fn(async (_name: string, _mime: string, _content: string) => true);
-  const platform: Platform = {
-    target: "web",
-    deviceLabel: "test",
-    local,
-    sync: noSync,
-    files: { saveAs, openText: async () => null },
-    shortcutHint: null,
-  };
   const restart = vi.fn();
   const element = document.body.appendChild(document.createElement("div"));
-  await act(() => startApp(platform, element, { restart }));
+  await act(() => startApp(host, element, { restart }));
   return { local, saveAs, restart };
 }
 

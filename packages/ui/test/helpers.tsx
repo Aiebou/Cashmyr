@@ -7,8 +7,10 @@ import {
   type Preferences,
 } from "@cashmyr/core";
 import {
+  implicitRegistry,
   Repository,
   SyncEngine,
+  syncFileNameFor,
   type AppUpdates,
   type AssistedSyncFile,
   type DeviceState,
@@ -16,8 +18,12 @@ import {
   type FileIO,
   type LocalStore,
   type Platform,
+  type ProfileEntry,
+  type ProfileHost,
+  type ProfileRegistry,
   type SetAsideInfo,
   type SnapshotInfo,
+  type SyncFile,
 } from "@cashmyr/storage";
 import { act, render } from "@testing-library/react";
 import { App } from "../src/App";
@@ -96,11 +102,62 @@ export class MemoryLocalStore implements LocalStore {
   }
 }
 
-const noSync: AssistedSyncFile = {
+export const noSync: AssistedSyncFile = {
   mode: "assisted",
   pickAndRead: async () => null,
   offer: async () => "cancelled",
 };
+
+/** Profils en mémoire : un stockage par profil, un registre, le mémo de session. */
+export class MemoryProfileHost implements ProfileHost {
+  stores = new Map<string, MemoryLocalStore>();
+  saved: ProfileRegistry | null = null;
+  noted: string | null = null;
+  removed: string[] = [];
+  prepared: string[] = [];
+  readonly updates?: AppUpdates;
+
+  constructor(
+    private readonly base: Omit<Platform, "local" | "sync" | "syncFileName">,
+    private readonly sync: SyncFile = noSync,
+  ) {
+    if (base.updates) this.updates = base.updates;
+  }
+
+  storeOf(profileId: string): MemoryLocalStore {
+    let store = this.stores.get(profileId);
+    if (!store) this.stores.set(profileId, (store = new MemoryLocalStore()));
+    return store;
+  }
+
+  registry = {
+    read: async () => (this.saved ? structuredClone(this.saved) : null),
+    write: async (registry: ProfileRegistry) => {
+      this.saved = structuredClone(registry);
+    },
+  };
+
+  async open(profile: ProfileEntry): Promise<Platform> {
+    return { ...this.base, local: this.storeOf(profile.id), sync: this.sync, syncFileName: syncFileNameFor(profile) };
+  }
+  async localOf(profileId: string): Promise<LocalStore> {
+    return this.storeOf(profileId);
+  }
+  async prepare(profileId: string) {
+    this.prepared.push(profileId);
+    this.storeOf(profileId);
+  }
+  async remove(profileId: string) {
+    this.removed.push(profileId);
+    this.stores.delete(profileId);
+  }
+  session = {
+    get: () => this.noted,
+    set: (profileId: string | null) => {
+      this.noted = profileId;
+    },
+  };
+}
 
 const account = (id: string, name: string, role: Account["role"], opening: number): Account => ({
   id,
@@ -128,9 +185,27 @@ export async function renderApp(
     /** Choix d'affichage de l'appareil au démarrage. */
     display?: Partial<DisplayPrefs>;
     restart?: () => void;
+    /** Registre des profils déjà écrit ; le profil ouvert est `profile`, le premier par défaut. */
+    registry?: ProfileRegistry;
+    profile?: string;
+    host?: MemoryProfileHost;
   } = {},
 ) {
-  const local = new MemoryLocalStore();
+  const host =
+    options.host ??
+    new MemoryProfileHost({
+      target: options.target ?? "web",
+      deviceLabel: "test",
+      files: { saveAs: async () => true, openText: async () => null, ...options.files },
+      ...(options.updates ? { updates: options.updates } : {}),
+      shortcutHint: "N",
+    });
+  if (options.registry) host.saved = structuredClone(options.registry);
+  const registry = await host.registry.read();
+  const list = (registry ?? implicitRegistry({ syncFileId: null, checkUpdatesOnLaunch: true })).profiles;
+  const current = list.find((p) => p.id === options.profile) ?? list[0]!;
+  const platform = await host.open(current);
+  const local = host.storeOf(current.id);
   const repository = await Repository.open({ local, deviceLabel: "test", now: () => NOW, today: () => TODAY });
   if (options.seeded !== false) {
     await repository.apply({ categories: defaultCategories(), accounts: [accounts.courant, accounts.livret] });
@@ -142,24 +217,17 @@ export async function renderApp(
     hooks: { confirmFirstJoin: async () => true, confirmDropPurged: async () => false },
     now: () => NOW,
   });
-  const platform: Platform = {
-    target: options.target ?? "web",
-    deviceLabel: "test",
-    local,
-    sync: noSync,
-    files: { saveAs: async () => true, openText: async () => null, ...options.files },
-    ...(options.updates ? { updates: options.updates } : {}),
-    shortcutHint: "N",
-  };
   const store = createAppStore({
     platform,
     repository,
     engine,
+    host,
+    profiles: { list, current, registered: registry !== null, registry },
     today: () => TODAY,
     now: () => NOW,
     restart: options.restart ?? (() => undefined),
   });
   const view = render(<App store={store} />);
   const actions = store.getState().actions;
-  return { store, repository, local, view, actions, act };
+  return { store, repository, local, view, actions, act, host };
 }

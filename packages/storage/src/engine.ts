@@ -10,6 +10,7 @@ import {
   type SyncDocument,
   type SyncReport,
 } from "@cashmyr/core";
+import { SYNC_FILE_NAME } from "./profiles";
 import { recordCount, type Repository } from "./repository";
 import type { AssistedSyncFile, AutoSyncFile, SyncFile, SyncTargetStatus } from "./types";
 
@@ -46,6 +47,13 @@ export type SyncHooks = {
    * supprimées ailleurs. Vrai pour les écarter, faux pour les garder.
    */
   confirmDropPurged(suspects: RecordRef[]): Promise<boolean>;
+  /**
+   * Nom de l'autre profil de l'appareil qui utilise déjà ce fichier, ou null (décision 57).
+   * Appelé avant toute fusion avec un fichier que ce profil ne connaît pas encore.
+   */
+  fileOwner?(fileId: string): Promise<string | null>;
+  /** Le profil vient de rejoindre ce fichier, ou de l'oublier (null). */
+  fileChanged?(fileId: string | null): Promise<void>;
 };
 
 type Timers = {
@@ -57,14 +65,14 @@ export type SyncEngineOptions = {
   repository: Repository;
   sync: SyncFile;
   hooks: SyncHooks;
+  /** Nom proposé pour un nouveau fichier en mode assisté (celui du profil). */
+  fileName?: string;
   /** Délai entre une modification et l'écriture du fichier, en mode automatique. */
   debounceMs?: number;
   now?: () => number;
   newFileId?: () => string;
   timers?: Timers;
 };
-
-export const SYNC_FILE_NAME = "finances-sync.json";
 
 const message = (e: unknown): string =>
   e instanceof SyncFileError || e instanceof Error ? e.message : String(e);
@@ -78,6 +86,7 @@ export class SyncEngine {
   private readonly repo: Repository;
   private readonly sync: SyncFile;
   private readonly hooks: SyncHooks;
+  private readonly fileName: string;
   private readonly debounceMs: number;
   private readonly now: () => number;
   private readonly newFileId: () => string;
@@ -93,6 +102,7 @@ export class SyncEngine {
     this.repo = options.repository;
     this.sync = options.sync;
     this.hooks = options.hooks;
+    this.fileName = options.fileName ?? SYNC_FILE_NAME;
     this.debounceMs = options.debounceMs ?? 2000;
     this.now = options.now ?? Date.now;
     this.newFileId = options.newFileId ?? newId;
@@ -205,6 +215,7 @@ export class SyncEngine {
       if (this.timer !== null) this.timers.clearTimeout(this.timer);
       this.timer = null;
       this.set({ status: "unconfigured", targetName: null, lastMergeAt: null, lastOfferAt: null, lastError: null });
+      await this.fileChanged(null);
     });
   }
 
@@ -225,7 +236,7 @@ export class SyncEngine {
   createAssistedFile(): Promise<SyncOutcome> {
     return this.serial(async () => {
       if (this.sync.mode !== "assisted") throw new Error("createAssistedFile() est réservé au mode assisté.");
-      return this.mergeWith(newSyncDocument(this.newFileId()), SYNC_FILE_NAME, this.sync);
+      return this.mergeWith(newSyncDocument(this.newFileId()), this.fileName, this.sync);
     });
   }
 
@@ -300,9 +311,41 @@ export class SyncEngine {
     this.set({ status: this.sync.mode === "auto" || this.repo.device.sync.fileId ? "ready" : "unconfigured" });
   }
 
+  /** Le registre des profils suit le fichier de chaque profil ; un échec ne remet pas en cause la fusion faite. */
+  private async fileChanged(fileId: string | null): Promise<void> {
+    try {
+      await this.hooks.fileChanged?.(fileId);
+    } catch {
+      // Le garde-fou de la décision 57 s'appuie sur la dernière valeur enregistrée.
+    }
+  }
+
+  /**
+   * Fichier déjà celui d'un autre profil de l'appareil (décision 57) : rien n'est fusionné ni écrit.
+   * En mode automatique, le fichier choisi est oublié, pour ne pas y revenir au prochain passage.
+   */
+  private async refuseOwnedFile(owner: string, sync: SyncFile): Promise<SyncOutcome> {
+    const error = `Ce fichier est déjà celui du profil « ${owner} » sur cet appareil. Choisis un autre fichier, ou ouvre ce profil.`;
+    if (sync.mode === "auto") {
+      await sync.forget();
+      await this.repo.updateDevice({
+        sync: { fileId: null, targetName: null, lastMergeAt: null, lastOfferAt: null, lastError: error },
+      });
+      this.set({ status: "unconfigured", targetName: null, lastMergeAt: null, lastOfferAt: null, lastError: error });
+      await this.fileChanged(null);
+    } else {
+      await this.repo.updateDevice({ sync: { ...this.repo.device.sync, lastError: error } });
+      this.restoreStatus();
+      this.set({ lastError: error });
+    }
+    return { kind: "failed", error };
+  }
+
   private async mergeWith(doc: SyncDocument, fileName: string | null, sync: SyncFile): Promise<SyncOutcome> {
     const device = this.repo.device;
     if (device.sync.fileId !== doc.fileId) {
+      const owner = (await this.hooks.fileOwner?.(doc.fileId)) ?? null;
+      if (owner !== null) return this.refuseOwnedFile(owner, sync);
       const localRecords = recordCount(this.repo.data.collections);
       const fileRecords = recordCount(doc.collections);
       if (localRecords > 0 && fileRecords > 0) {
@@ -343,13 +386,14 @@ export class SyncEngine {
         await this.repo.confirmInFile(result.document);
       }
     } else {
-      this.pendingOffer = { content, name: fileName ?? SYNC_FILE_NAME };
+      this.pendingOffer = { content, name: fileName ?? this.fileName };
     }
 
     const lastOfferAt = device.sync.lastOfferAt;
     await this.repo.updateDevice({
       sync: { fileId: doc.fileId, targetName: fileName, lastMergeAt: now, lastOfferAt, lastError: null },
     });
+    if (device.sync.fileId !== doc.fileId) await this.fileChanged(doc.fileId);
     const offerReady = this.pendingOffer !== null;
     this.set({ status: "ready", targetName: fileName, lastMergeAt: now, lastOfferAt, lastError: null, offerReady });
     // Des occurrences ont pu être générées à l'issue de la fusion : elles partiront au prochain passage.

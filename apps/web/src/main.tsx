@@ -1,9 +1,9 @@
 import { startApp } from "@cashmyr/ui";
-import { createWebPlatform } from "./platform";
+import { createWebHost } from "./platform";
 
 const root = document.getElementById("root")!;
 
-startApp(await createWebPlatform(), root).catch((error: unknown) => {
+startApp(createWebHost(), root).catch((error: unknown) => {
   // Démarrage impossible (stockage local illisible, navigateur trop ancien) : on le dit, sans rien effacer.
   root.innerHTML = "";
   const message = document.createElement("p");

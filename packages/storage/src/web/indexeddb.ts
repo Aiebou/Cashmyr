@@ -47,6 +47,11 @@ export class IndexedDbLocalStore implements LocalStore {
         }
         if (oldVersion < 2) database.createObjectStore("tags", { keyPath: "id" });
       },
+      // Suppression du profil (§9) ou nouvelle version ouverte dans un autre onglet : la connexion
+      // se ferme au lieu de bloquer l'autre côté.
+      blocking(_current, _next, event) {
+        (event.target as IDBDatabase).close();
+      },
     });
     return new IndexedDbLocalStore(db);
   }

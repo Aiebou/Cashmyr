@@ -3,7 +3,7 @@
 //! Le contrat côté front est décrit dans `packages/storage/src/tauri/sync.ts`. Les commandes
 //! n'agissent que sur le chemin choisi dans le dialogue natif et mémorisé ici : le front ne
 //! peut pas leur en passer un autre. Le chemin est gardé dans `sync-target.txt`, dans le
-//! répertoire de données de l'application : `plugin-fs` n'a pas le droit de toucher ce
+//! dossier du profil choisi (`profiles.rs`) : `plugin-fs` n'a pas le droit de toucher ce
 //! fichier (voir `capabilities/default.json`), et `plugin-store`, qui n'écrit que du JSON,
 //! ne peut pas en produire un valide.
 
@@ -25,11 +25,15 @@ pub const TARGET_FILE: &str = "sync-target.txt";
 const TARGET_HEADER: &str = "cashmyr-sync-target 1\n";
 const SUGGESTED_NAME: &str = "finances-sync.json";
 
-/// Le fichier choisi, s'il y en a un.
+/// Le fichier choisi par le profil ouvert, s'il y en a un.
 pub struct SyncTarget {
-    /// Où le chemin est mémorisé.
+    inner: Mutex<Target>,
+}
+
+struct Target {
+    /// Où le chemin est mémorisé : `sync-target.txt` du profil choisi.
     store: PathBuf,
-    path: Mutex<Option<PathBuf>>,
+    path: Option<PathBuf>,
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
@@ -40,53 +44,96 @@ pub enum Status {
     Missing,
 }
 
+/// Relit le chemin mémorisé ; un fichier absent ou illisible vaut « aucun fichier choisi ».
+fn read_store(store: &Path) -> Option<PathBuf> {
+    fs::read_to_string(store).ok().and_then(|text| {
+        text.strip_prefix(TARGET_HEADER)
+            .filter(|p| !p.is_empty())
+            .map(PathBuf::from)
+    })
+}
+
 impl SyncTarget {
-    /// Relit le chemin mémorisé ; un fichier absent ou illisible vaut « aucun fichier choisi ».
     pub fn load(store: PathBuf) -> Self {
-        let path = fs::read_to_string(&store).ok().and_then(|text| {
-            text.strip_prefix(TARGET_HEADER)
-                .filter(|p| !p.is_empty())
-                .map(PathBuf::from)
-        });
+        let path = read_store(&store);
         Self {
-            store,
-            path: Mutex::new(path),
+            inner: Mutex::new(Target { store, path }),
         }
     }
 
-    fn lock(&self) -> MutexGuard<'_, Option<PathBuf>> {
-        self.path.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    fn lock(&self) -> MutexGuard<'_, Target> {
+        self.inner.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
     pub fn current(&self) -> Option<PathBuf> {
-        self.lock().clone()
+        self.lock().path.clone()
+    }
+
+    /// Passe au mémo d'un autre profil et relit son chemin.
+    pub fn switch(&self, store: PathBuf) {
+        let mut target = self.lock();
+        target.path = read_store(&store);
+        target.store = store;
+    }
+
+    /// Le mémo en service est-il celui-ci ?
+    pub fn uses(&self, store: &Path) -> bool {
+        self.lock().store == store
+    }
+
+    /// Plus aucun fichier en service, sans rien écrire : le profil vient d'être retiré.
+    pub fn release(&self) {
+        self.lock().path = None;
     }
 
     /// Mémorise un nouveau chemin, sur disque puis en mémoire.
     pub fn set(&self, path: PathBuf) -> io::Result<()> {
-        let mut current = self.lock();
+        let mut target = self.lock();
         let text = format!(
             "{TARGET_HEADER}{}",
             path.to_str()
                 .ok_or_else(|| io::Error::new(ErrorKind::InvalidInput, "chemin non pris en charge"))?
         );
-        if let Some(dir) = self.store.parent() {
+        if let Some(dir) = target.store.parent() {
             fs::create_dir_all(dir)?;
         }
-        write_atomic(&self.store, text.as_bytes())?;
-        *current = Some(path);
+        write_atomic(&target.store, text.as_bytes())?;
+        target.path = Some(path);
         Ok(())
     }
 
     /// Oublie le chemin. Le fichier de synchronisation lui-même n'est pas touché.
     pub fn forget(&self) -> io::Result<()> {
-        let mut current = self.lock();
-        match fs::remove_file(&self.store) {
+        let mut target = self.lock();
+        match fs::remove_file(&target.store) {
             Err(e) if e.kind() != ErrorKind::NotFound => return Err(e),
             _ => {}
         }
-        *current = None;
+        target.path = None;
         Ok(())
+    }
+}
+
+/// Nom proposé à la création : `finances-sync.json` ou `finances-sync-<nom>.json`, rien d'autre.
+pub fn suggested_name(asked: Option<&str>) -> &str {
+    let valid = |name: &str| {
+        let Some(stem) = name.strip_suffix(".json") else {
+            return false;
+        };
+        let Some(rest) = stem.strip_prefix("finances-sync") else {
+            return false;
+        };
+        rest.is_empty()
+            || rest.strip_prefix('-').is_some_and(|slug| {
+                (1..=40).contains(&slug.len())
+                    && slug
+                        .bytes()
+                        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+            })
+    };
+    match asked {
+        Some(name) if valid(name) => name,
+        _ => SUGGESTED_NAME,
     }
 }
 
@@ -218,7 +265,9 @@ pub async fn sync_choose(
     app: AppHandle,
     target: State<'_, SyncTarget>,
     kind: ChooseKind,
+    suggested_name: Option<String>,
 ) -> Result<Option<Chosen>, String> {
+    let suggested = self::suggested_name(suggested_name.as_deref()).to_string();
     let dialog = app.dialog().file().add_filter("Fichier de synchronisation", &["json"]);
     let picked = blocking(move || match kind {
         ChooseKind::Open => dialog
@@ -226,7 +275,7 @@ pub async fn sync_choose(
             .blocking_pick_file(),
         ChooseKind::Create => dialog
             .set_title("Créer le fichier de synchronisation")
-            .set_file_name(SUGGESTED_NAME)
+            .set_file_name(suggested)
             .blocking_save_file(),
     })
     .await?;
@@ -311,6 +360,55 @@ mod tests {
         assert_eq!(SyncTarget::load(store.clone()).current(), None);
         // Oublier deux fois n'est pas une erreur.
         target.forget().unwrap();
+    }
+
+    #[test]
+    fn chaque_profil_a_son_memo() {
+        let dir = temp();
+        let principal = dir.path().join(TARGET_FILE);
+        let foyer = dir.path().join("profils").join("foyer").join(TARGET_FILE);
+        let a = dir.path().join("cloud").join("finances-sync.json");
+        let b = dir.path().join("cloud").join("finances-sync-foyer.json");
+
+        let target = SyncTarget::load(principal.clone());
+        target.set(a.clone()).unwrap();
+        target.switch(foyer.clone());
+        assert_eq!(target.current(), None);
+        assert!(target.uses(&foyer));
+        target.set(b.clone()).unwrap();
+        assert!(foyer.is_file(), "le dossier du profil est créé au besoin");
+
+        target.switch(principal.clone());
+        assert_eq!(target.current(), Some(a));
+        target.switch(foyer);
+        assert_eq!(target.current(), Some(b));
+        target.release();
+        assert_eq!(target.current(), None);
+    }
+
+    #[test]
+    fn nom_propose_a_la_creation() {
+        assert_eq!(suggested_name(None), "finances-sync.json");
+        assert_eq!(suggested_name(Some("finances-sync.json")), "finances-sync.json");
+        assert_eq!(
+            suggested_name(Some("finances-sync-foyer.json")),
+            "finances-sync-foyer.json"
+        );
+        assert_eq!(
+            suggested_name(Some("finances-sync-mon-budget-2.json")),
+            "finances-sync-mon-budget-2.json"
+        );
+        for bad in [
+            "../finances-sync.json",
+            "finances-sync-.json",
+            "finances-sync-Foyer.json",
+            "finances-sync-a/b.json",
+            "finances-sync-foyer.txt",
+            "autre.json",
+            "finances-sync-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.json",
+        ] {
+            assert_eq!(suggested_name(Some(bad)), "finances-sync.json", "{bad}");
+        }
     }
 
     #[test]

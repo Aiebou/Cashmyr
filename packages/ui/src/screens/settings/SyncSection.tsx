@@ -40,6 +40,7 @@ function outcomeText(outcome: SyncOutcome): string | null {
 
 export function SyncSection() {
   const sync = useApp((st) => st.sync);
+  const fileName = useApp((st) => st.platform.syncFileName);
   const { sync: actions, toast, ask } = useActions();
   const [busy, setBusy] = useState(false);
 
@@ -110,7 +111,7 @@ export function SyncSection() {
         <>
           {!configured && (
             <p className={s.muted}>
-              Choisis <strong>finances-sync.json</strong> dans un dossier que ton service cloud synchronise (iCloud Drive, Dropbox,
+              Choisis <strong>{fileName}</strong> dans un dossier que ton service cloud synchronise (iCloud Drive, Dropbox,
               OneDrive…). Chaque appareil y lit et y écrit ; aucune donnée ne passe par un serveur de Cashmyr.
             </p>
           )}
@@ -145,7 +146,7 @@ export function SyncSection() {
         <>
           <ol className={s.steps}>
             <li>
-              <strong>Synchroniser</strong> : choisis finances-sync.json dans ton dossier cloud. Il est fusionné avec cet appareil, qui est
+              <strong>Synchroniser</strong> : choisis {fileName} dans ton dossier cloud. Il est fusionné avec cet appareil, qui est
               aussitôt à jour.
             </li>
             <li>

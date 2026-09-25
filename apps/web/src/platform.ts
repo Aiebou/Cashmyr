@@ -1,5 +1,5 @@
-import type { Platform } from "@cashmyr/storage";
-import { createPwaUpdates, createWebPlatformParts } from "@cashmyr/storage/web";
+import type { ProfileHost } from "@cashmyr/storage";
+import { createPwaUpdates, createWebProfileHost } from "@cashmyr/storage/web";
 import { registerSW } from "virtual:pwa-register";
 
 const mobile = () =>
@@ -13,13 +13,11 @@ function deviceLabel(ua: string): string {
   return `${browser} · ${system}`;
 }
 
-export async function createWebPlatform(): Promise<Platform> {
-  const parts = await createWebPlatformParts(window);
-  return {
+export function createWebHost(): ProfileHost {
+  return createWebProfileHost(window, {
     target: "web",
     deviceLabel: deviceLabel(navigator.userAgent),
     shortcutHint: mobile() ? null : "N",
-    ...parts,
     updates: createPwaUpdates(registerSW, __APP_VERSION__),
-  };
+  });
 }

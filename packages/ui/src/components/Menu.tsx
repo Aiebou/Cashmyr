@@ -10,13 +10,15 @@ type MenuProps = {
   triggerClassName?: string;
   /** Groupes d'entrées, séparés par un filet. */
   groups: MenuItem[][];
+  /** Bord du bouton sur lequel le menu s'aligne ; à droite par défaut. */
+  align?: "start" | "end";
 };
 
 /**
  * Menu déroulant accessible : aria-haspopup, aria-expanded, role="menu".
  * Se ferme au clic à l'extérieur, à la touche Échap et après le choix d'une entrée.
  */
-export function Menu({ trigger, triggerLabel, triggerClassName, groups }: MenuProps) {
+export function Menu({ trigger, triggerLabel, triggerClassName, groups, align = "end" }: MenuProps) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -94,7 +96,7 @@ export function Menu({ trigger, triggerLabel, triggerClassName, groups }: MenuPr
         {trigger}
       </button>
       {open && (
-        <div className={s.menu} role="menu" id={menuId} aria-label={triggerLabel}>
+        <div className={align === "start" ? `${s.menu} ${s.menuStart}` : s.menu} role="menu" id={menuId} aria-label={triggerLabel}>
           {groups.map((group, g) => (
             <Fragment key={g}>
               {g > 0 && <div className={s.separator} role="separator" />}

@@ -60,7 +60,8 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │
 ├── packages/storage/            dépôt local, moteur de synchronisation, adaptateurs par plateforme
 │   └── src/
-│       ├── types.ts             Platform, LocalStore, SyncFile, FileIO, AppUpdates, DeviceState (§5)
+│       ├── types.ts             Platform, ProfileHost, LocalStore, SyncFile, FileIO, AppUpdates, DeviceState (§5)
+│       ├── profiles.ts          registre des profils de l'appareil, noms, fichier de chaque profil (§9)
 │       ├── repository.ts        Repository : jeu en mémoire, validation, récurrences, modifications en attente
 │       ├── engine.ts            SyncEngine : lire → fusionner → adopter → écrire, différé 2 s, état affiché
 │       ├── recovery.ts          écran de secours : copies vérifiées, restauration, retour à zéro (décisions 38 à 40)
@@ -75,7 +76,8 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │   └── src/
 │       ├── App.tsx              reçoit `platform: Platform` en prop, le fournit par contexte
 │       ├── store/               Zustand : données, préférences, période affichée, UI
-│       ├── screens/             Dashboard, Month, Goals, Accounts, Operations, Settings, Sync, Recovery
+│       ├── screens/             Dashboard, Month, Goals, Accounts, Operations, Settings, Sync, Recovery,
+│       │                        ProfilePicker (« Qui utilise Cashmyr ? »)
 │       ├── components/          OperationModal, Gauge, SegmentedBar, BarChart12, LineChart,
 │       │                        ReorderableBlock, PeriodPicker, EmptyState…
 │       ├── theme/               tokens.css (clair / sombre), fonts/*.woff2 + OFL.txt
@@ -86,15 +88,15 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
     │   │                        manifeste et précache ; CSP en balise meta)
     │   ├── icons/maskable.svg   source des icônes maskable et apple-touch-icon
     │   ├── public/              icons/ (192, 512, maskable 192 et 512), apple-touch-icon.png
-    │   └── src/platform.ts      assemble la Platform web (IDB + fs-access ou assisted, service worker)
+    │   └── src/platform.ts      assemble l'hôte des profils web (IDB + fs-access ou assisted, service worker)
     └── desktop/                 index.html, main.tsx, vite.config.ts (port 1420, base relative)
-        ├── src/platform.ts      assemble la Platform bureau
+        ├── src/platform.ts      assemble l'hôte des profils du bureau
         └── src-tauri/           Cargo.toml, build.rs (permissions des commandes), tauri.conf.json,
                                  tauri.release.conf.json (archives signées de l'updater, en Release seulement),
                                  windows/fr-FR.wxl (textes de Tauri dans le .msi, en français),
                                  Info.plist (français), capabilities/default.json,
                                  icons/ (icon.svg est la source, « pnpm tauri icon » en tire le reste),
-                                 src/{main.rs, lib.rs, menu.rs, sync_file.rs}
+                                 src/{main.rs, lib.rs, menu.rs, sync_file.rs, profiles.rs}
 ```
 
 **Sens des dépendances** : `core` ← `storage` ← `ui` ← `apps/*`. `storage` a trois entrées : la racine (types,
@@ -352,7 +354,10 @@ Les définitions font foi dans [`packages/storage/src/types.ts`](../packages/sto
 - **`AppUpdates`** : version en service, `onAvailable` (une nouvelle version est prête, `kind` « reload » ou
   « restart »), `onOfflineReady` (PWA) et `check` (bureau, au lancement et sur clic, décision 46). `createPwaUpdates` enveloppe le
   `registerSW` de vite-plugin-pwa, `createTauriUpdates` les plugins `updater` et `process`.
-- **`Platform`** : ce que chaque point d'entrée assemble et passe à `<App />`.
+- **`Platform`** : les capacités du profil ouvert, passées à `<App />`.
+- **`ProfileHost`** : ce que chaque point d'entrée assemble et passe à `startApp` (§9) : le registre des profils,
+  `open` (la `Platform` d'un profil), `localOf` (son stockage, sans l'ouvrir), `prepare`, `remove`, le mémo de
+  session et les mises à jour de l'application.
 
 **`Repository`** est la seule porte d'entrée des données.
 - Il ouvre le jeu local, en prend une copie de sauvegarde et génère les occurrences dues.
@@ -547,6 +552,7 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | 58 | Supprimer un profil en synchronisation assistée | S'il reste des modifications qui ne sont pas dans le fichier, c'est le cas « sans fichier » de la décision 56 : sauvegarde proposée d'abord, nom du profil à taper. |
 | 59 | Réglages de l'appareil ou du profil | La recherche de mise à jour au lancement vaut pour tout l'appareil. Le total du bandeau, le filtre de Mes comptes et les camemberts masqués sont propres à chaque profil sur l'appareil. |
 | 60 | Version des profils | 0.3.0, sans changement de format des données : un appareil en 0.2.0 peut rejoindre le fichier de n'importe quel profil. |
+| 61 | Supprimer un profil qui n'est pas ouvert | S'il lui reste des modifications pas encore dans son fichier, la confirmation propose de l'ouvrir pour les envoyer, ou de le supprimer quand même, avec le cas « sans fichier » de la décision 56 (sauvegarde proposée, nom à taper). Sans modification en attente, simple confirmation. Un profil sans aucune donnée se supprime aussi sur simple confirmation. |
 
 Lectures validées avec la section dettes :
 - Total : `principal` s'il est > 0.
@@ -710,7 +716,7 @@ Version 0.2.0, choix validés le 25/09/2026 :
 
 ## 9. Profils (version 0.3.0)
 
-Décisions 51 à 60. Chaque profil a son propre stockage local, avec la même forme qu'aujourd'hui : `LocalStore`,
+Décisions 51 à 61. Chaque profil a son propre stockage local, avec la même forme qu'aujourd'hui : `LocalStore`,
 `SyncFile`, `Repository` et `SyncEngine` ne voient jamais qu'un profil, et seul le moteur gagne un crochet
 (décision 57). Au-dessus d'eux, un registre propre à l'appareil dit quels profils existent.
 
@@ -732,8 +738,10 @@ type ProfileRegistry = {
 
 - Jamais synchronisé : chaque appareil a ses profils.
 - **Registre absent** : un seul profil, « Mon budget », d'identifiant `principal`. Le registre n'est écrit
-  qu'au premier renommage ou à la création d'un deuxième profil. Un appareil qui n'en crée pas n'écrit donc
-  rien de nouveau, et un retour à la 0.2.0 retrouve ses données telles quelles.
+  qu'au premier renommage ou à la création d'un deuxième profil ; d'ici là, la recherche au lancement reste
+  réglée dans `DeviceState.display`. Un appareil qui n'en crée pas n'écrit donc aucune donnée nouvelle (la
+  PWA ouvre seulement sa base `cashmyr-profils`, qui reste vide), et un retour à la 0.2.0 retrouve ses données
+  telles quelles.
 - **Registre présent** : il fait foi, même quand `principal` en a été retiré.
 - Au premier enregistrement, `checkUpdatesOnLaunch` reprend la valeur que `principal` avait dans
   `DeviceState.display`.
@@ -758,12 +766,15 @@ d'affichage, fichier de synchronisation) et, sur le web, le handle du fichier. C
   pas le droit d'y toucher.
 - La règle `deny` de `capabilities/default.json` couvre aussi `$APPDATA/profils/*/sync-target.txt`.
 - « Créer un nouveau fichier » propose `finances-sync.json` pour `principal` et
-  `finances-sync-<nom>.json` pour les autres profils.
+  `finances-sync-<nom>.json` pour les autres profils (nom sans accents ni majuscules, 40 caractères au plus).
+  `sync_choose` reçoit ce nom, et Rust n'admet que ces deux formes.
+- `profile_remove` ferme aussi l'état de l'appareil du profil s'il est chargé : `plugin-store` réécrit à la
+  fermeture de l'application tous les magasins ouverts, et recréerait sinon le dossier retiré.
 
 ### Démarrage et changement de profil
 
-- `apps/*/src/platform.ts` ne construit plus une `Platform` mais un hôte : il lit le registre et ouvre un
-  profil (`openProfile(id)` → `Platform`). `files` et `updates` ne dépendent pas du profil.
+- `apps/*/src/platform.ts` ne construit plus une `Platform` mais un hôte, `ProfileHost` (§5) : il lit le
+  registre et ouvre un profil (`open(profil)` → `Platform`). `files` et `updates` ne dépendent pas du profil.
 - `startApp` lit le registre et ouvre directement le profil s'il est seul. Sinon, il ouvre celui qu'a noté
   la session (`sessionStorage`, posé par un changement de profil ou un rechargement), et à défaut affiche
   « Qui utilise Cashmyr ? ». Le reste du démarrage ne change pas, écran de secours compris : il porte sur le
@@ -783,14 +794,35 @@ Nouvelle section, visible même avec un seul profil.
 - **« Nouveau profil »** demande un nom. Pour le deuxième profil, elle propose aussi de renommer « Mon
   budget ». Le registre est ensuite enregistré, puis l'application se relance sur le nouveau profil, qui
   arrive sur l'accueil : catégories par défaut, reprise ou sauvegarde, ou fichier à rejoindre.
-- **Supprimer** suit les décisions 56 et 58. Le profil ouvert se supprime aussi : l'application se relance sur le
-  choix, ou directement sur le profil qui reste.
+- **Supprimer** suit les décisions 56, 58 et 61. Le profil ouvert se supprime aussi : l'application se relance sur le
+  choix, ou directement sur le profil qui reste. Le registre est écrit avant de retirer le stockage : une panne au
+  milieu laisse au pire des données orphelines, jamais un profil sans stockage.
+- **Web** : une base retenue par un onglet d'une version plus ancienne n'est effacée qu'à sa fermeture ; le
+  message le dit.
 - **Remise à zéro** (décision 45) : elle porte sur le profil ouvert, et ses libellés le nomment dès qu'il
   y a deux profils.
 
 ### Synchronisation
 
 - **Un fichier, un profil** (décision 57) : le registre garde le `fileId` du fichier de chaque profil. Avant la
-  première fusion avec un fichier, le moteur appelle un nouveau crochet, `checkFileFree(fileId)` ; si un autre
-  profil de l'appareil a ce `fileId`, le passage s'arrête sans rien écrire et le message nomme ce profil.
+  première fusion avec un fichier, le moteur appelle un nouveau crochet, `fileOwner(fileId)`. Si un autre profil
+  de l'appareil a ce `fileId`, le passage s'arrête sans rien fusionner ni écrire, et le message nomme ce profil ;
+  en mode automatique, le fichier choisi est aussi oublié, pour ne pas y revenir au passage suivant.
+- Après chaque fusion avec un nouveau fichier, et quand le fichier est oublié, le crochet `fileChanged` met le
+  registre à jour. S'il échoue, la synchronisation n'en souffre pas.
 - Le reste ne change pas : chaque profil se synchronise seul, avec son fichier, au rythme du §6.
+
+### Profils, choix d'interface (version 0.3.0)
+
+- **« Qui utilise Cashmyr ? »** : une tuile par profil, avec l'initiale du nom dans une pastille. Il suit le thème du
+  système, puisque le thème choisi appartient à chaque profil.
+- **En-tête** : dès deux profils, la pastille et le nom du profil ouvert suivent « Cashmyr ». Le menu liste les
+  autres profils, puis « Gérer les profils ». Sur téléphone, la pastille seule, et le menu prend la largeur de
+  l'écran ; sous 400 px, « Ajouter » passe en icône seule pour que tout tienne.
+- **Paramètres → Profils** vient juste avant Synchronisation. Chaque ligne a sa pastille, son nom modifiable sur
+  place (un nom déjà pris revient à l'ancien), « Ouvrir » ou « Ouvert », et la corbeille dès deux profils.
+- **Nouveau profil** : fenêtre avec le nom du nouveau profil et, pour le deuxième, « Nom de ce profil-ci », prérempli
+  « Mon budget ». « Créer et ouvrir » relance l'application sur le nouveau profil.
+- L'accueil d'un nouveau profil s'intitule « Bienvenue dans « nom » », et nomme le fichier proposé au profil.
+- La remise à zéro nomme le profil ouvert dès deux profils ; l'écran de secours nomme le profil abîmé et propose
+  « Changer de profil ».

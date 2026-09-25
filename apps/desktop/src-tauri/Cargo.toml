@@ -1,6 +1,6 @@
 [package]
 name = "cashmyr"
-version = "0.2.0"
+version = "0.3.0"
 description = "Budget personnel hors ligne"
 authors = ["Aiebou"]
 license = "MIT"

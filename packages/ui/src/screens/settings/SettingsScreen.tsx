@@ -7,6 +7,7 @@ import { AppSection } from "./AppSection";
 import { BudgetSection } from "./BudgetSection";
 import { CategoriesSection } from "./CategoriesSection";
 import { DataSection } from "./DataSection";
+import { ProfilesSection } from "./ProfilesSection";
 import { RecurrencesSection } from "./RecurrencesSection";
 import s from "./Settings.module.css";
 import { SyncSection } from "./SyncSection";
@@ -37,6 +38,7 @@ const SECTIONS: { id: string; title: string; content: ReactNode }[] = [
   { id: "recurrences", title: "Récurrences", content: <RecurrencesSection /> },
   { id: "categories", title: "Catégories et couleurs", content: <CategoriesSection /> },
   { id: "tags", title: "Tags", content: <TagsSection /> },
+  { id: "profils", title: "Profils", content: <ProfilesSection /> },
   { id: "synchronisation", title: "Synchronisation", content: <SyncSection /> },
   { id: "sauvegardes", title: "Sauvegardes", content: <DataSection /> },
   { id: "apparence", title: "Apparence", content: <Appearance /> },

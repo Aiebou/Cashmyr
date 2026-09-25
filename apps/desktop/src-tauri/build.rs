@@ -7,6 +7,8 @@ const COMMANDS: &[&str] = &[
     "sync_read",
     "sync_write_atomic",
     "sync_forget",
+    "profile_select",
+    "profile_remove",
 ];
 
 fn main() {

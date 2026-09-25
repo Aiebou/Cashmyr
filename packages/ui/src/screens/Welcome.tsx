@@ -9,6 +9,8 @@ import s from "./Welcome.module.css";
 export function Welcome() {
   const store = useStoreApi();
   const sync = useApp((st) => st.sync);
+  const fileName = useApp((st) => st.platform.syncFileName);
+  const { list, current } = useApp((st) => st.profiles);
   const { apply, openModal, sync: syncActions } = useActions();
 
   const start = async () => {
@@ -24,7 +26,7 @@ export function Welcome() {
   return (
     <div className={s.welcome}>
       <Stack gap={10}>
-        <h2 className={s.title}>Bienvenue</h2>
+        <h2 className={s.title}>{list.length > 1 ? `Bienvenue dans « ${current.name} »` : "Bienvenue"}</h2>
         <p className={s.lead}>
           Cashmyr garde tes comptes sur cet appareil, sans compte ni serveur. Tes revenus se déduisent de ce que tu
           saisis : l'application ne te demande jamais ton salaire.
@@ -43,8 +45,8 @@ export function Welcome() {
         <Card title="J'utilise déjà Cashmyr ailleurs">
           <p className={s.text}>
             {sync.mode === "assisted"
-              ? "Désigne ton fichier de synchronisation (finances-sync.json) dans ton app Fichiers : tes données le rejoindront."
-              : "Choisis ton fichier de synchronisation (finances-sync.json) dans ton dossier synchronisé : tes données s'y retrouvent."}
+              ? `Désigne ton fichier de synchronisation (${fileName}) dans ton app Fichiers : tes données le rejoindront.`
+              : `Choisis ton fichier de synchronisation (${fileName}) dans ton dossier synchronisé : tes données s'y retrouvent.`}
           </p>
           <Button className={s.choice} onClick={join}>Rejoindre mon fichier de synchronisation</Button>
         </Card>

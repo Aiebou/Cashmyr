@@ -12,6 +12,9 @@ type Props = {
   problem: LocalDataError;
   /** Après une restauration réussie : l'application redémarre. */
   onRecovered: () => void;
+  /** Plusieurs profils sur l'appareil : le profil abîmé, et le retour au choix du profil. */
+  profileName?: string;
+  onSwitchProfile?: () => void;
   now?: () => number;
 };
 
@@ -24,7 +27,7 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
  * l'ouverture (décisions 38 à 40) : repartir d'une copie de sauvegarde, ou de zéro s'il n'y
  * en a aucune d'utilisable. La version abîmée est gardée de côté, et peut être enregistrée.
  */
-export function RecoveryScreen({ platform, problem, onRecovered, now = Date.now }: Props) {
+export function RecoveryScreen({ platform, problem, onRecovered, profileName, onSwitchProfile, now = Date.now }: Props) {
   const [copies, setCopies] = useState<RecoveryCopy[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmZero, setConfirmZero] = useState(false);
@@ -77,13 +80,22 @@ export function RecoveryScreen({ platform, problem, onRecovered, now = Date.now 
     <main className={s.page}>
       <h1 className={s.brand}>Cashmyr</h1>
       <Stack gap={10}>
-        <h2 className={s.title}>Les données de cet appareil sont abîmées</h2>
+        <h2 className={s.title}>
+          {profileName ? `Les données du profil « ${profileName} » sont abîmées` : "Les données de cet appareil sont abîmées"}
+        </h2>
         <p className={s.lead}>
           {problem.kind === "illisible"
             ? "Cashmyr ne parvient pas à les lire."
             : "Elles contiennent des incohérences que Cashmyr refuse d'ouvrir."}{" "}
           Rien n'a été modifié. Choisis comment repartir : la version abîmée sera gardée de côté.
         </p>
+        {onSwitchProfile && (
+          <div className={s.actions}>
+            <Button variant="ghost" onClick={onSwitchProfile}>
+              Changer de profil
+            </Button>
+          </div>
+        )}
       </Stack>
 
       {status && (

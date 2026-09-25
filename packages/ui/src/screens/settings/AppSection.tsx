@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Button, Checkbox } from "../../components/controls";
 import { Card } from "../../components/layout";
-import { displayOf } from "../../store/app-store";
 import { useActions, useApp } from "../../store/context";
 import s from "./Settings.module.css";
 
@@ -11,8 +10,9 @@ type Check = { kind: "idle" } | { kind: "checking" } | { kind: "none" } | { kind
 export function AppSection() {
   const updates = useApp((st) => st.platform.updates);
   const update = useApp((st) => st.update);
-  const onLaunch = displayOf(useApp((st) => st.device)).checkUpdatesOnLaunch;
-  const { updates: actions, setDisplay } = useActions();
+  // Réglage de l'appareil, quel que soit le profil ouvert (décision 59).
+  const onLaunch = useApp((st) => st.profiles.checkUpdatesOnLaunch);
+  const { updates: actions } = useActions();
   const [check, setCheck] = useState<Check>({ kind: "idle" });
 
   const search = async () => {
@@ -50,7 +50,7 @@ export function AppSection() {
           <Checkbox
             label="Rechercher une mise à jour au lancement"
             checked={onLaunch}
-            onChange={(e) => void setDisplay({ checkUpdatesOnLaunch: e.target.checked })}
+            onChange={(e) => void actions.setCheckOnLaunch(e.target.checked)}
           />
           <p className={s.muted}>
             Cashmyr ne se connecte à Internet que pour lire la dernière version publiée sur GitHub : au lancement si la case est

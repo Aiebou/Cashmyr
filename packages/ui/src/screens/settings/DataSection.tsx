@@ -18,6 +18,9 @@ export function DataSection() {
   const today = useApp((st) => st.today);
   const { toast, ask, reset } = useActions();
   const sync = useApp((st) => st.sync);
+  const { list, current } = useApp((st) => st.profiles);
+  // Plusieurs profils : la remise à zéro porte sur le profil ouvert, et le dit.
+  const named = list.length > 1 ? `« ${current.name} »` : null;
   const [snapshots, setSnapshots] = useState<SnapshotInfo[] | null>(null);
   const [setAside, setSetAside] = useState<SetAsideInfo[]>([]);
   const [busy, setBusy] = useState(false);
@@ -63,7 +66,7 @@ export function DataSection() {
   const configured = sync.status !== "unconfigured";
   const eraseDevice = async () => {
     const ok = await ask({
-      title: "Effacer les données de cet appareil ?",
+      title: named ? `Effacer ${named} sur cet appareil ?` : "Effacer les données de cet appareil ?",
       message: [
         "Cashmyr repart de l'écran d'accueil sur cet appareil" + (configured ? " et oublie le fichier de synchronisation." : "."),
         configured
@@ -72,7 +75,7 @@ export function DataSection() {
           : "Sans fichier de synchronisation, ce qui n'est que sur cet appareil disparaît.",
         "Une copie de sauvegarde est prise juste avant.",
       ].join("\n\n"),
-      confirmLabel: "Effacer cet appareil",
+      confirmLabel: named ? `Effacer ${named} sur cet appareil` : "Effacer cet appareil",
       danger: true,
     });
     if (!ok) return;
@@ -86,7 +89,7 @@ export function DataSection() {
   };
   const eraseEverywhere = async () => {
     const ok = await ask({
-      title: "Tout effacer, sur tous les appareils ?",
+      title: named ? `Tout effacer dans ${named}, sur tous les appareils ?` : "Tout effacer, sur tous les appareils ?",
       message: [
         "Opérations, comptes, catégories, objectifs, dettes et récurrences sont supprimés, et les réglages reprennent leurs valeurs par défaut.",
         configured
@@ -96,7 +99,7 @@ export function DataSection() {
           : "Aucun fichier de synchronisation : seul cet appareil est concerné.",
         "Une copie de sauvegarde est prise juste avant : Paramètres → Sauvegardes → Restaurer la remet partout. Réimporter ensuite une sauvegarde ou l'ancien fichier ne rendrait rien, l'effacement étant plus récent.",
       ].join("\n\n"),
-      confirmLabel: "Tout effacer, partout",
+      confirmLabel: named ? `Tout effacer dans ${named}, partout` : "Tout effacer, partout",
       danger: true,
     });
     if (!ok) return;
@@ -169,13 +172,20 @@ export function DataSection() {
           actuel est prise juste avant.
         </p>
       </Card>
-      <Card title="Remise à zéro" subtitle="Repartir d'un Cashmyr vide, sur cet appareil seulement ou partout.">
+      <Card
+        title="Remise à zéro"
+        subtitle={
+          named
+            ? `Repartir d'un profil ${named} vide, sur cet appareil seulement ou partout. Les autres profils ne changent pas.`
+            : "Repartir d'un Cashmyr vide, sur cet appareil seulement ou partout."
+        }
+      >
         <div className={s.actions}>
           <Button disabled={busy} onClick={() => void eraseDevice()}>
-            Effacer cet appareil…
+            {named ? `Effacer ${named} sur cet appareil…` : "Effacer cet appareil…"}
           </Button>
           <Button variant="danger" disabled={busy} onClick={() => void eraseEverywhere()}>
-            Tout effacer, partout…
+            {named ? `Tout effacer dans ${named}, partout…` : "Tout effacer, partout…"}
           </Button>
         </div>
         <p className={s.muted}>
