@@ -143,6 +143,31 @@
 .categoryList > li {
   padding: 6px 0;
 }
+
+/* Profils : pastille, nom modifiable sur place, ouvrir, supprimer. */
+.profileList > li {
+  padding: 8px 0;
+}
+.profileRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+}
+.profileInitial {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--track);
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+.confirmText {
+  white-space: pre-line;
+  line-height: 1.5;
+}
 .group {
   display: grid;
   gap: 6px;

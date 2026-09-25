@@ -6,6 +6,7 @@ import { Toasts } from "./components/layout";
 import { Menu } from "./components/Menu";
 import { Modal } from "./components/Modal";
 import { monthTitle, stamp } from "./lib/format";
+import { initialOf } from "./lib/profiles";
 import { CreateAccountModal, CreateDebtModal, CreateGoalModal } from "./screens/CreateModals";
 import { DashboardScreen } from "./screens/DashboardScreen";
 import { AccountsScreen } from "./screens/AccountsScreen";
@@ -16,6 +17,7 @@ import { OperationsScreen } from "./screens/OperationsScreen";
 import { OperationModal } from "./screens/OperationModal";
 import { RecurrenceModal } from "./screens/RecurrenceModal";
 import { DeleteCategoryModal } from "./screens/settings/DeleteCategoryModal";
+import { CreateProfileModal, DeleteProfileModal } from "./screens/settings/ProfileModals";
 import { SettingsScreen } from "./screens/settings/SettingsScreen";
 import { Welcome } from "./screens/Welcome";
 import { TABS, type Tab } from "./store/app-store";
@@ -87,6 +89,41 @@ function SyncBadge() {
   );
 }
 
+/** Profil ouvert, dès qu'il y en a deux : on passe d'un profil à l'autre d'ici (décision 54). */
+function ProfileMenu() {
+  const { list, current } = useApp((st) => st.profiles);
+  const { profiles, setTab } = useActions();
+  if (list.length < 2) return null;
+  return (
+    <Menu
+      align="start"
+      triggerLabel={`Profil « ${current.name} ». Changer de profil`}
+      triggerClassName={s.profile}
+      trigger={
+        <>
+          <span className={s.profileInitial} aria-hidden="true">
+            {initialOf(current.name)}
+          </span>
+          <span className={s.profileName}>{current.name}</span>
+        </>
+      }
+      groups={[
+        list.filter((p) => p.id !== current.id).map((p) => ({ id: p.id, label: p.name, onSelect: () => void profiles.open(p.id) })),
+        [
+          {
+            id: "manage",
+            label: "Gérer les profils",
+            onSelect: () => {
+              setTab("settings");
+              requestAnimationFrame(() => document.getElementById("reglages-profils")?.scrollIntoView());
+            },
+          },
+        ],
+      ]}
+    />
+  );
+}
+
 function AddMenu() {
   const { openModal } = useActions();
   return (
@@ -131,6 +168,10 @@ function Modals() {
       return <RecurrenceModal key={modal.editId ?? "new"} {...(modal.editId ? { editId: modal.editId } : {})} />;
     case "delete-category":
       return <DeleteCategoryModal categoryId={modal.categoryId} />;
+    case "create-profile":
+      return <CreateProfileModal />;
+    case "delete-profile":
+      return <DeleteProfileModal profileId={modal.profileId} check={modal.check} />;
   }
 }
 
@@ -256,7 +297,10 @@ export function Shell() {
     <div className={s.app}>
       <header className={s.header} ref={header}>
         <div className={s.brandRow}>
-          <h1 className={s.brand}>Cashmyr</h1>
+          <div className={s.headerLeft}>
+            <h1 className={s.brand}>Cashmyr</h1>
+            <ProfileMenu />
+          </div>
           <div className={s.headerRight}>
             <SyncBadge />
             <AddMenu />

@@ -39,13 +39,27 @@ Paramètres). À chaque fusion, la version la plus récente de chaque élément 
 | Chrome ou Edge sur ordinateur | Automatique, au même rythme. Le navigateur redemande parfois l'autorisation d'accéder au fichier : un bouton « Réautoriser » s'affiche. |
 | Safari, Firefox, iPhone, Android | À la demande : « Synchroniser » ouvre le fichier et le fusionne avec l'appareil, puis « Enregistrer le fichier fusionné » le propose pour qu'il remplace l'original. Vérifie que c'est bien l'original qui est remplacé, et non une copie créée à côté : Cashmyr ne peut pas le vérifier. |
 
+## Profils
+
+Un même appareil peut porter plusieurs budgets : le tien, celui du foyer, celui d'un proche. Chaque profil a ses
+comptes, ses opérations, ses réglages et son propre fichier de synchronisation ; rien ne passe d'un profil à l'autre.
+Paramètres → Profils les crée, les renomme et les supprime. Dès qu'il y en a deux, Cashmyr demande à chaque lancement
+qui l'utilise, et le nom du profil ouvert, en haut de l'écran, permet d'en changer.
+
+- **Partager un profil**, celui du foyer par exemple : crée un profil sur chaque appareil concerné et fais-leur
+  rejoindre le même fichier de synchronisation (`finances-sync-foyer.json`, par exemple).
+- **Aucun verrou** : sur un appareil, chacun peut ouvrir tous les profils. Un budget privé reste sur ton propre appareil.
+- **Supprimer un profil** ne le retire que de cet appareil : son fichier et les autres appareils ne changent pas.
+- Tes données d'avant les profils forment le profil « Mon budget », que tu peux renommer.
+
 ## Où vivent tes données
 
-- **Bureau** : `data.json` dans le dossier de l'application, avec ses cinq copies dans `backups/`.
+- **Bureau** : `data.json` dans le dossier de l'application, avec ses cinq copies dans `backups/`. Les profils
+  créés ensuite ont chacun leur dossier dans `profils/`.
   - macOS : `~/Library/Application Support/io.github.aiebou.cashmyr/`
   - Windows : `%APPDATA%\io.github.aiebou.cashmyr\`
   - Linux : `~/.local/share/io.github.aiebou.cashmyr/`
-- **Version web** : dans le stockage du navigateur (IndexedDB), pour ce seul navigateur. Effacer les données du
+- **Version web** : dans le stockage du navigateur (IndexedDB, une base par profil), pour ce seul navigateur. Effacer les données du
   site les efface. Sur iPhone et iPad, utilise l'application ajoutée à l'écran d'accueil : elle a son propre
   stockage, séparé de Safari, que Safari n'efface pas après quelques jours sans visite.
 

@@ -1,3 +1,4 @@
+import { SYNC_FILE_NAME } from "../profiles";
 import type { AutoSyncFile, FileIO, SyncTargetStatus } from "../types";
 
 export type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
@@ -7,14 +8,17 @@ export type Invoke = <T>(command: string, args?: Record<string, unknown>) => Pro
  * le chemin choisi par l'utilisateur dans le dialogue natif, mémorisé côté Rust :
  * le front ne peut pas leur passer un autre chemin.
  *
- * - `sync_choose { kind: "open" | "create" }` → `{ name } | null` : ouvre le dialogue, mémorise le chemin ;
- *   en création, crée un fichier vide s'il n'existe pas (comme le fait `showSaveFilePicker`).
+ * - `sync_choose { kind: "open" | "create", suggestedName }` → `{ name } | null` : ouvre le dialogue, mémorise
+ *   le chemin ; en création, propose `suggestedName` (Rust n'admet que `finances-sync[-nom].json`) et crée un
+ *   fichier vide s'il n'existe pas (comme le fait `showSaveFilePicker`).
  * - `sync_status` → `"unconfigured" | "ready" | "missing"`.
  * - `sync_target_name` → `string | null`.
  * - `sync_read` → `string | null` (null si le fichier a disparu).
  * - `sync_write_atomic { content }` : écrit `<fichier>.tmp-<aléa>` dans le même dossier,
  *   `fsync`, puis renomme par-dessus l'original.
  * - `sync_forget` : oublie le chemin.
+ *
+ * Toutes agissent sur le profil choisi par `profile_select` (voir `./index.ts`).
  */
 export const SYNC_COMMANDS = {
   choose: "sync_choose",
@@ -26,11 +30,11 @@ export const SYNC_COMMANDS = {
 } as const;
 
 /** Bureau : accès complet au fichier choisi une fois pour toutes. */
-export function createTauriSync(invoke: Invoke): AutoSyncFile {
+export function createTauriSync(invoke: Invoke, suggestedName = SYNC_FILE_NAME): AutoSyncFile {
   return {
     mode: "auto",
     via: "tauri",
-    choose: (kind) => invoke<{ name: string } | null>(SYNC_COMMANDS.choose, { kind }),
+    choose: (kind) => invoke<{ name: string } | null>(SYNC_COMMANDS.choose, { kind, suggestedName }),
     status: () => invoke<SyncTargetStatus>(SYNC_COMMANDS.status),
     requestPermission: async () => true,
     targetName: () => invoke<string | null>(SYNC_COMMANDS.targetName),

@@ -1,9 +1,10 @@
 //! Enveloppe de bureau de Cashmyr : une fenêtre, les plugins de fichiers et de dialogues,
-//! et les commandes du fichier de synchronisation. Seul appel réseau : la recherche de mise
+//! et les commandes du fichier de synchronisation et des profils. Seul appel réseau : la recherche de mise
 //! à jour, faite ici côté Rust et seulement quand l'utilisateur la demande.
 
 #[cfg(target_os = "macos")]
 mod menu;
+mod profiles;
 mod sync_file;
 
 use tauri::Manager;
@@ -27,6 +28,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
+            // Premier profil par défaut ; le front choisit le profil ouvert par `profile_select`.
             let store = app.path().app_data_dir()?.join(sync_file::TARGET_FILE);
             app.manage(sync_file::SyncTarget::load(store));
             Ok(())
@@ -38,6 +40,8 @@ pub fn run() {
             sync_file::sync_read,
             sync_file::sync_write_atomic,
             sync_file::sync_forget,
+            profiles::profile_select,
+            profiles::profile_remove,
         ]);
 
     #[cfg(target_os = "macos")]

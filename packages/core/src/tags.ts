@@ -1,6 +1,7 @@
 import { indexOf } from "./dataset";
 import { derivedId, newId } from "./ids";
 import type { Cents, Changes, Dataset, Operation, Tag } from "./model";
+import { cleanName, nameKey } from "./names";
 import { createRecord, revive, tombstone, touch } from "./records";
 
 export class TagError extends Error {
@@ -8,11 +9,10 @@ export class TagError extends Error {
 }
 
 /** Nom affiché d'un tag : espaces en trop retirés. */
-export const cleanTagName = (name: string): string => name.trim().replace(/\s+/g, " ");
+export const cleanTagName = cleanName;
 
-/** Clé d'identité d'un nom : sans casse, accents ni espaces en trop (« Société  A » = « societe a »). */
-export const tagKey = (name: string): string =>
-  cleanTagName(name).normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("fr-FR");
+/** Clé d'identité d'un tag : sans casse, accents ni espaces en trop (« Société  A » = « societe a »). */
+export const tagKey = nameKey;
 
 /** Identifiant d'un tag créé sous ce nom : le même sur tous les appareils (décision 47). */
 export const tagIdFor = (name: string): string => derivedId("tag", tagKey(name));

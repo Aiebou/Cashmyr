@@ -1,4 +1,5 @@
 import type { Changes, Dataset, Preferences, Role, WorthMode } from "@cashmyr/core";
+import type { ProfileEntry, ProfileRegistryStore } from "./profiles";
 
 /** Choix d'affichage propres à l'appareil, jamais synchronisés (version 0.2.0). */
 export type DisplayPrefs = {
@@ -8,7 +9,10 @@ export type DisplayPrefs = {
   accountRoles: Role[];
   /** Camemberts de l'écran Mois masqués. */
   hideMonthCharts: boolean;
-  /** Bureau : recherche d'une mise à jour au lancement (décision 46). */
+  /**
+   * Bureau : recherche d'une mise à jour au lancement (décision 46). Lu ici tant que l'appareil n'a
+   * qu'un profil implicite ; ensuite, c'est le registre des profils qui le porte (décision 59).
+   */
   checkUpdatesOnLaunch: boolean;
 };
 
@@ -144,10 +148,34 @@ export interface Platform {
   /** Affichage seulement. */
   target: "web" | "desktop";
   deviceLabel: string;
+  /** Stockage et synchronisation du profil ouvert. */
   local: LocalStore;
   sync: SyncFile;
+  /** Nom proposé pour le fichier de synchronisation du profil ouvert. */
+  syncFileName: string;
   files: FileIO;
   /** Service worker de la PWA, updater du bureau. Absent en test. */
   updates?: AppUpdates;
   shortcutHint: string | null;
+}
+
+/**
+ * Les profils de l'appareil (§9) : ce que chaque point d'entrée assemble et passe à `startApp`.
+ * `LocalStore` et `SyncFile` ne voient jamais qu'un profil ; l'hôte dit lesquels existent et
+ * ouvre celui qui est choisi.
+ */
+export interface ProfileHost {
+  registry: ProfileRegistryStore;
+  /** Stockage, synchronisation et capacités du profil choisi. Bureau : le choisit aussi côté Rust. */
+  open(profile: ProfileEntry): Promise<Platform>;
+  /** Stockage local d'un profil, sans l'ouvrir : état de l'appareil, données pour une sauvegarde. */
+  localOf(profileId: string): Promise<LocalStore>;
+  /** Prépare le stockage d'un nouveau profil (bureau : son dossier). */
+  prepare(profileId: string): Promise<void>;
+  /** Retire tout le stockage local d'un profil, copies comprises. Son fichier de synchronisation n'est pas touché. */
+  remove(profileId: string): Promise<void>;
+  /** Profil à rouvrir sans repasser par le choix : noté pour la session, par un changement de profil ou un rechargement. */
+  session: { get(): string | null; set(profileId: string | null): void };
+  /** Service worker de la PWA, updater du bureau : ne dépendent d'aucun profil. */
+  updates?: AppUpdates;
 }

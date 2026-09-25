@@ -1,4 +1,4 @@
-import { SYNC_FILE_NAME } from "../engine";
+import { SYNC_FILE_NAME } from "../profiles";
 import type { AutoSyncFile, SyncTargetStatus } from "../types";
 
 type Permission = "granted" | "denied" | "prompt";
@@ -42,7 +42,7 @@ const errorName = (e: unknown) => (typeof e === "object" && e !== null ? (e as {
  * `createWritable()` écrit dans un fichier d'échange que le navigateur ne substitue
  * à l'original qu'à `close()` : c'est le seul mécanisme atomique qu'offre l'API web.
  */
-export function createFsAccessSync(pickers: FsPickers, store: HandleStore): AutoSyncFile {
+export function createFsAccessSync(pickers: FsPickers, store: HandleStore, suggestedName = SYNC_FILE_NAME): AutoSyncFile {
   let cached: FsFileHandle | null | undefined;
   const handle = async () => {
     if (cached === undefined) cached = await store.get();
@@ -59,7 +59,7 @@ export function createFsAccessSync(pickers: FsPickers, store: HandleStore): Auto
         picked =
           kind === "open"
             ? (await pickers.showOpenFilePicker({ types: TYPES, multiple: false }))[0]
-            : await pickers.showSaveFilePicker({ types: TYPES, suggestedName: SYNC_FILE_NAME });
+            : await pickers.showSaveFilePicker({ types: TYPES, suggestedName });
       } catch (e) {
         if (errorName(e) === "AbortError") return null;
         throw e;

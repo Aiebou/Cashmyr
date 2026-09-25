@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Fenêtre principale : données dans le répertoire de l'application, dialogues natifs, fichier de synchronisation par les commandes Rust. Aucun accès réseau depuis l'interface ; la mise à jour, demandée par un clic, est vérifiée et téléchargée côté Rust.",
+  "description": "Fenêtre principale : données dans le répertoire de l'application, dialogues natifs, fichier de synchronisation et profils par les commandes Rust. Aucun accès réseau depuis l'interface ; la mise à jour, demandée par un clic, est vérifiée et téléchargée côté Rust.",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -17,7 +17,7 @@
     {
       "identifier": "fs:scope",
       "allow": [{ "path": "$APPDATA" }, { "path": "$APPDATA/**" }],
-      "deny": [{ "path": "$APPDATA/sync-target.txt" }]
+      "deny": [{ "path": "$APPDATA/sync-target.txt" }, { "path": "$APPDATA/profils/*/sync-target.txt" }]
     },
     "store:default",
     "updater:allow-check",
@@ -28,6 +28,8 @@
     "allow-sync-target-name",
     "allow-sync-read",
     "allow-sync-write-atomic",
-    "allow-sync-forget"
+    "allow-sync-forget",
+    "allow-profile-select",
+    "allow-profile-remove"
   ]
 }
