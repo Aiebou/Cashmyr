@@ -533,6 +533,21 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | 49 | Ordre des comptes | Choisi dans Mes comptes, synchronisé (une position par compte, comme les objectifs et les dettes), et suivi partout : bandeau, listes, saisie, Paramètres. Un compte sans position vient après, dans l'ordre d'arrivée ; à position égale (deux appareils qui réordonnent en même temps), l'ordre alphabétique départage. |
 | 50 | Format 2 des données | Collection `tags`, `tagId` sur les opérations et les récurrences, `position` sur les comptes. Données locales, copies de sauvegarde, sauvegardes importées et fichier de synchronisation du format 1 sont mis à niveau à la lecture, puis réécrits au format 2. Une version 0.1.x refuse un fichier au format 2 (« Mets l'application à jour ») sans rien écrire ni perdre : chaque appareil doit passer en 0.2.0. |
 
+### Validées les 25 et 26/09/2026 (profils, version 0.3.0)
+
+| # | Sujet | Décision |
+|---|---|---|
+| 51 | Profil | Un profil est un budget complet et indépendant : catégories, comptes, opérations, tags, objectifs, dettes, récurrences et réglages, avec son propre fichier de synchronisation et ses copies de sauvegarde. Rien n'est partagé ni additionné d'un profil à l'autre, et il n'y a pas de vue d'ensemble. « Foyer » est un profil comme un autre ; partager un profil, c'est partager son fichier. Le format des données ne change pas. |
+| 52 | Accès aux profils | Pas de verrou : sur un appareil, chacun peut ouvrir tous les profils. Un profil reste privé en ne l'installant que sur son propre appareil. |
+| 53 | Argent versé d'un profil à l'autre | Deux saisies sans lien : une sortie dans un profil, une entrée dans l'autre. |
+| 54 | Ouverture | Avec un seul profil, il s'ouvre directement. Avec au moins deux, l'écran « Qui utilise Cashmyr ? » s'affiche à chaque lancement. Changer de profil en cours de route relance l'application sur l'autre profil sans repasser par ce choix ; un rechargement pour mise à jour garde aussi le profil ouvert. |
+| 55 | Premier profil | Les données déjà présentes deviennent le profil « Mon budget », sans être déplacées. On le renomme dans Paramètres → Profils, et la création du deuxième profil propose de le nommer. |
+| 56 | Supprimer un profil | Le profil n'est retiré que de cet appareil. En synchronisation automatique, les modifications en attente partent d'abord dans le fichier. Ensuite, ses données locales quittent l'appareil, copies de sauvegarde et versions mises de côté comprises. Le fichier et les autres appareils ne changent pas : rejoindre le fichier depuis un nouveau profil le fait revenir. Sans fichier, la confirmation propose d'abord d'enregistrer une sauvegarde et demande de taper le nom du profil. Le dernier profil ne se supprime pas : la remise à zéro (décision 45) le remplace. |
+| 57 | Un fichier, un profil | Sur un appareil, un fichier de synchronisation ne sert qu'à un profil. Rejoindre depuis un profil le fichier d'un autre profil de l'appareil (même `fileId`) est refusé, en nommant ce profil ; sinon les deux profils se fondraient l'un dans l'autre au fil des synchronisations. |
+| 58 | Supprimer un profil en synchronisation assistée | S'il reste des modifications qui ne sont pas dans le fichier, c'est le cas « sans fichier » de la décision 56 : sauvegarde proposée d'abord, nom du profil à taper. |
+| 59 | Réglages de l'appareil ou du profil | La recherche de mise à jour au lancement vaut pour tout l'appareil. Le total du bandeau, le filtre de Mes comptes et les camemberts masqués sont propres à chaque profil sur l'appareil. |
+| 60 | Version des profils | 0.3.0, sans changement de format des données : un appareil en 0.2.0 peut rejoindre le fichier de n'importe quel profil. |
+
 Lectures validées avec la section dettes :
 - Total : `principal` s'il est > 0.
 - Mode libre : pas d'échéancier.
@@ -690,3 +705,92 @@ Version 0.2.0, choix validés le 25/09/2026 :
   d'opérations et de récurrences par tag).
 - **Ordre des comptes** : « Modifier l'ordre » sur la carte « Vos comptes » fait apparaître sur chaque tuile une poignée
   de glisser-déposer et deux flèches ; « Terminé » les retire. Avec un filtre actif, on déplace parmi les comptes montrés.
+
+---
+
+## 9. Profils (version 0.3.0)
+
+Décisions 51 à 60. Chaque profil a son propre stockage local, avec la même forme qu'aujourd'hui : `LocalStore`,
+`SyncFile`, `Repository` et `SyncEngine` ne voient jamais qu'un profil, et seul le moteur gagne un crochet
+(décision 57). Au-dessus d'eux, un registre propre à l'appareil dit quels profils existent.
+
+### Registre des profils
+
+```ts
+type ProfileEntry = {
+  id: string;             // « principal » pour le premier profil, uuid v4 pour les suivants
+  name: string;           // non vide, unique sur l'appareil à la casse, aux accents et aux espaces près
+  createdAt: number;
+  syncFileId: string | null;  // fileId du fichier de synchronisation du profil, tenu à jour à chaque fusion
+};
+type ProfileRegistry = {
+  version: 1;
+  profiles: ProfileEntry[];
+  checkUpdatesOnLaunch: boolean;  // bureau : réglage de l'appareil, plus d'un profil (décisions 46 et 59)
+};
+```
+
+- Jamais synchronisé : chaque appareil a ses profils.
+- **Registre absent** : un seul profil, « Mon budget », d'identifiant `principal`. Le registre n'est écrit
+  qu'au premier renommage ou à la création d'un deuxième profil. Un appareil qui n'en crée pas n'écrit donc
+  rien de nouveau, et un retour à la 0.2.0 retrouve ses données telles quelles.
+- **Registre présent** : il fait foi, même quand `principal` en a été retiré.
+- Au premier enregistrement, `checkUpdatesOnLaunch` reprend la valeur que `principal` avait dans
+  `DeviceState.display`.
+
+### Stockage par plateforme
+
+| | Bureau Tauri | PWA |
+|---|---|---|
+| Registre | `$APPDATA/profils.json`, écrit dans `.tmp` puis renommé | base IndexedDB `cashmyr-profils` |
+| Profil `principal` | emplacement actuel : `data.json`, `backups/`, `mis-de-cote/`, `device.json`, `sync-target.txt` à la racine de `$APPDATA` | base `cashmyr` |
+| Autres profils | même disposition dans `$APPDATA/profils/<id>/` | base `cashmyr-<id>` |
+
+Tout ce qui est propre à un profil reste dans son stockage : `DeviceState` (modifications en attente, choix
+d'affichage, fichier de synchronisation) et, sur le web, le handle du fichier. Chaque profil a donc son
+`deviceId`, et un appareil apparaît une fois dans le registre de chaque fichier qu'il rejoint.
+
+**Commandes Rust.** Les six commandes de synchronisation agissent sur le profil choisi au démarrage.
+- `profile_select(id)` : Rust n'accepte que `principal` ou un uuid v4, et un dossier `profils/<id>/`
+  existant. Le front ne peut donc toujours pas diriger la synchronisation hors des fichiers choisis dans
+  le dialogue.
+- `profile_remove(id)` retire le stockage d'un profil, `sync-target.txt` compris, puisque `plugin-fs` n'a
+  pas le droit d'y toucher.
+- La règle `deny` de `capabilities/default.json` couvre aussi `$APPDATA/profils/*/sync-target.txt`.
+- « Créer un nouveau fichier » propose `finances-sync.json` pour `principal` et
+  `finances-sync-<nom>.json` pour les autres profils.
+
+### Démarrage et changement de profil
+
+- `apps/*/src/platform.ts` ne construit plus une `Platform` mais un hôte : il lit le registre et ouvre un
+  profil (`openProfile(id)` → `Platform`). `files` et `updates` ne dépendent pas du profil.
+- `startApp` lit le registre et ouvre directement le profil s'il est seul. Sinon, il ouvre celui qu'a noté
+  la session (`sessionStorage`, posé par un changement de profil ou un rechargement), et à défaut affiche
+  « Qui utilise Cashmyr ? ». Le reste du démarrage ne change pas, écran de secours compris : il porte sur le
+  profil ouvert, avec un lien « Changer de profil ».
+- La recherche de mise à jour au lancement ne dépend d'aucun profil : elle part avant le choix.
+- **En-tête** : dès qu'il y a deux profils, le nom du profil ouvert s'y affiche. Il ouvre un menu avec les
+  autres profils et « Gérer les profils ».
+- **Changer de profil** passe par le même chemin qu'un rechargement pour mise à jour : un passage de
+  synchronisation s'il reste des modifications en attente (mode automatique), la fin des écritures, puis
+  la relance sur l'autre profil.
+- **Web** : deux onglets peuvent montrer deux profils différents, puisque ce sont deux bases.
+
+### Paramètres → Profils
+
+Nouvelle section, visible même avec un seul profil.
+- **Liste** : les profils de l'appareil, avec renommer sur place et supprimer.
+- **« Nouveau profil »** demande un nom. Pour le deuxième profil, elle propose aussi de renommer « Mon
+  budget ». Le registre est ensuite enregistré, puis l'application se relance sur le nouveau profil, qui
+  arrive sur l'accueil : catégories par défaut, reprise ou sauvegarde, ou fichier à rejoindre.
+- **Supprimer** suit les décisions 56 et 58. Le profil ouvert se supprime aussi : l'application se relance sur le
+  choix, ou directement sur le profil qui reste.
+- **Remise à zéro** (décision 45) : elle porte sur le profil ouvert, et ses libellés le nomment dès qu'il
+  y a deux profils.
+
+### Synchronisation
+
+- **Un fichier, un profil** (décision 57) : le registre garde le `fileId` du fichier de chaque profil. Avant la
+  première fusion avec un fichier, le moteur appelle un nouveau crochet, `checkFileFree(fileId)` ; si un autre
+  profil de l'appareil a ce `fileId`, le passage s'arrête sans rien écrire et le message nomme ce profil.
+- Le reste ne change pas : chaque profil se synchronise seul, avec son fichier, au rythme du §6.
