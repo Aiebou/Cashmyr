@@ -1,6 +1,7 @@
 import {
   colorFor,
   indexOf,
+  orderAccounts,
   type Account,
   type Bucket,
   type Category,
@@ -41,7 +42,8 @@ export function expenseGroups(data: Dataset): { bucket: Bucket; label: string; c
   }));
 }
 
-export const liveAccounts = (data: Dataset): Account[] => data.collections.accounts.filter((a) => a.deletedAt === null);
+/** Comptes vivants, dans l'ordre choisi dans Mes comptes (décision 49). */
+export const liveAccounts = (data: Dataset): Account[] => orderAccounts(data.collections.accounts.filter((a) => a.deletedAt === null));
 
 export const liveGoals = (data: Dataset): Goal[] =>
   data.collections.goals.filter((g) => g.deletedAt === null && !g.archived).sort((a, b) => a.position - b.position);

@@ -67,6 +67,7 @@ const SHAPES: Record<CollectionName, Shape> = {
     declaredValue: opt(isInt, "centimes entiers"),
     declaredAt: opt(isValidDay, "date AAAA-MM-JJ"),
     color: req(isColor, "couleur 0–6"),
+    position: opt(isInt, "entier"),
   },
   operations: {
     ...META,
@@ -81,6 +82,7 @@ const SHAPES: Record<CollectionName, Shape> = {
     goalId: opt(isId, "identifiant"),
     debtId: opt(isId, "identifiant"),
     recurrenceId: opt(isId, "identifiant"),
+    tagId: opt(isId, "identifiant"),
   },
   goals: {
     ...META,
@@ -140,6 +142,7 @@ const SHAPES: Record<CollectionName, Shape> = {
     toAccountId: opt(isId, "identifiant"),
     goalId: opt(isId, "identifiant"),
     debtId: opt(isId, "identifiant"),
+    tagId: opt(isId, "identifiant"),
     dayOfMonth: req((v) => isInt(v) && v >= 1 && v <= 31, "jour 1–31"),
     startMonth: req(isValidMonth, "mois AAAA-MM"),
     endMonth: req(nullable(isValidMonth), "null ou mois"),
@@ -149,6 +152,10 @@ const SHAPES: Record<CollectionName, Shape> = {
     ...META,
     month: req(isValidMonth, "mois AAAA-MM"),
     recurrenceId: req(isId, "identifiant"),
+  },
+  tags: {
+    ...META,
+    name: req((v) => isStr(v) && v.trim() !== "" && v === v.trim(), "texte non vide, sans espace en bord"),
   },
 };
 
@@ -232,6 +239,7 @@ function checkReferences(name: CollectionName, r: Obj, where: string, lookup: Lo
     ref("toAccountId", "accounts");
     ref("goalId", "goals");
     ref("debtId", "debts");
+    ref("tagId", "tags");
     if (name === "operations") ref("recurrenceId", "recurrences");
   }
   if (name === "debts") {

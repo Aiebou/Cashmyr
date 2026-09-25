@@ -1,4 +1,4 @@
-import type { Dataset, Operation } from "@cashmyr/core";
+import { shownTag, type Dataset, type Operation } from "@cashmyr/core";
 import { operationColor, operationLabel, categoryName, accountName } from "../lib/data";
 import { dayShort, money } from "../lib/format";
 import { cx } from "./controls";
@@ -17,6 +17,7 @@ type Props = {
 /** Une opération dans une liste : pastille, libellé, détail, montant signé. */
 export function OperationRow({ data, op, onOpen, showDate = true }: Props) {
   const label = operationLabel(data, op);
+  const tag = shownTag(data, op.tagId);
   const detail =
     op.type === "tx"
       ? "Transfert"
@@ -36,7 +37,15 @@ export function OperationRow({ data, op, onOpen, showDate = true }: Props) {
             </span>
           )}
         </span>
-        <span className={s.detail}>{detail}</span>
+        <span className={s.detail}>
+          {detail}
+          {tag && (
+            <span className={s.tag}>
+              <span className="visually-hidden">, tag </span>
+              {tag.name}
+            </span>
+          )}
+        </span>
       </span>
       <span className={`${s.amount} ${op.type === "in" ? s.in : ""}`}>{amount}</span>
     </>

@@ -22,4 +22,6 @@ export * from "./usage";
 export * from "./backup";
 export * from "./defaults";
 export * from "./reset";
+export * from "./tags";
+export * from "./migrate/schema";
 export * from "./migrate/legacy";

@@ -1,4 +1,5 @@
 import "fake-indexeddb/auto";
+import { SCHEMA_VERSION } from "@cashmyr/core";
 import { describe, expect, it } from "vitest";
 import { LocalDataError, recoverLocalData, recoveryCopies, Repository, type LocalStore } from "../src";
 import { TauriFileLocalStore } from "../src/tauri";
@@ -66,12 +67,12 @@ describe("ouverture de données abîmées", () => {
     const env = desktop();
     await (await env.open()).apply(seed);
     const newer = JSON.parse(env.fs.files.get("data.json")!);
-    newer.schemaVersion = 2;
+    newer.schemaVersion = SCHEMA_VERSION + 1;
     env.fs.files.set("data.json", JSON.stringify(newer));
     const error = await env.open().catch((e: unknown) => e);
     expect(error).not.toBeInstanceOf(LocalDataError);
     expect(String(error)).toContain("version plus récente");
-    expect(JSON.parse(env.fs.files.get("data.json")!).schemaVersion).toBe(2);
+    expect(JSON.parse(env.fs.files.get("data.json")!).schemaVersion).toBe(SCHEMA_VERSION + 1);
   });
 });
 

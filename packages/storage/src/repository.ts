@@ -4,6 +4,7 @@ import {
   COLLECTION_NAMES,
   dropRecords,
   emptyDataset,
+  isOlderSchema,
   materializeRecurrences,
   mergeChanges,
   mergeDatasets,
@@ -11,6 +12,7 @@ import {
   PREF_KEYS,
   SCHEMA_VERSION,
   toLocalDay,
+  upgradeSchema,
   validateDataset,
   ValidationError,
   type Changes,
@@ -110,12 +112,16 @@ export class Repository {
           "Les données de cet appareil viennent d'une version plus récente de Cashmyr. Mets l'application à jour : rien n'a été modifié.",
         );
       }
+      // Données d'une version plus ancienne : mises au format courant, validées, puis réécrites (décision 50).
+      const older = isOlderSchema(loaded);
+      if (older) loaded = upgradeSchema(loaded);
       try {
         assertValidDataset(loaded);
       } catch (e) {
         if (e instanceof ValidationError) throw new LocalDataError("invalide", e.message);
         throw e;
       }
+      if (older) await options.local.replace(loaded);
       await options.local.snapshot(now());
     }
     let device = await options.local.getDevice();

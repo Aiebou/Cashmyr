@@ -33,7 +33,7 @@ const card = (title: string) => screen.getByRole("heading", { name: title, level
 const dialog = () => screen.getByRole("dialog");
 
 describe("écran Paramètres", () => {
-  it("huit sections, sans sélecteur de période dans l'en-tête", async () => {
+  it("neuf sections, sans sélecteur de période dans l'en-tête", async () => {
     await openSettings();
     const toc = screen.getByRole("navigation", { name: "Sections des paramètres" });
     expect(within(toc).getAllByRole("link").map((a) => a.textContent)).toEqual([
@@ -41,6 +41,7 @@ describe("écran Paramètres", () => {
       "Comptes",
       "Récurrences",
       "Catégories et couleurs",
+      "Tags",
       "Synchronisation",
       "Sauvegardes",
       "Apparence",
@@ -272,7 +273,7 @@ describe("sauvegardes (décisions 32 et 33)", () => {
       [`cashmyr-operations-${TODAY}.csv`, "text/csv"],
     ]);
     expect(JSON.parse(saved[0]!.content).collections.operations).toHaveLength(2);
-    expect(saved[1]!.content.split("\r\n")[1]).toBe('"2026-08-09";"Dépense";"Courses";"Besoins";"Compte courant";"";"";"";"";"61,00"');
+    expect(saved[1]!.content.split("\r\n")[1]).toBe('"2026-08-09";"Dépense";"Courses";"Besoins";"Compte courant";"";"";"";"";"61,00";""');
   });
 
   it("CSV : colonnes de l'ancienne application, BOM, CRLF, transferts et montants", () => {
@@ -286,8 +287,8 @@ describe("sauvegardes (décisions 32 et 33)", () => {
       },
     };
     const [header, row] = operationsCsv(data).split("\r\n");
-    expect(header).toBe('﻿"Date";"Type";"Categorie";"Usage";"Compte";"Vers";"Objectif";"Dette";"Libelle";"Montant"');
-    expect(row).toBe('"2026-09-01";"Transfert";"";"";"Compte courant";"Livret A";"";"";"dit ""épargne""";"0,05"');
+    expect(header).toBe('﻿"Date";"Type";"Categorie";"Usage";"Compte";"Vers";"Objectif";"Dette";"Libelle";"Montant";"Tag"');
+    expect(row).toBe('"2026-09-01";"Transfert";"";"";"Compte courant";"Livret A";"";"";"dit ""épargne""";"0,05";""');
     expect(csvAmount(123_456)).toBe("1234,56");
   });
 

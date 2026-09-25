@@ -1,5 +1,6 @@
 import { indexOf } from "../dataset";
-import type { Account, Cents, Dataset, Day, Operation, Role } from "../model";
+import type { Account, Cents, Changes, Dataset, Day, Operation, Role } from "../model";
+import { touch } from "../records";
 import { isSavingRole } from "./month";
 
 export type AccountFigures = {
@@ -70,6 +71,29 @@ export function accountFigures(data: Dataset, asOf: Day): Map<string, AccountFig
   return out;
 }
 
+/**
+ * Comptes dans l'ordre choisi (décision 49) : d'abord ceux qui ont une position, dans l'ordre
+ * croissant (à égalité, par nom puis identifiant, pour que tous les appareils s'accordent) ;
+ * puis les autres, dans l'ordre d'arrivée.
+ */
+export function orderAccounts<T extends Pick<Account, "id" | "name" | "position">>(accounts: readonly T[]): T[] {
+  const placed = accounts
+    .filter((a) => a.position !== undefined)
+    .sort((a, b) => a.position! - b.position! || a.name.localeCompare(b.name, "fr") || a.id.localeCompare(b.id));
+  return [...placed, ...accounts.filter((a) => a.position === undefined)];
+}
+
+/** Nouvel ordre des comptes : positions 1, 2, 3… dans l'ordre donné ; seules les lignes qui changent sont écrites. */
+export function reorderAccounts(data: Dataset, orderedIds: readonly string[], now: number): Changes {
+  const byId = new Map(data.collections.accounts.map((a) => [a.id, a]));
+  const accounts: Account[] = [];
+  orderedIds.forEach((id, i) => {
+    const account = byId.get(id);
+    if (account && account.deletedAt === null && account.position !== i + 1) accounts.push(touch(account, { position: i + 1 }, now));
+  });
+  return accounts.length > 0 ? { accounts } : {};
+}
+
 /** Date de référence d'une année : le 31/12, ou aujourd'hui pour l'année en cours ou à venir. */
 export const asOfForYear = (year: number, today: Day): Day => {
   const end = `${String(year).padStart(4, "0")}-12-31`;
@@ -88,7 +112,7 @@ function group(data: Dataset, asOf: Day, keep: (role: Role) => boolean): Account
   const byAccount: AccountGroup["byAccount"] = [];
   let total = 0;
   let gap: Cents | null = null;
-  for (const account of data.collections.accounts) {
+  for (const account of orderAccounts(data.collections.accounts)) {
     if (account.deletedAt !== null || !keep(account.role)) continue;
     const f = figures.get(account.id);
     if (!f) continue;
@@ -167,7 +191,7 @@ export function worthOverview(data: Dataset, asOf: Day, today: Day, mode: WorthM
     injectedOutsideCurrent: 0,
     undeclared: 0,
   };
-  for (const account of data.collections.accounts) {
+  for (const account of orderAccounts(data.collections.accounts)) {
     if (account.deletedAt !== null) continue;
     const balance = figures.get(account.id)?.balance ?? 0;
     const fluctuating = isFluctuatingRole(account.role);

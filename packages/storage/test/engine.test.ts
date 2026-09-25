@@ -1,4 +1,5 @@
 import {
+  SCHEMA_VERSION,
   parseSyncDocument,
   serializeSyncDocument,
   syncWithDocument,
@@ -133,7 +134,7 @@ describe("mode automatique", () => {
     const d = await device("tauri", cloud);
     await d.repo.apply(seed);
     await d.engine.connect("create");
-    cloud.content = JSON.stringify({ ...fileData(cloud), schemaVersion: 2 });
+    cloud.content = JSON.stringify({ ...fileData(cloud), schemaVersion: SCHEMA_VERSION + 1 });
     expect(await d.engine.onFocus()).toMatchObject({ kind: "failed", error: expect.stringMatching(/Mets l'application à jour/) });
   });
 

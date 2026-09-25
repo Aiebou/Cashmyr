@@ -19,7 +19,9 @@ import {
 import { useId, useMemo, useState, type FormEvent } from "react";
 import { AmountInput, Button, Checkbox, Field, FieldRow, Segmented, Select, submitOnEnter, TextInput } from "../components/controls";
 import { Modal } from "../components/Modal";
+import { TagField } from "../components/TagField";
 import { accountName, expenseGroups, liveAccounts, liveCategories, liveDebts, liveGoals } from "../lib/data";
+import { tagChoice, tagText } from "../lib/tags";
 import { useActions, useApp } from "../store/context";
 import s from "./OperationModal.module.css";
 
@@ -60,6 +62,7 @@ export function OperationModal({ type: initialType, editId }: Props) {
   const [debtId, setDebtId] = useState(existing?.debtId ?? "");
   const [date, setDate] = useState<Day>(existing?.date ?? defaultDate);
   const [note, setNote] = useState(existing?.note ?? "");
+  const [tag, setTag] = useState(() => tagText(data, existing?.tagId));
   const [repeat, setRepeat] = useState(false);
   const [repeatDay, setRepeatDay] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -99,6 +102,7 @@ export function OperationModal({ type: initialType, editId }: Props) {
     setErrors(found);
     if (Object.keys(found).length > 0) return;
     const now = Date.now();
+    const tagged = tagChoice(data, tag, existing?.tagId, now);
     const fields: Omit<Operation, "id" | "updatedAt" | "deletedAt"> = {
       date,
       amount: amount!,
@@ -108,11 +112,12 @@ export function OperationModal({ type: initialType, editId }: Props) {
       ...(goalId ? { goalId } : {}),
       ...(debtId ? { debtId } : {}),
       ...(existing?.recurrenceId ? { recurrenceId: existing.recurrenceId } : {}),
+      ...(tagged.tagId ? { tagId: tagged.tagId } : {}),
     };
     const op: Operation = existing
       ? { id: existing.id, updatedAt: nextStamp(now, existing), deletedAt: null, ...fields }
       : createRecord<Operation>(newId(), fields, now);
-    const changes: Changes = { operations: [op] };
+    const changes: Changes = { ...tagged.changes, operations: [op] };
     if (repeat && !existing) {
       const rec = createRecord<Recurrence>(
         newId(),
@@ -123,6 +128,7 @@ export function OperationModal({ type: initialType, editId }: Props) {
           ...(isTransfer ? { fromAccountId: fromId, toAccountId: toId } : { categoryId, accountId }),
           ...(goalId ? { goalId } : {}),
           ...(debtId ? { debtId } : {}),
+          ...(tagged.tagId ? { tagId: tagged.tagId } : {}),
           dayOfMonth: day,
           startMonth: addMonths(monthOf(date), 1),
           endMonth: null,
@@ -243,6 +249,8 @@ export function OperationModal({ type: initialType, editId }: Props) {
             <TextInput id={`${id}-note`} value={note} onChange={(e) => setNote(e.target.value)} autoComplete="off" />
           </Field>
         </FieldRow>
+
+        <TagField id={`${id}-tag`} data={data} value={tag} onChange={setTag} />
 
         {(goals.length > 0 || debts.length > 0) && (
           <FieldRow>

@@ -20,6 +20,7 @@ import {
   type PrefKey,
   type Preferences,
   type Recurrence,
+  type Tag,
 } from "./model";
 import { nextStamp } from "./records";
 
@@ -48,6 +49,7 @@ export function emptyCollections(): Collections {
     debts: [],
     recurrences: [],
     skips: [],
+    tags: [],
   };
 }
 
@@ -133,6 +135,7 @@ export type DatasetIndex = {
   debts: Map<string, Debt>;
   recurrences: Map<string, Recurrence>;
   operations: Map<string, Operation>;
+  tags: Map<string, Tag>;
   /** Opérations vivantes, par mois de leur date. */
   opsByMonth: Map<Month, Operation[]>;
   /** Opérations vivantes, tous mois confondus. */
@@ -162,6 +165,7 @@ export function indexOf(data: Dataset): DatasetIndex {
     debts: byId(c.debts),
     recurrences: byId(c.recurrences),
     operations: byId(c.operations),
+    tags: byId(c.tags),
     opsByMonth,
     liveOps,
   };

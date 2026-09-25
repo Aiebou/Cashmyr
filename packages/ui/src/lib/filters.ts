@@ -8,12 +8,19 @@ export type OperationFilters = {
   accountId: string;
   goalId: string;
   debtId: string;
+  tagId: string;
 };
 
-export const NO_FILTERS: OperationFilters = { query: "", type: "all", categoryId: "", accountId: "", goalId: "", debtId: "" };
+export const NO_FILTERS: OperationFilters = { query: "", type: "all", categoryId: "", accountId: "", goalId: "", debtId: "", tagId: "" };
 
 export const hasFilters = (f: OperationFilters): boolean =>
-  f.query.trim() !== "" || f.type !== "all" || f.categoryId !== "" || f.accountId !== "" || f.goalId !== "" || f.debtId !== "";
+  f.query.trim() !== "" ||
+  f.type !== "all" ||
+  f.categoryId !== "" ||
+  f.accountId !== "" ||
+  f.goalId !== "" ||
+  f.debtId !== "" ||
+  f.tagId !== "";
 
 /** Minuscules sans accents : « Échéance » se trouve en tapant « echeance ». */
 export const fold = (text: string): string => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
@@ -31,6 +38,7 @@ export function matchesFilters(data: Dataset, op: Operation, f: OperationFilters
   }
   if (f.goalId && op.goalId !== f.goalId) return false;
   if (f.debtId && op.debtId !== f.debtId) return false;
+  if (f.tagId && op.tagId !== f.tagId) return false;
   const words = fold(f.query).split(/\s+/).filter(Boolean);
   if (words.length === 0) return true;
   const label = fold(operationLabel(data, op));

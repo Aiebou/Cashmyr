@@ -57,6 +57,18 @@ button.row:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Tag de l'opération : une étiquette discrète après le détail. */
+.tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 7px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 18px;
+}
 .amount {
   font-weight: 600;
   white-space: nowrap;

@@ -41,6 +41,11 @@ export type Account = Meta & {
   declaredValue?: Cents;
   declaredAt?: Day;
   color: SeriesColor;
+  /**
+   * Ordre d'affichage, choisi dans Mes comptes et synchronisé (format 2). Absent : après les comptes
+   * ordonnés, dans l'ordre d'arrivée.
+   */
+  position?: number;
 };
 
 export type Operation = Meta & {
@@ -57,6 +62,8 @@ export type Operation = Meta & {
   /** Rattachement à une dette ; peut coexister avec goalId. */
   debtId?: string;
   recurrenceId?: string;
+  /** Tag (format 2). Un tag supprimé ne s'affiche plus, sans que l'opération soit réécrite. */
+  tagId?: string;
 };
 
 export type GoalStep = Meta & {
@@ -94,6 +101,8 @@ export type Recurrence = Meta & {
   goalId?: string;
   /** Propagé à chaque occurrence ; la génération suit alors l'échéancier de la dette. */
   debtId?: string;
+  /** Propagé à chaque occurrence (format 2). */
+  tagId?: string;
   /** 1–31, rabattu sur le dernier jour des mois courts. */
   dayOfMonth: number;
   startMonth: Month;
@@ -138,6 +147,12 @@ export type Debt = Meta & {
   position: number;
   color: SeriesColor;
 };
+
+/**
+ * Tag d'opérations (format 2) : relie des opérations d'un même projet ou objectif. Son identifiant
+ * se déduit de son nom à la création (décision 47) ; le renommer garde son identité.
+ */
+export type Tag = Meta & { name: string };
 
 /** Occurrence annulée. */
 export type Skip = Meta & { month: Month; recurrenceId: string };
@@ -195,6 +210,7 @@ export type Collections = {
   debts: Debt[];
   recurrences: Recurrence[];
   skips: Skip[];
+  tags: Tag[];
 };
 export type CollectionName = keyof Collections;
 export const COLLECTION_NAMES: readonly CollectionName[] = [
@@ -206,10 +222,12 @@ export const COLLECTION_NAMES: readonly CollectionName[] = [
   "debts",
   "recurrences",
   "skips",
+  "tags",
 ];
 export type AnyRecord = Collections[CollectionName][number];
 
-export const SCHEMA_VERSION = 1;
+/** 2 : tags, tag des opérations et des récurrences, ordre des comptes (version 0.2.0). */
+export const SCHEMA_VERSION = 2;
 
 export type Dataset = {
   schemaVersion: typeof SCHEMA_VERSION;

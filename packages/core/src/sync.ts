@@ -1,5 +1,6 @@
 import { defaultPreferences, emptyCollections } from "./dataset";
 import { mergeDatasets, type MergeReport } from "./merge";
+import { upgradeSchema } from "./migrate/schema";
 import {
   COLLECTION_NAMES,
   SCHEMA_VERSION,
@@ -82,6 +83,7 @@ function referencedIds(collections: Collections): Set<string> {
     add(op.goalId);
     add(op.debtId);
     add(op.recurrenceId);
+    add(op.tagId);
   }
   for (const rec of collections.recurrences) {
     if (rec.deletedAt !== null) continue;
@@ -91,6 +93,7 @@ function referencedIds(collections: Collections): Set<string> {
     add(rec.toAccountId);
     add(rec.goalId);
     add(rec.debtId);
+    add(rec.tagId);
   }
   for (const d of collections.debts) {
     if (d.deletedAt !== null) continue;
@@ -289,27 +292,29 @@ export function parseSyncDocument(text: string): SyncDocument {
       "Ce fichier a été écrit par une version plus récente de Cashmyr. Mets l'application à jour sur cet appareil.",
     );
   }
+  // Fichier écrit par une version plus ancienne : mis à niveau en mémoire, réécrit au format courant.
+  const doc = upgradeSchema(raw);
   const issues = validateDataset({
-    schemaVersion: raw.schemaVersion,
-    collections: raw.collections,
-    preferences: raw.preferences,
+    schemaVersion: doc.schemaVersion,
+    collections: doc.collections,
+    preferences: doc.preferences,
   });
-  if (typeof raw.fileId !== "string" || raw.fileId === "") issues.push("fileId manquant");
+  if (typeof doc.fileId !== "string" || doc.fileId === "") issues.push("fileId manquant");
   for (const key of ["revision", "writtenAt"] as const) if (!isNat(raw[key])) issues.push(`${key} invalide`);
-  if (typeof raw.writtenBy !== "string") issues.push("writtenBy invalide");
-  if (!isObj(raw.devices)) issues.push("devices invalide");
+  if (typeof doc.writtenBy !== "string") issues.push("writtenBy invalide");
+  if (!isObj(doc.devices)) issues.push("devices invalide");
   else {
-    for (const [id, d] of Object.entries(raw.devices)) {
+    for (const [id, d] of Object.entries(doc.devices)) {
       if (!isObj(d) || typeof d.label !== "string" || !isNat(d.lastRevision) || !isNat(d.lastMergeAt)) {
         issues.push(`devices.${id} invalide`);
       }
     }
   }
-  if (!isObj(raw.landed) || !Object.values(raw.landed).every(isNat)) issues.push("landed invalide");
+  if (!isObj(doc.landed) || !Object.values(doc.landed).every(isNat)) issues.push("landed invalide");
   if (issues.length > 0) {
     throw new SyncFileError("invalid", new ValidationError(issues).message, issues);
   }
-  return raw as SyncDocument;
+  return doc as SyncDocument;
 }
 
 export const serializeSyncDocument = (doc: SyncDocument): string => `${JSON.stringify(doc)}\n`;

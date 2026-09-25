@@ -1,4 +1,4 @@
-import { applyChanges, emptyDataset, type Changes, type Dataset, type Preferences } from "@cashmyr/core";
+import { applyChanges, emptyDataset, upgradeSchema, type Changes, type Dataset, type Preferences } from "@cashmyr/core";
 import type { DeviceState, LocalStore, SetAsideInfo, SnapshotInfo } from "../types";
 
 /** Opérations de fichiers utilisées, sur des chemins relatifs au répertoire de données de l'application. */
@@ -125,7 +125,8 @@ export class TauriFileLocalStore implements LocalStore {
 
   async readSnapshot(id: string): Promise<Dataset> {
     if (!/^\d+$/.test(id)) throw new Error(`Copie de sauvegarde introuvable : ${id}`);
-    return JSON.parse(await this.fs.readTextFile(`${BACKUPS}/data-${id}.json`)) as Dataset;
+    // Une copie prise par une version précédente est mise au format courant.
+    return upgradeSchema(JSON.parse(await this.fs.readTextFile(`${BACKUPS}/data-${id}.json`)) as Dataset);
   }
 
   async getDevice(): Promise<DeviceState | null> {

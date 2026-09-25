@@ -46,12 +46,13 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │   │   ├── debts.ts             versement ponctuel, prélèvement créé depuis une dette
 │   │   ├── colors.ts            accesseur unique de couleur, choix et réinitialisation
 │   │   ├── reset.ts             remise à zéro partout, catégories de l'accueil (décision 45)
+│   │   ├── tags.ts              identité, création, renommage, suppression et totaux des tags (47, 48)
 │   │   ├── defaults.ts          catégories par défaut, aux identifiants de l'ancienne application
 │   │   ├── recurrence.ts        matérialisation idempotente, annulation, rétablissement
 │   │   ├── merge.ts             fusion ligne à ligne, préférences clé à clé
 │   │   ├── sync.ts              document de synchronisation, registre, purge
 │   │   ├── migrate/
-│   │   │   ├── schema.ts        migrations du schéma (v1 → v2…)
+│   │   │   ├── schema.ts        mises à niveau du format (1 → 2), décision 50
 │   │   │   ├── legacy.ts        import de mes-finances.json : lecture stricte, conversion
 │   │   │   └── legacy-check.ts  vérification croisée, calculateur de l'ancien format en euros
 │   │   └── index.ts
@@ -141,6 +142,7 @@ export type Account = Meta & {
   safety: boolean;
   declaredValue?: Cents; declaredAt?: Day;   // épargne, placement, autre : entre dans le total (décisions 42 à 44)
   color: SeriesColor;         // ÉCART
+  position?: number;          // format 2 : ordre choisi, synchronisé ; absent = après les autres (décision 49)
 };
 
 export type Operation = Meta & {
@@ -150,6 +152,7 @@ export type Operation = Meta & {
   goalId?: string;
   debtId?: string;                              // comme goalId ; peut coexister avec lui
   recurrenceId?: string;
+  tagId?: string;                               // format 2 : un tag au plus (décisions 47 et 48)
 };
 
 export type GoalStep = Meta & {
@@ -170,6 +173,7 @@ export type Recurrence = Meta & {
   categoryId?: string; accountId?: string; fromAccountId?: string; toAccountId?: string;
   goalId?: string;
   debtId?: string;            // propagé aux occurrences ; la génération suit alors l'échéancier (§4.9)
+  tagId?: string;             // format 2 : propagé aux occurrences
   dayOfMonth: number; startMonth: Month; endMonth: Month | null; active: boolean;
 };
 
@@ -193,6 +197,8 @@ export type Debt = Meta & {
 
 export type Skip = Meta & { month: Month; recurrenceId: string };
 
+export type Tag = Meta & { name: string };   // format 2 ; identifiant déduit du nom à la création (décision 47)
+
 export type DashBlock = "goals" | "debts" | "stats" | "months" | "savings" | "cats";
 // Un ordre enregistré reçoit en fin de liste les blocs qui lui manquent ; les clés inconnues sont retirées.
 
@@ -212,9 +218,11 @@ export type PrefKey = Exclude<keyof Preferences, "updatedAt">;  // ÉCART : upda
 export type Collections = {
   categories: Category[]; accounts: Account[]; operations: Operation[];
   goals: Goal[]; goalSteps: GoalStep[]; debts: Debt[]; recurrences: Recurrence[]; skips: Skip[];
+  tags: Tag[];                // format 2
 };
 
-export type Dataset = { schemaVersion: 1; collections: Collections; preferences: Preferences };
+export type Dataset = { schemaVersion: 2; collections: Collections; preferences: Preferences };
+// 1 : versions 0.1.x. 2 : version 0.2.0 (tags, ordre des comptes). Mise à niveau à la lecture (décision 50).
 ```
 
 **Invariants vérifiés** à chaque écriture, à l'import et à chaque lecture du fichier de synchronisation.
@@ -227,6 +235,8 @@ Une violation bloque l'opération avec un message, sans correction silencieuse.
 - Dette en mode échéances : montant > 0, au moins une échéance, total renseigné ≤ montant × nombre.
   Catégorie de dépense pour « je dois », de revenu pour « on me doit ».
 - Couleurs personnalisées au format `#rrggbb`.
+- Tag : nom non vide, sans espace en bord ; le `tagId` d'une opération ou d'une récurrence désigne un tag existant,
+  vivant ou supprimé.
 - Une référence vers une ligne supprimée reste lisible. C'est possible après une fusion : l'appareil A
   supprime un compte pendant que B y saisit une opération hors ligne. L'interface la signale
   (« compte supprimé ») et les calculs la comptent normalement.
@@ -258,7 +268,8 @@ peut pas savoir si l'original a été remplacé.
 ```ts
 export type SyncDocument = {
   format: "finances-sync";
-  schemaVersion: 1;             // plus récent que l'app → refus : « Mets l'application à jour »
+  schemaVersion: 2;             // plus récent que l'app → refus : « Mets l'application à jour » ;
+                                // plus ancien → mis à niveau à la lecture, réécrit au format courant
   fileId: string;               // créé à la naissance du fichier
   revision: number;             // +1 à chaque écriture
   writtenAt: number; writtenBy: string;   // deviceId
@@ -366,7 +377,7 @@ Les définitions font foi dans [`packages/storage/src/types.ts`](../packages/sto
 
 | | Bureau Tauri | Chromium bureau (PWA) | Safari, Firefox, mobiles |
 |---|---|---|---|
-| Stockage local | `$APPDATA/data.json`, écrit dans `.tmp` puis renommé | IndexedDB, un store par collection | IndexedDB |
+| Stockage local | `$APPDATA/data.json`, écrit dans `.tmp` puis renommé | IndexedDB, un store par collection (base en version 2 depuis la 0.2.0 : store `tags`) | IndexedDB |
 | Copies tournantes | `$APPDATA/backups/`, 5 fichiers | store `snapshots`, 5 entrées | idem |
 | Données locales illisibles ou invalides au démarrage | rien n'est écrit ni copié ; écran de secours (décisions 38 à 40). Version abîmée gardée dans `$APPDATA/mis-de-cote/`, un fichier par incident | écran de secours ; la dernière version abîmée gardée dans le magasin `meta` | idem |
 | Sync | auto : lancement, focus, 2 s après modification | auto, même rythme ; permission redemandée si expirée | assistée, sur bouton |
@@ -517,6 +528,10 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | 44 | Patrimoine net | Total en valeurs déclarées (décision 42, quel que soit le total choisi) moins le total dû. L'épargne de précaution, la courbe d'épargne et les indicateurs de l'année restent en capital injecté. |
 | 45 | Remise à zéro | Deux gestes, chacun confirmé, chacun précédé d'une copie de sauvegarde. **Cet appareil** : les modifications en attente partent d'abord dans le fichier (synchronisation automatique), le fichier est oublié, les données locales et l'état de l'appareil (sauf son identifiant et son nom) sont retirés, l'application repart de l'accueil ; le fichier et les autres appareils ne changent pas. **Partout** : un passage de synchronisation, puis chaque ligne vivante devient une suppression et chaque réglage reprend sa valeur par défaut, horodatés maintenant ; la synchronisation porte l'effacement partout, et une ligne modifiée ailleurs après l'effacement revient (décision 1). Réimporter ensuite une sauvegarde ou l'ancien fichier ne rend rien (décisions 32 et 34) ; « Restaurer » la copie prise juste avant (décision 33) remet tout. L'accueil revient dès qu'il ne reste aucune ligne vivante ; ses catégories par défaut reprennent alors les suppressions qu'il connaît avec un horodatage plus récent. |
 | 46 | Recherche de mise à jour (bureau) | Au lancement, sauf si l'appareil l'a désactivée (Paramètres → Application, activée par défaut), et sur clic. Hors ligne, elle échoue sans rien afficher. Rien ne s'installe sans le clic de l'utilisateur. Remplace la décision 17. |
+| 47 | Identité d'un tag | Même nom, même tag, à la casse, aux accents et aux espaces près : l'identifiant se déduit du nom à la création, et deux appareils qui créent le même nom avant de se synchroniser créent le même tag. Renommer garde l'identité ; un tag créé ensuite sous l'ancien nom d'un tag renommé reçoit un autre identifiant. Deux tags vivants ne portent jamais le même nom. |
+| 48 | Usage d'un tag | Un tag au plus par opération, transferts compris ; une récurrence taguée le transmet à chaque occurrence. Filtre dans Opérations ; le total d'un tag porte sur le mois affiché : entrées, sorties, solde, les transferts listés sans compter. Colonne « Tag » en fin d'export CSV. Supprimer un tag ne réécrit rien : les opérations le gardent sans l'afficher (ni dans l'export), et le retrouvent si un tag de ce nom est recréé. |
+| 49 | Ordre des comptes | Choisi dans Mes comptes, synchronisé (une position par compte, comme les objectifs et les dettes), et suivi partout : bandeau, listes, saisie, Paramètres. Un compte sans position vient après, dans l'ordre d'arrivée ; à position égale (deux appareils qui réordonnent en même temps), l'ordre alphabétique départage. |
+| 50 | Format 2 des données | Collection `tags`, `tagId` sur les opérations et les récurrences, `position` sur les comptes. Données locales, copies de sauvegarde, sauvegardes importées et fichier de synchronisation du format 1 sont mis à niveau à la lecture, puis réécrits au format 2. Une version 0.1.x refuse un fichier au format 2 (« Mets l'application à jour ») sans rien écrire ni perdre : chaque appareil doit passer en 0.2.0. |
 
 Lectures validées avec la section dettes :
 - Total : `principal` s'il est > 0.
@@ -669,3 +684,9 @@ Version 0.2.0, choix validés le 25/09/2026 :
   priorité, puis le montant par échéance. Le champ calculé le dit sous le champ (« Calculé… »), avec le montant de
   la dernière échéance quand elle est réduite. Un champ tout juste calculé ne sert pas de base au calcul suivant
   pendant la frappe. En remboursement libre, rien ne se calcule.
+- **Tags** : champ « Tag » dans la saisie d'une opération et d'une récurrence, avec les tags existants proposés ; un nom
+  nouveau est annoncé (« Nouveau tag … »), puis créé à l'enregistrement. Le tag s'affiche en étiquette dans les listes
+  d'opérations. Paramètres gagne une section « Tags » (renommer sur place, supprimer après confirmation, nombre
+  d'opérations et de récurrences par tag).
+- **Ordre des comptes** : « Modifier l'ordre » sur la carte « Vos comptes » fait apparaître sur chaque tuile une poignée
+  de glisser-déposer et deux flèches ; « Terminé » les retire. Avec un filtre actif, on déplace parmi les comptes montrés.

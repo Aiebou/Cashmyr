@@ -1,5 +1,6 @@
 import { canonicalJson, mergeDatasets } from "./merge";
 import { importLegacy, type LegacyConversion } from "./migrate/legacy";
+import { upgradeSchema } from "./migrate/schema";
 import {
   COLLECTION_NAMES,
   PREF_KEYS,
@@ -61,11 +62,12 @@ export function parseBackup(text: string): Dataset {
   if (raw.schemaVersion > SCHEMA_VERSION) {
     throw new BackupError("newer-schema", "Cette sauvegarde vient d'une version plus récente de Cashmyr. Mets l'application à jour.");
   }
-  const issues = validateDataset(raw);
+  const upgraded = upgradeSchema(raw);
+  const issues = validateDataset(upgraded);
   if (issues.length > 0) {
     throw new BackupError("invalid", `Sauvegarde refusée : ${issues[0]}${issues.length > 1 ? ` (et ${issues.length - 1} autres problèmes)` : ""}.`);
   }
-  return raw as Dataset;
+  return upgraded as Dataset;
 }
 
 export type ParsedImport = { kind: "backup"; data: Dataset } | { kind: "legacy"; conversion: LegacyConversion };
