@@ -21,6 +21,7 @@ import { CreateProfileModal, DeleteProfileModal } from "./screens/settings/Profi
 import { SettingsScreen } from "./screens/settings/SettingsScreen";
 import { Welcome } from "./screens/Welcome";
 import { TABS, type Tab } from "./store/app-store";
+import { Tour } from "./tour/Tour";
 import { useActions, useApp } from "./store/context";
 import s from "./Shell.module.css";
 
@@ -35,7 +36,7 @@ function PeriodPicker() {
   const isCurrent = byMonth ? month === monthOf(today) : year === yearOf(today);
   const shift = (d: number) => (byMonth ? setMonth(addMonths(month, d)) : setYear(year + d));
   return (
-    <div className={s.period} aria-label={byMonth ? "Mois affiché" : "Année affichée"} role="group">
+    <div className={s.period} aria-label={byMonth ? "Mois affiché" : "Année affichée"} role="group" data-tour="period">
       <IconButton label={byMonth ? "Mois précédent" : "Année précédente"} onClick={() => shift(-1)}>
         <ChevronLeft />
       </IconButton>
@@ -82,7 +83,14 @@ function SyncBadge() {
   else if (sync.lastMergeAt) text = `Synchronisé · ${stamp(sync.lastMergeAt)}`;
   else text = "Synchronisation manuelle";
   return (
-    <button type="button" className={`${s.badge} ${tone ?? ""}`} onClick={() => setTab("settings")} title={text} aria-label={`${text}. Voir la synchronisation`}>
+    <button
+      type="button"
+      className={`${s.badge} ${tone ?? ""}`}
+      onClick={() => setTab("settings")}
+      title={text}
+      aria-label={`${text}. Voir la synchronisation`}
+      data-tour="sync"
+    >
       <SyncIcon size={16} />
       <span className={s.badgeText}>{text}</span>
     </button>
@@ -308,13 +316,17 @@ export function Shell() {
             <SyncBadge />
           </div>
           <div className={s.headerRight}>
-            <AddMenu />
-            <ProfileMenu />
+            <div data-tour="add">
+              <AddMenu />
+            </div>
+            <div data-tour="profile">
+              <ProfileMenu />
+            </div>
           </div>
         </div>
         {!fresh && (
           <div className={s.navRow}>
-            <nav className={s.tabs} aria-label="Sections">
+            <nav className={s.tabs} aria-label="Sections" data-tour="tabs">
               {TABS.map((t) => (
                 <button
                   key={t.id}
@@ -340,6 +352,7 @@ export function Shell() {
       )}
       <Modals />
       <ConfirmDialog />
+      <Tour />
       <Toasts />
     </div>
   );

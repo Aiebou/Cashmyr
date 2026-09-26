@@ -57,12 +57,14 @@ export class LocalDataError extends Error {
   }
 }
 
+/** État d'un appareil qui ouvre ce profil pour la première fois : le tutoriel l'attend (décision 65). */
 function newDevice(label: string): DeviceState {
   return {
     deviceId: newId(),
     deviceLabel: label,
     sync: { fileId: null, targetName: null, lastMergeAt: null, lastOfferAt: null, lastError: null },
     dirty: {},
+    tour: { seen: [] },
   };
 }
 

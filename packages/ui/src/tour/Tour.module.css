@@ -1,0 +1,70 @@
+/* Tutoriel : au-dessus de l'application et de ses fenêtres, sous les messages (z-index 60). */
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+}
+
+/* La lumière : l'élément présenté reste net, le reste de l'écran s'assombrit. */
+.spot {
+  position: fixed;
+  border-radius: var(--radius);
+  box-shadow:
+    0 0 0 2px var(--focus),
+    0 0 0 9999px var(--overlay);
+  pointer-events: none;
+  transition:
+    top 180ms ease,
+    left 180ms ease,
+    width 180ms ease,
+    height 180ms ease;
+}
+
+.bubble {
+  position: fixed;
+  display: grid;
+  gap: 6px;
+  width: min(360px, calc(100vw - 32px));
+  padding: 16px 16px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+/* Téléphone : toute la largeur, en haut ou en bas de l'écran. */
+@media (max-width: 640px) {
+  .bubble {
+    width: auto;
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+.count {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 560;
+  color: var(--ink-2);
+}
+.title {
+  margin: 0;
+  font-size: 20px;
+}
+.text {
+  margin: 0 0 6px;
+  line-height: 1.5;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.spacer {
+  flex: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spot {
+    transition: none;
+  }
+}

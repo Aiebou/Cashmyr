@@ -12,11 +12,13 @@ type CardProps = {
   children: ReactNode;
   as?: "section" | "article" | "div";
   labelledBy?: string;
+  /** Repère du tutoriel (`data-tour`). */
+  tour?: string;
 };
 
-export function Card({ title, subtitle, actions, tone = "default", className, children, as: Tag = "section" }: CardProps) {
+export function Card({ title, subtitle, actions, tone = "default", className, children, as: Tag = "section", tour }: CardProps) {
   return (
-    <Tag className={cx(s.card, tone === "muted" && s.muted, className)}>
+    <Tag className={cx(s.card, tone === "muted" && s.muted, className)} data-tour={tour}>
       {(title || actions) && (
         <header className={s.cardHeader}>
           <div className={s.cardTitles}>

@@ -669,7 +669,7 @@ function DebtSettings({ debt }: { debt: Debt }) {
 
 // ── Carte ──────────────────────────────────────────────────────────────────
 
-function DebtCard({ debt, asOf }: { debt: Debt; asOf: string }) {
+function DebtCard({ debt, asOf, tour }: { debt: Debt; asOf: string; tour?: string }) {
   const data = useApp((st) => st.data);
   const today = useApp((st) => st.today);
   const { apply } = useActions();
@@ -691,6 +691,7 @@ function DebtCard({ debt, asOf }: { debt: Debt; asOf: string }) {
   return (
     <Card
       as="article"
+      tour={tour}
       title={debt.name}
       subtitle={subtitle}
       actions={
@@ -747,7 +748,7 @@ function DebtCard({ debt, asOf }: { debt: Debt; asOf: string }) {
 function NewDebtForm({ first, onCreated }: { first: boolean; onCreated(): void }) {
   const form = useDebtForm({ full: true, onCreated });
   return (
-    <Card title="Nouvelle dette" subtitle={first ? "Aucune dette en cours : ajoute la première ici." : undefined} tone="muted">
+    <Card tour="new-debt" title="Nouvelle dette" subtitle={first ? "Aucune dette en cours : ajoute la première ici." : undefined} tone="muted">
       <form className={s.newDebt} onSubmit={form.submit} onKeyDown={submitOnEnter} noValidate>
         {form.fields}
         <div className={s.alignStart}>
@@ -794,8 +795,8 @@ export function DebtsScreen() {
     <Stack gap={18}>
       <ScreenTitle title="Dettes">{asOf !== today && <p className={s.muted}>Situation au {dayLong(asOf)}</p>}</ScreenTitle>
       {any && <Banner asOf={asOf} today={today} />}
-      {active.map((d) => (
-        <DebtCard key={d.id} debt={d} asOf={asOf} />
+      {active.map((d, i) => (
+        <DebtCard key={d.id} debt={d} asOf={asOf} {...(i === 0 ? { tour: "debt" } : {})} />
       ))}
       <NewDebtForm key={formKey} first={active.length === 0} onCreated={() => setFormKey((k) => k + 1)} />
       {settled.length > 0 && (

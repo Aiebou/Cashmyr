@@ -12,7 +12,7 @@ export function AppSection() {
   const update = useApp((st) => st.update);
   // Réglage de l'appareil, quel que soit le profil ouvert (décision 59).
   const onLaunch = useApp((st) => st.profiles.checkUpdatesOnLaunch);
-  const { updates: actions } = useActions();
+  const { updates: actions, tour } = useActions();
   const [check, setCheck] = useState<Check>({ kind: "idle" });
 
   const search = async () => {
@@ -66,6 +66,13 @@ export function AppSection() {
           </p>
         )
       )}
+      <div className={s.actions}>
+        <Button onClick={() => void tour.restart()}>Revoir le tutoriel</Button>
+      </div>
+      <p className={s.muted}>
+        Chaque section se présente de nouveau à ta prochaine visite, à commencer par le tableau de bord. « Passer » ne ferme que la
+        section en cours.
+      </p>
     </Card>
   );
 }

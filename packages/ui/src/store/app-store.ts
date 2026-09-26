@@ -163,6 +163,13 @@ export type AppActions = {
     /** Recherche au lancement : réglage de l'appareil (décision 59). */
     setCheckOnLaunch(on: boolean): Promise<void>;
   };
+  /** Tutoriel (décisions 65 à 67), retenu sur cet appareil pour ce profil. */
+  tour: {
+    /** Onglet présenté jusqu'au bout ou passé : il ne se montre plus. */
+    done(tab: Tab): Promise<void>;
+    /** « Revoir le tutoriel » : chaque onglet se présente de nouveau, à commencer par le tableau de bord. */
+    restart(): Promise<void>;
+  };
   /** Profils de l'appareil (§9). Les erreurs de nom sont renvoyées en texte, pour les afficher. */
   profiles: {
     /** Relance l'application sur ce profil, une fois envoyé ce qui attend (décision 54). */
@@ -351,6 +358,18 @@ export function createAppStore(deps: AppDeps): AppStore {
             if (get().profiles.registered) await saveRegistry({ ...(await registry()), checkUpdatesOnLaunch: on });
             else await get().actions.setDisplay({ checkUpdatesOnLaunch: on });
             set((s) => ({ profiles: { ...s.profiles, checkUpdatesOnLaunch: on } }));
+          },
+        },
+        tour: {
+          done: async (tab) => {
+            const seen = repo.device.tour?.seen ?? [];
+            if (seen.includes(tab)) return;
+            await repo.updateDevice({ tour: { seen: [...seen, tab] } });
+            set({ device: repo.device });
+          },
+          restart: async () => {
+            await repo.updateDevice({ tour: { seen: [] } });
+            set({ device: repo.device, tab: "dashboard" });
           },
         },
         profiles: {
