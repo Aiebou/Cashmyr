@@ -10,17 +10,34 @@
   justify-content: space-between;
   gap: 6px 12px;
 }
-.mode {
-  width: auto;
+/* Le titre ouvre la liste des totaux (décision 62). */
+.title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-height: 34px;
-  padding: 0 30px 0 10px;
-  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
-  font-size: 13px;
-  font-weight: 560;
-}
-.eyebrow {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
   font-size: 14px;
-  font-weight: 560;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.title:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.title:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+/* La date, plus discrète que le total qu'elle précise. */
+.when {
+  font-weight: 400;
   color: var(--ink-2);
 }
 .big {

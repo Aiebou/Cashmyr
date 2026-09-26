@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { dayLong } from "../src/lib/format";
 import { defaultCategories } from "../src/lib/data";
-import { accounts, renderApp } from "./helpers";
+import { accounts, bannerSection, renderApp } from "./helpers";
 
 afterEach(cleanup);
 
@@ -40,7 +40,7 @@ describe("Mes comptes", () => {
   it("dans l'ordre : bandeau, les deux boutons, Mouvements de l'année, Vos comptes", async () => {
     await openAccounts();
     const order = [
-      screen.getByText("Total de mes comptes aujourd'hui"),
+      bannerSection("Total de mes comptes (valeurs déclarées) aujourd'hui"),
       screen.getByRole("button", { name: "Ajouter un compte" }),
       screen.getByRole("button", { name: "Nouveau transfert" }),
       screen.getByRole("heading", { name: "Mouvements de l'année" }),
@@ -104,7 +104,7 @@ describe("Mes comptes", () => {
     expect(names("Vos comptes")).toEqual(["Livret A", "PEA"]);
     expect(within(chips).getByRole("button", { name: "Tous" }).getAttribute("aria-pressed")).toBe("false");
     // Le bandeau garde tous les comptes.
-    expect(screen.getByText("Total de mes comptes aujourd'hui").closest("section")!.textContent).toContain("Compte courant");
+    expect(bannerSection("Total de mes comptes (valeurs déclarées) aujourd'hui").textContent).toContain("Compte courant");
     expect(local.device?.display?.accountRoles).toEqual(["epargne", "invest"]);
     expect(repository.pending).toBe(pending);
 
@@ -127,7 +127,7 @@ describe("Mes comptes", () => {
       ["Livret A", 1],
     ]);
     // Ailleurs aussi : la légende du bandeau et la saisie d'une opération.
-    const legend = within(screen.getByText("Total de mes comptes aujourd'hui").closest("section")!).getAllByRole("listitem");
+    const legend = within(bannerSection("Total de mes comptes (valeurs déclarées) aujourd'hui")).getAllByRole("listitem");
     expect(legend[0]!.textContent).toMatch(/^Livret A/);
     act(() => store.getState().actions.openModal({ kind: "operation", type: "out" }));
     const dialog = await screen.findByRole("dialog", { name: "Nouvelle opération" });
@@ -148,7 +148,7 @@ describe("Mes comptes", () => {
   it("année passée : soldes et mouvements au 31 décembre", async () => {
     const { store } = await openAccounts();
     act(() => store.getState().actions.setYear(2025));
-    expect(screen.getByText("Total de mes comptes au 31 décembre 2025")).toBeTruthy();
+    expect(bannerSection("Total de mes comptes (valeurs déclarées) au 31 décembre 2025")).toBeTruthy();
     expect(within(frame("Vos comptes")).getByText("Soldes au 31 décembre 2025")).toBeTruthy();
     const flows = within(frame("Mouvements de l'année")).getByRole("list");
     expect(plain(row(flows, "Compte courant").textContent)).toBe("Compte courant+1 000,00 €Sorties 0,00 €Entrées 1 000,00 €");

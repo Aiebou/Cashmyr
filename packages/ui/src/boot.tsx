@@ -1,8 +1,10 @@
-import { toLocalDay } from "@cashmyr/core";
+import { newId, toLocalDay } from "@cashmyr/core";
 import {
+  addProfile,
   fileOwner,
   implicitRegistry,
   LocalDataError,
+  ProfileError,
   Repository,
   setProfileFile,
   SyncEngine,
@@ -53,8 +55,8 @@ export async function startApp(
   element: HTMLElement,
   options: { restart?: () => void; now?: () => number } = {},
 ): Promise<void> {
-  const registry = await host.registry.read();
-  const profiles = registry?.profiles ?? implicitRegistry({ syncFileId: null, checkUpdatesOnLaunch: true }).profiles;
+  let registry = await host.registry.read();
+  let profiles = registry?.profiles ?? implicitRegistry({ syncFileId: null, checkUpdatesOnLaunch: true }).profiles;
   // La recherche au lancement ne dépend d'aucun profil (décision 59) ; sans registre, le seul profil la règle.
   const launchChecked = registry !== null;
   if (registry?.checkUpdatesOnLaunch && host.updates?.check) void host.updates.check().catch(() => undefined);
@@ -70,6 +72,23 @@ export async function startApp(
         onPick={(profile) => {
           host.session.set(profile.id);
           void openProfile(profile).catch((e: unknown) => root.render(<StartupError error={e} />));
+        }}
+        onCreate={async (name) => {
+          // Décision 64 : un profil se crée dès l'écran de choix, puis s'ouvre sur l'accueil.
+          let created: ProfileEntry;
+          try {
+            const next = addProfile(registry!, { id: newId(), name }, (options.now ?? Date.now)());
+            created = next.profiles[next.profiles.length - 1]!;
+            await host.prepare(created.id);
+            await host.registry.write(next);
+            registry = next;
+            profiles = next.profiles;
+          } catch (e) {
+            return e instanceof ProfileError ? e.message : `Le profil n'a pas pu être créé : ${e instanceof Error ? e.message : String(e)}`;
+          }
+          host.session.set(created.id);
+          void openProfile(created).catch((e: unknown) => root.render(<StartupError error={e} />));
+          return null;
         }}
       />
     </StrictMode>,

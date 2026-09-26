@@ -231,3 +231,10 @@ export async function renderApp(
   const actions = store.getState().actions;
   return { store, repository, local, view, actions, act, host };
 }
+
+/** Bandeau des comptes : vérifie son titre (le sélecteur du total, décision 62) et renvoie le bandeau. */
+export function bannerSection(title: string): HTMLElement {
+  const heading = document.getElementById("banner-title");
+  if (heading?.textContent !== title) throw new Error(`Bandeau « ${heading?.textContent ?? "absent"} » au lieu de « ${title} »`);
+  return heading.closest("section")!;
+}

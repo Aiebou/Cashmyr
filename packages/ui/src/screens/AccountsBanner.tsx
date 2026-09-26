@@ -1,6 +1,7 @@
 import { colorFor, isFluctuatingRole, netWorth, totalOwed, worthOverview, type Dataset, type Day, type WorthMode } from "@cashmyr/core";
-import { Select } from "../components/controls";
 import { SegmentedBar } from "../components/figures";
+import { ChevronDown } from "../components/icons";
+import { Menu } from "../components/Menu";
 import { count, money } from "../lib/format";
 import { displayOf } from "../store/app-store";
 import { useActions, useApp } from "../store/context";
@@ -8,11 +9,11 @@ import s from "./AccountsBanner.module.css";
 
 type Props = { data: Dataset; asOf: Day; today: Day; year: number };
 
-/** Les trois totaux proposés (décision 42) ; le choix reste propre à l'appareil. */
-const MODES: { value: WorthMode; option: string; title: string }[] = [
-  { value: "declared", option: "Valeurs déclarées", title: "Total de mes comptes" },
-  { value: "injected", option: "Capital injecté", title: "Total de mes comptes en capital injecté" },
-  { value: "injectedOutsideCurrent", option: "Injecté hors comptes courants", title: "Capital injecté hors comptes courants" },
+/** Les trois totaux proposés (décision 42) ; le choix reste propre à l'appareil, et le titre le fait changer (décision 62). */
+const MODES: { value: WorthMode; title: string }[] = [
+  { value: "declared", title: "Total de mes comptes (valeurs déclarées)" },
+  { value: "injected", title: "Total de mes comptes en capital injecté" },
+  { value: "injectedOutsideCurrent", title: "Capital injecté hors comptes courants" },
 ];
 
 /** Bandeau du total des comptes, commun au tableau de bord et à Mes comptes. */
@@ -39,27 +40,32 @@ export function AccountsBanner({ data, asOf, today, year }: Props) {
     });
 
   const others = Math.abs(w.others) > 100 ? w.others : 0;
+  const when = asOf === today ? "aujourd'hui" : `au 31 décembre ${year}`;
   return (
     <section className={s.banner} aria-labelledby="banner-title">
       <div className={s.head}>
-        <p className={s.eyebrow} id="banner-title">
-          {current.title} {asOf === today ? "aujourd'hui" : `au 31 décembre ${year}`}
-        </p>
-        <label className="visually-hidden" htmlFor="banner-mode">
-          Total affiché
-        </label>
-        <Select
-          id="banner-mode"
-          className={s.mode}
-          value={mode}
-          onChange={(e) => void setDisplay({ bannerTotal: e.target.value as WorthMode })}
-        >
-          {MODES.map((m) => (
-            <option key={m.value} value={m.value}>
-              {m.option}
-            </option>
-          ))}
-        </Select>
+        <Menu
+          align="start"
+          triggerLabel={`${current.title} ${when}. Changer le total affiché`}
+          triggerClassName={s.title}
+          trigger={
+            <>
+              <span id="banner-title">
+                {current.title} <span className={s.when}>{when}</span>
+              </span>
+              <ChevronDown size={16} />
+            </>
+          }
+          groups={[
+            MODES.map((m) => ({
+              id: m.value,
+              label: m.title,
+              detail: when,
+              checked: m.value === mode,
+              onSelect: () => void setDisplay({ bannerTotal: m.value }),
+            })),
+          ]}
+        />
       </div>
       <p className={s.big}>{money(w.total)}</p>
       <SegmentedBar label="Répartition par compte" segments={segments} />

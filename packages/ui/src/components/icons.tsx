@@ -42,6 +42,11 @@ export const ChevronRight = (p: IconProps) => (
     <path d="M9 5l7 7-7 7" />
   </Icon>
 );
+export const ChevronDown = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M5 9l7 7 7-7" />
+  </Icon>
+);
 export const EyeOffIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M3 3l18 18" />

@@ -89,14 +89,12 @@ function SyncBadge() {
   );
 }
 
-/** Profil ouvert, dès qu'il y en a deux : on passe d'un profil à l'autre d'ici (décision 54). */
+/** Profil ouvert, toujours affiché : on passe d'un profil à l'autre ou on en crée un d'ici (décision 63). */
 function ProfileMenu() {
   const { list, current } = useApp((st) => st.profiles);
-  const { profiles, setTab } = useActions();
-  if (list.length < 2) return null;
+  const { profiles, setTab, openModal } = useActions();
   return (
     <Menu
-      align="start"
       triggerLabel={`Profil « ${current.name} ». Changer de profil`}
       triggerClassName={s.profile}
       trigger={
@@ -108,7 +106,15 @@ function ProfileMenu() {
         </>
       }
       groups={[
-        list.filter((p) => p.id !== current.id).map((p) => ({ id: p.id, label: p.name, onSelect: () => void profiles.open(p.id) })),
+        [
+          ...list.map((p) => ({
+            id: p.id,
+            label: p.name,
+            checked: p.id === current.id,
+            onSelect: () => void (p.id !== current.id && profiles.open(p.id)),
+          })),
+          { id: "create", label: "Nouveau profil…", onSelect: () => openModal({ kind: "create-profile" }) },
+        ],
         [
           {
             id: "manage",
@@ -299,11 +305,11 @@ export function Shell() {
         <div className={s.brandRow}>
           <div className={s.headerLeft}>
             <h1 className={s.brand}>Cashmyr</h1>
-            <ProfileMenu />
+            <SyncBadge />
           </div>
           <div className={s.headerRight}>
-            <SyncBadge />
             <AddMenu />
+            <ProfileMenu />
           </div>
         </div>
         {!fresh && (

@@ -6,7 +6,7 @@ import { niceTicks } from "../src/components/charts/scale";
 import { dropBefore, moveAmongVisible } from "../src/components/Reorderable";
 import { defaultCategories } from "../src/lib/data";
 import { debtSentence } from "../src/lib/debt-text";
-import { accounts, renderApp, TODAY } from "./helpers";
+import { accounts, bannerSection, renderApp, TODAY } from "./helpers";
 
 afterEach(cleanup);
 
@@ -46,10 +46,16 @@ const loan = (extra: Partial<Debt> = {}): Debt =>
 
 const blocks = () => screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
 
+/** Le titre du bandeau ouvre la liste des totaux (décision 62). */
+async function chooseTotal(user: ReturnType<typeof userEvent.setup>, title: string) {
+  await user.click(screen.getByRole("button", { name: /Changer le total affiché$/ }));
+  await user.click(screen.getByRole("menuitemradio", { name: new RegExp(`^${title.replace(/[()]/g, "\\$&")} `) }));
+}
+
 describe("bandeau du tableau de bord", () => {
   it("par défaut, courants et valeurs déclarées ; un compte sans valeur déclarée compte pour son capital injecté, signalé", async () => {
     await renderApp();
-    const banner = screen.getByText("Total de mes comptes aujourd'hui").closest("section")!;
+    const banner = bannerSection("Total de mes comptes (valeurs déclarées) aujourd'hui");
     expect(within(banner).getByText(/^4\s250,00\s€$/)).toBeTruthy();
     expect(banner.textContent).toMatch(/Dont 1\s250,00\s€ disponibles au quotidien et 3\s000,00\s€ d'épargne et de placements\./);
     expect(banner.textContent).toMatch(/Valeur injectée \(hors comptes courants\) : 3\s000,00\s€\./);
@@ -68,7 +74,7 @@ describe("bandeau du tableau de bord", () => {
         operations: [op("op-1", "2026-07-10", 20_000, "out", { categoryId: cat("Crédit"), accountId: accounts.courant.id, debtId: "debt-1" })],
       }),
     );
-    const banner = screen.getByText("Total de mes comptes aujourd'hui").closest("section")!;
+    const banner = bannerSection("Total de mes comptes (valeurs déclarées) aujourd'hui");
     // 1 250 − 200 sur le courant, 3 100 déclarés sur le livret.
     expect(within(banner).getByText(/^4\s150,00\s€$/)).toBeTruthy();
     const legend = within(banner).getAllByRole("listitem").map((li) => li.textContent);
@@ -84,12 +90,12 @@ describe("bandeau du tableau de bord", () => {
     const { repository, local } = await renderApp();
     await act(() => repository.apply({ accounts: [{ ...accounts.livret, declaredValue: 310_000, declaredAt: TODAY, updatedAt: 2 }] }));
     const pending = repository.pending;
-    await user.selectOptions(screen.getByLabelText("Total affiché"), "Capital injecté");
-    let banner = screen.getByText("Total de mes comptes en capital injecté aujourd'hui").closest("section")!;
+    await chooseTotal(user, "Total de mes comptes en capital injecté");
+    let banner = bannerSection("Total de mes comptes en capital injecté aujourd'hui");
     expect(within(banner).getByText(/^4\s250,00\s€$/)).toBeTruthy();
     expect(banner.textContent).not.toMatch(/injecté 3\s000/);
-    await user.selectOptions(screen.getByLabelText("Total affiché"), "Injecté hors comptes courants");
-    banner = screen.getByText("Capital injecté hors comptes courants aujourd'hui").closest("section")!;
+    await chooseTotal(user, "Capital injecté hors comptes courants");
+    banner = bannerSection("Capital injecté hors comptes courants aujourd'hui");
     // Le gros chiffre, puis la légende du seul compte retenu.
     expect(within(banner).getAllByText(/^3\s000,00\s€$/).map((el) => el.tagName)).toEqual(["P", "SPAN"]);
     expect(within(banner).getAllByRole("listitem").map((li) => li.textContent)).toEqual([expect.stringMatching(/^Livret A/)]);
@@ -101,7 +107,7 @@ describe("bandeau du tableau de bord", () => {
   it("n'affiche que les comptes au solde positif dans la barre et la légende", async () => {
     const { repository } = await renderApp();
     await act(() => repository.apply({ accounts: [{ ...accounts.courant, opening: -5_000, updatedAt: 2 }] }));
-    const banner = screen.getByText("Total de mes comptes aujourd'hui").closest("section")!;
+    const banner = bannerSection("Total de mes comptes (valeurs déclarées) aujourd'hui");
     const legend = within(banner).getAllByRole("listitem").map((li) => li.textContent);
     expect(legend).toEqual([expect.stringContaining("Livret A")]);
   });
