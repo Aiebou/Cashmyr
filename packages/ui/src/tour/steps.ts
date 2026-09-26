@@ -107,7 +107,7 @@ export const TOUR: Record<Tab, TourStep[]> = {
     {
       target: at("new-debt"),
       title: "Nouvelle dette",
-      text: "Montant total, montant par échéance, nombre d'échéances : deux suffisent, le troisième se calcule.",
+      text: "Pour toutes tes dettes et créances, garde un visuel ! Montant total, montant par échéance, nombre d'échéances : deux suffisent, le troisième se calcule.",
     },
   ],
   accounts: [
@@ -158,7 +158,7 @@ export const TOUR: Record<Tab, TourStep[]> = {
     {
       target: "#reglages-budget",
       title: "Ta répartition",
-      text: "Les parts de tes revenus visées pour tes besoins, tes envies et ta mise de côté.",
+      text: "Parce qu'une bonne santé financière rime avec bonne gestion du budget, ici tu peux te fixer un objectif de répartition de tes revenus.",
     },
     {
       target: "#reglages-synchronisation",
