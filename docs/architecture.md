@@ -76,6 +76,7 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │   └── src/
 │       ├── App.tsx              reçoit `platform: Platform` en prop, le fournit par contexte
 │       ├── store/               Zustand : données, préférences, période affichée, UI
+│       ├── tour/                tutoriel : étapes de chaque onglet, bulle et mise en lumière (décisions 65 à 67)
 │       ├── screens/             Dashboard, Month, Goals, Accounts, Operations, Settings, Sync, Recovery,
 │       │                        ProfilePicker (« Qui utilise Cashmyr ? »)
 │       ├── components/          OperationModal, Gauge, SegmentedBar, BarChart12, LineChart,
@@ -561,6 +562,9 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | 62 | Choisir le total du bandeau | Le titre du bandeau ouvre la liste des trois totaux de la décision 42 : « Total de mes comptes (valeurs déclarées) », « Total de mes comptes en capital injecté », « Capital injecté hors comptes courants », chacun suivi de la date (« aujourd'hui », « au 31 décembre AAAA »), plus discrète. Il remplace le sélecteur « Total affiché ». Le même bandeau sert au tableau de bord et à Mes comptes. |
 | 63 | En-tête | Le nom du profil ouvert est toujours affiché, même avec un seul profil, à droite de « Ajouter ». Son menu liste les profils (celui qui est ouvert est coché), puis « Nouveau profil… », puis « Gérer les profils ». L'état de la synchronisation passe à gauche, juste après « Cashmyr ». Remplace le choix « nom du profil dès deux profils, à côté de Cashmyr » de la 0.3.0. |
 | 64 | Créer un profil dès l'ouverture | L'écran « Qui utilise Cashmyr ? » a une tuile « + Profil » : un nom, puis le nouveau profil s'ouvre sur l'accueil. L'écran n'apparaît qu'à partir de deux profils (décision 54). |
+| 65 | Qui voit le tutoriel | Un profil ouvert pour la première fois sur un appareil à partir de la 0.4.0 : première installation, profil créé, fichier rejoint depuis un nouveau profil. Un profil déjà ouvert avant ne le voit pas. « Revoir le tutoriel » (Paramètres → Application) le relance pour le profil ouvert. |
+| 66 | Déroulé du tutoriel | Il commence au tableau de bord, puis chaque onglet se présente à sa première visite. Chaque étape met un élément en lumière et l'explique dans une bulle, avec « Précédent », « Suivant » (« Terminer » à la dernière) et « Passer ». On regarde sans rien modifier : le reste de l'écran est assombri et ne répond pas. Une étape dont l'élément n'est pas à l'écran est sautée. |
+| 67 | « Passer » et mémoire du tutoriel | « Passer » (ou Échap) ne ferme que l'onglet en cours ; les autres se présentent quand même à leur première visite. Les onglets vus sont retenus par appareil et par profil (`DeviceState.tour`), jamais synchronisés : le format des données ne change pas. |
 
 Reporté le 26/09/2026 : le type de compte « Compte professionnel ». Il changerait le format des données, et sa place
 dans les calculs reste à définir (budget du mois, totaux, virements entre comptes pro et perso) ; un profil
@@ -848,3 +852,7 @@ Nouvelle section, visible même avec un seul profil.
   l'état de la synchronisation et le profil se réduisent à leur icône ; sous 400 px, « Ajouter » aussi.
 - **Tuile « + Profil »** : bordure en pointillés ; elle laisse la place à un champ « Nom du nouveau profil », avec
   « Annuler » et « Créer et ouvrir ». Un nom déjà pris est refusé sur place.
+- **Tutoriel** : la bulle se pose sous l'élément présenté, sinon au-dessus ; sur téléphone, sur toute la largeur, en
+  bas de l'écran (en haut si l'élément est en bas). « 2 / 8 » indique l'étape. Le focus reste dans la bulle ; flèches
+  gauche et droite pour avancer ou reculer. Il attend que l'accueil soit fini et qu'aucune fenêtre ne soit ouverte. Le
+  texte de chaque étape est dans `packages/ui/src/tour/steps.ts`.

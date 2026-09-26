@@ -64,7 +64,7 @@ function Filters({ data, value, onChange }: { data: Dataset; value: OperationFil
   };
 
   return (
-    <div className={s.filters} role="search" aria-label="Filtrer les opérations">
+    <div className={s.filters} role="search" aria-label="Filtrer les opérations" data-tour="ops-filters">
       <div className={s.searchRow}>
         <TextInput
           type="search"
@@ -261,7 +261,7 @@ export function OperationsScreen() {
       <ScreenTitle title={`Opérations ${ofMonth(month)}`} />
       {all.length > 0 && <Filters data={data} value={filters} onChange={setFilters} />}
       {all.length > 0 ? (
-        <Card>
+        <Card tour="ops-list">
           <div className={s.summary}>
             <p aria-live="polite">{summary}</p>
             {filtered && (

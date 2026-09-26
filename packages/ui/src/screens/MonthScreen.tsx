@@ -144,7 +144,7 @@ export function MonthScreen() {
       </section>
 
       {charts && (
-        <aside className={s.charts} aria-label="Graphiques du mois">
+        <aside className={s.charts} aria-label="Graphiques du mois" data-tour="month-charts">
           <div className={s.chartsHead}>
             <span>Graphiques du mois</span>
             <Button variant="ghost" size="small" onClick={() => void setDisplay({ hideMonthCharts: true })}>
@@ -173,7 +173,7 @@ export function MonthScreen() {
           />
         ) : (
           <>
-            <Card title="Répartition" subtitle={basis}>
+            <Card title="Répartition" subtitle={basis} tour="month-split">
               <div className={s.gauges}>
                 {(["besoin", "envie", "invest"] as Bucket[]).map((bucket) => {
                   const value = bucket === "besoin" ? agg.needs : bucket === "envie" ? agg.wants : agg.saved;
@@ -210,7 +210,7 @@ export function MonthScreen() {
         {plannedList}
 
         {latest.length > 0 && (
-          <Card title="Dernières opérations">
+          <Card title="Dernières opérations" tour="month-ops">
             <OperationList>
               {latest.map((op) => (
                 <OperationRow key={op.id} data={data} op={op} onOpen={(o) => openModal({ kind: "operation", type: o.type, editId: o.id })} />

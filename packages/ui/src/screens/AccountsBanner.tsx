@@ -42,7 +42,7 @@ export function AccountsBanner({ data, asOf, today, year }: Props) {
   const others = Math.abs(w.others) > 100 ? w.others : 0;
   const when = asOf === today ? "aujourd'hui" : `au 31 décembre ${year}`;
   return (
-    <section className={s.banner} aria-labelledby="banner-title">
+    <section className={s.banner} aria-labelledby="banner-title" data-tour="banner">
       <div className={s.head}>
         <Menu
           align="start"

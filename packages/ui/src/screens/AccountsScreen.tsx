@@ -235,7 +235,7 @@ export function AccountsScreen() {
     <Stack gap={18}>
       <ScreenTitle title="Mes comptes" />
       <AccountsBanner data={data} asOf={asOf} today={today} year={year} />
-      <div className={s.actions}>
+      <div className={s.actions} data-tour="accounts-actions">
         <Button onClick={() => openModal({ kind: "create-account" })}>
           <PlusIcon size={16} />
           Ajouter un compte
@@ -249,17 +249,20 @@ export function AccountsScreen() {
         </Button>
       </div>
       {present.length > 1 && (
-        <ToggleChips
-          label="Types de comptes affichés"
-          value={active}
-          options={present}
-          onChange={(accountRoles) => void setDisplay({ accountRoles })}
-        />
+        <div data-tour="accounts-filter">
+          <ToggleChips
+            label="Types de comptes affichés"
+            value={active}
+            options={present}
+            onChange={(accountRoles) => void setDisplay({ accountRoles })}
+          />
+        </div>
       )}
       <Card title="Mouvements de l'année" subtitle={period}>
         <YearFlows data={data} accounts={shown} year={year} asOf={asOf} />
       </Card>
       <Card
+        tour="accounts-list"
         title="Vos comptes"
         subtitle={asOf === today ? "Soldes aujourd'hui" : `Soldes au ${dayLong(asOf)}`}
         actions={

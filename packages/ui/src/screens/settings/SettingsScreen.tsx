@@ -49,7 +49,7 @@ export function SettingsScreen() {
   return (
     <Stack gap={22}>
       <ScreenTitle title="Paramètres" />
-      <nav aria-label="Sections des paramètres">
+      <nav aria-label="Sections des paramètres" data-tour="settings-toc">
         <ul className={s.toc}>
           {SECTIONS.map((sec) => (
             <li key={sec.id}>

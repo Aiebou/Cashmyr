@@ -11,6 +11,8 @@ type BlockProps = {
   onDropOn(dragged: string, target: string, after: boolean): void;
   action?: ReactNode;
   children: ReactNode;
+  /** Repère du tutoriel (`data-tour`). */
+  tour?: string;
 };
 
 const MIME = "application/x-cashmyr-block";
@@ -89,10 +91,10 @@ export function MoveBar({ name, what, index, count, grip, onMove }: MoveBarProps
  * Bloc du tableau de bord déplaçable. En haut à droite, une barre discrète,
  * plus marquée au survol : une poignée de glisser-déposer, et deux flèches.
  */
-export function ReorderableBlock({ id, title, index, count, onMove, onDropOn, action, children }: BlockProps) {
+export function ReorderableBlock({ id, title, index, count, onMove, onDropOn, action, children, tour }: BlockProps) {
   const { container, grip, overClass } = useReorderDrag(id, MIME, onDropOn);
   return (
-    <section className={`${s.block} ${overClass}`} aria-labelledby={`block-${id}`} {...container}>
+    <section className={`${s.block} ${overClass}`} aria-labelledby={`block-${id}`} data-tour={tour} {...container}>
       <header className={s.header}>
         <h3 id={`block-${id}`} className={s.title}>
           {title}

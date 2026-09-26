@@ -211,6 +211,7 @@ function MonthTargetsCard({ data, today }: { data: Dataset; today: Day }) {
   };
   return (
     <Card
+      tour="targets"
       title={`Cibles ${ofMonth(month)}`}
       subtitle="Encore à atteindre ce mois-ci"
       actions={
@@ -293,6 +294,7 @@ export function DashboardScreen() {
           index={i}
           count={visible.length}
           action={actions[key]}
+          {...(i === 0 ? { tour: "blocks" } : {})}
           onMove={(id, delta) => setPreference("dashOrder", moveAmongVisible(order, visible, id as DashBlock, delta))}
           onDropOn={(dragged, target, after) =>
             setPreference("dashOrder", dropBefore(order, dragged as DashBlock, target as DashBlock, after))

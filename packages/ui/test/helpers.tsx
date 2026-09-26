@@ -184,6 +184,8 @@ export async function renderApp(
     updates?: AppUpdates;
     /** Choix d'affichage de l'appareil au démarrage. */
     display?: Partial<DisplayPrefs>;
+    /** Onglets déjà présentés par le tutoriel ; sans cette option, un appareil d'avant le tutoriel (aucun). */
+    tour?: string[];
     restart?: () => void;
     /** Registre des profils déjà écrit ; le profil ouvert est `profile`, le premier par défaut. */
     registry?: ProfileRegistry;
@@ -206,6 +208,14 @@ export async function renderApp(
   const current = list.find((p) => p.id === options.profile) ?? list[0]!;
   const platform = await host.open(current);
   const local = host.storeOf(current.id);
+  // Un appareil neuf attend le tutoriel ; les tests d'écran partent d'un appareil qui ne le montre pas.
+  local.device ??= {
+    deviceId: "appareil-test",
+    deviceLabel: "test",
+    sync: { fileId: null, targetName: null, lastMergeAt: null, lastOfferAt: null, lastError: null },
+    dirty: {},
+    ...(options.tour ? { tour: { seen: options.tour } } : {}),
+  };
   const repository = await Repository.open({ local, deviceLabel: "test", now: () => NOW, today: () => TODAY });
   if (options.seeded !== false) {
     await repository.apply({ categories: defaultCategories(), accounts: [accounts.courant, accounts.livret] });

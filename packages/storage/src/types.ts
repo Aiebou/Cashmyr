@@ -39,6 +39,11 @@ export type DeviceState = {
   dirty: Record<string, number>;
   /** Absent avant la version 0.2.0 : valeurs par défaut. */
   display?: Partial<DisplayPrefs>;
+  /**
+   * Tutoriel (décisions 65 à 67) : onglets déjà présentés sur cet appareil. Absent pour un profil
+   * ouvert avant la 0.4.0, qui ne voit donc pas le tutoriel sans le demander.
+   */
+  tour?: { seen: string[] };
 };
 
 export type SnapshotInfo = { id: string; takenAt: number; bytes: number };

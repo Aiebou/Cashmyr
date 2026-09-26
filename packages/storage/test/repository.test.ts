@@ -29,6 +29,16 @@ const rent: Recurrence = {
 };
 
 describe("dépôt local", () => {
+  it("un appareil neuf attend le tutoriel ; un appareil déjà en service ne le voit pas (décision 65)", async () => {
+    const fresh = setup();
+    expect((await fresh.open()).device.tour).toEqual({ seen: [] });
+
+    const before = setup();
+    const { tour: _tour, ...older } = (await before.open()).device;
+    await before.local.setDevice(older);
+    expect((await before.open()).device.tour).toBeUndefined();
+  });
+
   it("premier lancement : jeu vide, appareil créé, aucune sauvegarde", async () => {
     const { open, local } = setup();
     const repo = await open();

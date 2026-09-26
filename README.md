@@ -52,6 +52,12 @@ qui l'utilise, et le nom du profil ouvert, en haut de l'écran, permet d'en chan
 - **Supprimer un profil** ne le retire que de cet appareil : son fichier et les autres appareils ne changent pas.
 - Tes données d'avant les profils forment le profil « Mon budget », que tu peux renommer.
 
+## Découvrir l'application
+
+À la première utilisation, et pour chaque nouveau profil, un tutoriel présente chaque section à ta première visite :
+une bulle à la fois, « Passer » pour fermer celle de la section en cours. Paramètres → Application → « Revoir le
+tutoriel » le relance.
+
 ## Où vivent tes données
 
 - **Bureau** : `data.json` dans le dossier de l'application, avec ses cinq copies dans `backups/`. Les profils

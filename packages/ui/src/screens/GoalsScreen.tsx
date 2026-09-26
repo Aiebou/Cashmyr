@@ -64,6 +64,7 @@ function SafetyCard({ asOf }: { asOf: string }) {
 
   return (
     <Card
+      tour="safety"
       title="Épargne de précaution"
       subtitle={status.reached ? "Objectif atteint" : undefined}
       actions={
@@ -323,7 +324,7 @@ function GoalSettings({ goal }: { goal: Goal }) {
   );
 }
 
-function GoalCard({ goal, asOf }: { goal: Goal; asOf: string }) {
+function GoalCard({ goal, asOf, tour }: { goal: Goal; asOf: string; tour?: string }) {
   const data = useApp((st) => st.data);
   const today = useApp((st) => st.today);
   const { apply } = useActions();
@@ -336,6 +337,7 @@ function GoalCard({ goal, asOf }: { goal: Goal; asOf: string }) {
   return (
     <Card
       as="article"
+      tour={tour}
       title={goal.name}
       subtitle={goal.done ? `Atteint${goal.doneAt ? ` le ${dayLong(goal.doneAt)}` : ""}` : goal.source === "account" ? "Suivi par le solde de comptes" : "Suivi par les opérations rattachées"}
       actions={
@@ -441,7 +443,7 @@ function NewGoalForm({ first }: { first: boolean }) {
   };
 
   return (
-    <Card title="Nouvel objectif" subtitle={first ? "Aucun objectif en cours : crée le premier ici." : undefined} tone="muted">
+    <Card tour="new-goal" title="Nouvel objectif" subtitle={first ? "Aucun objectif en cours : crée le premier ici." : undefined} tone="muted">
       <form key={key} className={s.newGoal} onSubmit={submit}>
         <Field label="Nom" htmlFor={`${id}-name`}>
           <TextInput id={`${id}-name`} value={name} onChange={(e) => setName(e.target.value)} placeholder="Voyage, apport, ordinateur…" autoComplete="off" />
@@ -501,8 +503,8 @@ export function GoalsScreen() {
         {asOf !== today && <p className={s.muted}>Situation au {dayLong(asOf)}</p>}
       </ScreenTitle>
       <SafetyCard asOf={asOf} />
-      {active.map((g) => (
-        <GoalCard key={g.id} goal={g} asOf={asOf} />
+      {active.map((g, i) => (
+        <GoalCard key={g.id} goal={g} asOf={asOf} {...(i === 0 ? { tour: "goal" } : {})} />
       ))}
       <NewGoalForm first={active.length === 0} />
       {done.length > 0 && (
