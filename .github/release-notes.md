@@ -1,11 +1,11 @@
 Cashmyr pour ordinateur. La version web, qui s'installe aussi sur téléphone, est sur https://aiebou.github.io/Cashmyr/.
 
-## Nouveautés de la 0.3.0
+## Nouveautés de la 0.4.0
 
-- **Profils** : plusieurs budgets sur un même appareil, le tien, celui du foyer, celui d'un proche. Chaque profil a ses comptes, ses opérations, ses réglages et son propre fichier de synchronisation. Paramètres → Profils les crée, les renomme et les supprime.
-- Dès deux profils, Cashmyr demande à chaque lancement qui l'utilise ; le nom du profil ouvert, en haut de l'écran, permet d'en changer.
-- Pour partager un profil, celui du foyer par exemple, crée un profil sur chaque appareil concerné et fais-leur rejoindre le même fichier de synchronisation.
-- Tes données actuelles deviennent le profil « Mon budget », sans être déplacées. Tant que tu ne crées pas d'autre profil, rien ne change.
+- **Tutoriel** : à la première utilisation, et pour chaque nouveau profil, chaque section se présente à ta première visite, une bulle à la fois. « Passer » ferme celle de la section en cours ; Paramètres → Application → « Revoir le tutoriel » le relance.
+- **En-tête** : le nom du profil est toujours affiché, à droite de « Ajouter » ; son menu permet aussi de créer un profil. L'état de la synchronisation suit le nom de l'application.
+- **Total de tes comptes** : touche le titre du bandeau pour choisir le total affiché (valeurs déclarées, capital injecté, ou capital injecté hors comptes courants).
+- **« Qui utilise Cashmyr ? »** : une tuile « + Profil » crée un profil dès l'ouverture.
 
 **Format des données.** Inchangé depuis la 0.2.0. Un appareil encore en 0.1 doit être mis à jour : il affiche « Mets l'application à jour » sans rien modifier.
 
