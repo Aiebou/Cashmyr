@@ -75,3 +75,30 @@
   color: var(--ink-2);
   font-size: 14px;
 }
+/* « + Profil » : même tuile, en pointillé (décision 64). */
+.add {
+  border-style: dashed;
+  box-shadow: none;
+  background: transparent;
+  color: var(--ink-2);
+}
+.form {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 320px);
+  text-align: left;
+}
+.label {
+  font-size: 14px;
+  font-weight: 560;
+}
+.error {
+  margin: 0;
+  color: var(--negative);
+  font-size: 14px;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

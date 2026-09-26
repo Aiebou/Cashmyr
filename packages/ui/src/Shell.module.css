@@ -43,7 +43,7 @@
   min-width: 0;
 }
 
-/* Profil ouvert, à côté du nom de l'application. */
+/* Profil ouvert, à droite de « Ajouter » (décision 63). */
 .profile {
   display: inline-flex;
   align-items: center;
@@ -267,7 +267,7 @@
   }
 }
 
-/* Téléphone étroit : « Ajouter » en icône seule, pour que la pastille du profil tienne dans l'en-tête. */
+/* Téléphone étroit : « Ajouter » en icône seule, pour que la synchronisation et la pastille du profil tiennent dans l'en-tête. */
 @media (max-width: 400px) {
   .brandRow {
     gap: 8px;

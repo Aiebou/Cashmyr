@@ -554,6 +554,18 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | 60 | Version des profils | 0.3.0, sans changement de format des données : un appareil en 0.2.0 peut rejoindre le fichier de n'importe quel profil. |
 | 61 | Supprimer un profil qui n'est pas ouvert | S'il lui reste des modifications pas encore dans son fichier, la confirmation propose de l'ouvrir pour les envoyer, ou de le supprimer quand même, avec le cas « sans fichier » de la décision 56 (sauvegarde proposée, nom à taper). Sans modification en attente, simple confirmation. Un profil sans aucune donnée se supprime aussi sur simple confirmation. |
 
+### Validées le 26/09/2026 (version 0.4.0)
+
+| # | Sujet | Décision |
+|---|---|---|
+| 62 | Choisir le total du bandeau | Le titre du bandeau ouvre la liste des trois totaux de la décision 42 : « Total de mes comptes (valeurs déclarées) », « Total de mes comptes en capital injecté », « Capital injecté hors comptes courants », chacun suivi de la date (« aujourd'hui », « au 31 décembre AAAA »), plus discrète. Il remplace le sélecteur « Total affiché ». Le même bandeau sert au tableau de bord et à Mes comptes. |
+| 63 | En-tête | Le nom du profil ouvert est toujours affiché, même avec un seul profil, à droite de « Ajouter ». Son menu liste les profils (celui qui est ouvert est coché), puis « Nouveau profil… », puis « Gérer les profils ». L'état de la synchronisation passe à gauche, juste après « Cashmyr ». Remplace le choix « nom du profil dès deux profils, à côté de Cashmyr » de la 0.3.0. |
+| 64 | Créer un profil dès l'ouverture | L'écran « Qui utilise Cashmyr ? » a une tuile « + Profil » : un nom, puis le nouveau profil s'ouvre sur l'accueil. L'écran n'apparaît qu'à partir de deux profils (décision 54). |
+
+Reporté le 26/09/2026 : le type de compte « Compte professionnel ». Il changerait le format des données, et sa place
+dans les calculs reste à définir (budget du mois, totaux, virements entre comptes pro et perso) ; un profil
+professionnel est une autre piste.
+
 Lectures validées avec la section dettes :
 - Total : `principal` s'il est > 0.
 - Mode libre : pas d'échéancier.
@@ -678,7 +690,7 @@ Version 0.2.0, choix validés le 25/09/2026 :
 - **Tableau de bord** : sous le bandeau, « Cibles de <mois> » reprend les trois jauges de la Répartition du mois en
   cours (besoins et envies : reste ou dépassement ; épargne : encore à mettre de côté), pour l'année en cours seulement,
   avec « Voir le mois ». Ce bloc n'entre pas dans l'ordre des blocs (`dashOrder`), qui ne change pas de format.
-- **Bandeau des comptes** : un sélecteur « Total affiché » à droite du titre (décision 42). Dans la légende, un
+- **Bandeau des comptes** : un sélecteur « Total affiché » à droite du titre (décision 42 ; remplacé par la décision 62). Dans la légende, un
   compte épargne, placement ou autre montre sa valeur déclarée, et dessous « injecté … » ou « valeur non déclarée ».
 - **Mes comptes** : chaque compte dans sa propre tuile. Un filtre à puces (« Tous », puis les types présents) agit sur
   « Mouvements de l'année » et « Vos comptes », pas sur le bandeau. La valeur déclarée passe en avant, avec le
@@ -816,7 +828,7 @@ Nouvelle section, visible même avec un seul profil.
 
 - **« Qui utilise Cashmyr ? »** : une tuile par profil, avec l'initiale du nom dans une pastille. Il suit le thème du
   système, puisque le thème choisi appartient à chaque profil.
-- **En-tête** : dès deux profils, la pastille et le nom du profil ouvert suivent « Cashmyr ». Le menu liste les
+- **En-tête** (remplacé par la décision 63) : dès deux profils, la pastille et le nom du profil ouvert suivent « Cashmyr ». Le menu liste les
   autres profils, puis « Gérer les profils ». Sur téléphone, la pastille seule, et le menu prend la largeur de
   l'écran ; sous 400 px, « Ajouter » passe en icône seule pour que tout tienne.
 - **Paramètres → Profils** vient juste avant Synchronisation. Chaque ligne a sa pastille, son nom modifiable sur
@@ -826,3 +838,13 @@ Nouvelle section, visible même avec un seul profil.
 - L'accueil d'un nouveau profil s'intitule « Bienvenue dans « nom » », et nomme le fichier proposé au profil.
 - La remise à zéro nomme le profil ouvert dès deux profils ; l'écran de secours nomme le profil abîmé et propose
   « Changer de profil ».
+
+### Version 0.4.0, choix d'interface
+
+- **Titre du bandeau** : en gras, suivi de la date en graisse normale et en encre secondaire, puis d'un chevron. La date
+  n'est pas en italique : aucune italique n'est embarquée, et le navigateur en fabriquerait une. Dans la liste, le total
+  affiché est coché ; elle prend la largeur de son contenu, sans dépasser l'écran.
+- **En-tête** : « Cashmyr », l'état de la synchronisation, puis à droite « Ajouter » et le profil. Sur téléphone,
+  l'état de la synchronisation et le profil se réduisent à leur icône ; sous 400 px, « Ajouter » aussi.
+- **Tuile « + Profil »** : bordure en pointillés ; elle laisse la place à un champ « Nom du nouveau profil », avec
+  « Annuler » et « Créer et ouvrir ». Un nom déjà pris est refusé sur place.

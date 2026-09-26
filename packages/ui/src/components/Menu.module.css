@@ -18,18 +18,10 @@
   left: 0;
   right: auto;
 }
-/*
- * Téléphone : un menu aligné à gauche tient dans la largeur de l'écran, juste sous la ligne du titre.
- * Le flou de l'en-tête en fait le bloc de référence de `position: fixed` : les positions partent de lui.
- */
-@media (max-width: 640px) {
-  .menuStart {
-    position: fixed;
-    top: calc(env(safe-area-inset-top) + 54px);
-    left: 16px;
-    right: 16px;
-    min-width: 0;
-  }
+/* À la largeur de son contenu, jamais plus large que l'écran, marges comprises. */
+.menu {
+  width: max-content;
+  max-width: calc(100vw - 32px);
 }
 .item {
   display: flex;
@@ -38,7 +30,8 @@
   gap: 16px;
   width: 100%;
   min-height: var(--tap);
-  padding: 0 12px;
+  /* Une entrée qui passe sur deux lignes (téléphone) garde de l'air au-dessus et au-dessous. */
+  padding: 8px 12px;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -53,6 +46,15 @@
 .hint {
   font-size: 12px;
   color: var(--ink-3);
+}
+/* Complément discret : même taille, graisse et couleur plus légères, lisible en clair comme en sombre. */
+.detail {
+  font-weight: 400;
+  color: var(--ink-2);
+}
+.check {
+  flex: none;
+  color: var(--focus);
 }
 .separator {
   height: 1px;

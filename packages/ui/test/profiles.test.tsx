@@ -61,11 +61,11 @@ describe("ouverture (décision 54)", () => {
       ...(updates ? { updates } : {}),
     });
 
-  it("un seul profil : il s'ouvre directement, sans choix ni menu de profil", async () => {
+  it("un seul profil : il s'ouvre directement, sans choix ; son nom est dans l'en-tête (décision 63)", async () => {
     await launch(newHost());
     expect(screen.queryByRole("heading", { name: "Qui utilise Cashmyr ?" })).toBeNull();
     expect(await screen.findByRole("heading", { name: "Bienvenue" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Changer de profil/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Profil « Mon budget ». Changer de profil" })).toBeTruthy();
   });
 
   it("plusieurs profils : « Qui utilise Cashmyr ? », puis le profil choisi, noté pour la session", async () => {
@@ -74,7 +74,7 @@ describe("ouverture (décision 54)", () => {
     await launch(host);
     expect(screen.getByRole("heading", { name: "Qui utilise Cashmyr ?" })).toBeTruthy();
     const choices = screen.getAllByRole("listitem").map((li) => li.textContent);
-    expect(choices).toEqual(["MMon budget", "FFoyer"]);
+    expect(choices).toEqual(["MMon budget", "FFoyer", "Profil"]);
     await userEvent.click(screen.getByRole("button", { name: /Foyer/ }));
     expect(await screen.findByRole("heading", { name: "Bienvenue dans « Foyer »" })).toBeTruthy();
     expect(host.noted).toBe(FOYER);
@@ -88,6 +88,31 @@ describe("ouverture (décision 54)", () => {
     await launch(host);
     expect(screen.queryByRole("heading", { name: "Qui utilise Cashmyr ?" })).toBeNull();
     expect(await screen.findByRole("heading", { name: "Bienvenue dans « Foyer »" })).toBeTruthy();
+  });
+
+  it("« + Profil » crée un profil dès l'écran de choix, puis l'ouvre (décision 64)", async () => {
+    const user = userEvent.setup();
+    const host = newHost();
+    host.saved = twoProfiles();
+    await launch(host);
+    await user.click(screen.getByRole("button", { name: "Nouveau profil" }));
+    const field = screen.getByLabelText("Nom du nouveau profil");
+    await user.type(field, "foyer");
+    await user.click(screen.getByRole("button", { name: "Créer et ouvrir" }));
+    expect(screen.getByRole("alert").textContent).toBe("Le profil « Foyer » existe déjà sur cet appareil.");
+    expect(host.saved.profiles).toHaveLength(2);
+
+    await user.clear(field);
+    await user.type(field, "Alice");
+    await user.click(screen.getByRole("button", { name: "Créer et ouvrir" }));
+    expect(await screen.findByRole("heading", { name: "Bienvenue dans « Alice »" })).toBeTruthy();
+    const alice = host.saved.profiles[2]!;
+    expect(alice).toMatchObject({ name: "Alice", syncFileId: null });
+    expect(host.prepared).toEqual([alice.id]);
+    expect(host.noted).toBe(alice.id);
+    // Le nouveau profil figure dans le menu de l'en-tête.
+    await user.click(screen.getByRole("button", { name: "Profil « Alice ». Changer de profil" }));
+    expect(screen.getAllByRole("menuitemradio").map((m) => m.textContent)).toEqual(["Mon budget", "Foyer", "Alice"]);
   });
 
   it("la recherche de mise à jour part avant le choix, selon le réglage de l'appareil (décision 59)", async () => {
@@ -118,7 +143,21 @@ describe("Paramètres → Profils", () => {
     expect(within(card).getByRole("textbox", { name: "Nom du profil « Mon budget »" })).toBeTruthy();
     expect(within(card).getByText("Ouvert")).toBeTruthy();
     expect(within(card).queryByRole("button", { name: /Supprimer le profil/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Changer de profil/ })).toBeNull();
+  });
+
+  it("en-tête, un seul profil : son nom, et « Nouveau profil… » dans le menu (décision 63)", async () => {
+    const user = userEvent.setup();
+    await openProfiles();
+    const header = screen.getAllByRole("banner")[0]!;
+    const buttons = within(header).getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent);
+    // La synchronisation suit le titre ; le profil vient après « Ajouter ».
+    expect(buttons.indexOf("Ajouter")).toBeLessThan(buttons.indexOf("Profil « Mon budget ». Changer de profil"));
+    expect(buttons.findIndex((b) => b?.endsWith("Voir la synchronisation"))).toBeLessThan(buttons.indexOf("Ajouter"));
+    await user.click(within(header).getByRole("button", { name: "Profil « Mon budget ». Changer de profil" }));
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByRole("menuitemradio", { name: "Mon budget" }).getAttribute("aria-checked")).toBe("true");
+    await user.click(within(menu).getByRole("menuitem", { name: "Nouveau profil…" }));
+    expect(screen.getByRole("dialog", { name: "Nouveau profil" })).toBeTruthy();
   });
 
   it("créer le deuxième profil : « Mon budget » peut être renommé, puis le nouveau s'ouvre", async () => {
@@ -176,8 +215,9 @@ describe("Paramètres → Profils", () => {
     const flush = vi.spyOn(local, "flush");
     await user.click(screen.getByRole("button", { name: "Profil « Mon budget ». Changer de profil" }));
     const menu = screen.getByRole("menu");
-    expect(within(menu).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Foyer", "Gérer les profils"]);
-    await user.click(within(menu).getByRole("menuitem", { name: "Foyer" }));
+    expect(within(menu).getAllByRole("menuitemradio").map((m) => m.textContent)).toEqual(["Mon budget", "Foyer"]);
+    expect(within(menu).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Nouveau profil…", "Gérer les profils"]);
+    await user.click(within(menu).getByRole("menuitemradio", { name: "Foyer" }));
     await waitFor(() => expect(restart).toHaveBeenCalledTimes(1));
     expect(flush).toHaveBeenCalled();
     expect(host.noted).toBe(FOYER);

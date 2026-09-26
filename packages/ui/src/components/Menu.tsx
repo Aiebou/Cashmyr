@@ -1,7 +1,17 @@
 import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { CheckIcon } from "./icons";
 import s from "./Menu.module.css";
 
-export type MenuItem = { id: string; label: string; hint?: string; onSelect(): void };
+export type MenuItem = {
+  id: string;
+  label: string;
+  /** Complément discret, juste après le libellé (« aujourd'hui »). */
+  detail?: string;
+  hint?: string;
+  /** Entrée d'un choix exclusif : cochée ou non (menuitemradio). */
+  checked?: boolean;
+  onSelect(): void;
+};
 
 type MenuProps = {
   /** Contenu du bouton d'ouverture. */
@@ -104,7 +114,8 @@ export function Menu({ trigger, triggerLabel, triggerClassName, groups, align = 
                 <button
                   key={item.id}
                   type="button"
-                  role="menuitem"
+                  role={item.checked === undefined ? "menuitem" : "menuitemradio"}
+                  aria-checked={item.checked}
                   tabIndex={-1}
                   className={s.item}
                   onClick={() => {
@@ -112,8 +123,19 @@ export function Menu({ trigger, triggerLabel, triggerClassName, groups, align = 
                     item.onSelect();
                   }}
                 >
-                  <span>{item.label}</span>
+                  <span>
+                    {item.label}
+                    {item.detail && (
+                      <>
+                        {" "}
+                        <span className={s.detail}>{item.detail}</span>
+                      </>
+                    )}
+                  </span>
                   {item.hint && <span className={s.hint}>{item.hint}</span>}
+                  {item.checked && <span className={s.check} aria-hidden="true">
+                      <CheckIcon size={16} />
+                    </span>}
                 </button>
               ))}
             </Fragment>
