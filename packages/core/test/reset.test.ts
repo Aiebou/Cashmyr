@@ -7,6 +7,7 @@ import {
   eraseEverything,
   hasLiveRecords,
   mergeDatasets,
+  RENAMED_AT,
   setPreference,
   startingCategories,
   tombstone,
@@ -62,8 +63,27 @@ describe("remise à zéro partout (décision 45)", () => {
 });
 
 describe("catégories par défaut de l'écran d'accueil", () => {
-  it("horodatées 0 sur un appareil neuf", () => {
-    expect(startingCategories(dataset({}), NOW).every((c) => c.updatedAt === 0 && c.deletedAt === null)).toBe(true);
+  it("horodatées 0 sur un appareil neuf, RENAMED_AT pour les noms remplacés (décision 68)", () => {
+    const start = startingCategories(dataset({}), NOW);
+    expect(start.every((c) => c.deletedAt === null)).toBe(true);
+    expect(start.filter((c) => c.updatedAt !== 0).map((c) => [c.name, c.updatedAt])).toEqual([
+      ["Revenus annexes", RENAMED_AT],
+      ["Activité indépendante", RENAMED_AT],
+      ["Revenus de placements", RENAMED_AT],
+      ["Autres placements", RENAMED_AT],
+    ]);
+  });
+
+  it("décision 68 : le nouveau nom gagne sur l'ancien jamais modifié, pas sur un nom choisi", () => {
+    const renamed = startingCategories(dataset({}), NOW).find((c) => c.name === "Activité indépendante")!;
+    const untouched = { ...renamed, name: "Missions freelance", updatedAt: 0 };
+    const legacy = { ...renamed, name: "Missions freelance", updatedAt: 1 };
+    const chosen = { ...renamed, name: "Mon activité", updatedAt: NOW };
+    const merged = (mine: typeof renamed) =>
+      mergeDatasets(dataset({ categories: [mine] }), dataset({ categories: [renamed] })).data.collections.categories[0]!.name;
+    expect(merged(untouched)).toBe("Activité indépendante");
+    expect(merged(legacy)).toBe("Activité indépendante");
+    expect(merged(chosen)).toBe("Mon activité");
   });
 
   it("après une remise à zéro partout, elles reviennent et l'emportent sur la suppression", () => {

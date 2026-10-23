@@ -581,6 +581,12 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | 66 | Déroulé du tutoriel | Il commence au tableau de bord, puis chaque onglet se présente à sa première visite. Chaque étape met un élément en lumière et l'explique dans une bulle, avec « Précédent », « Suivant » (« Terminer » à la dernière) et « Passer ». On regarde sans rien modifier : le reste de l'écran est assombri et ne répond pas. Une étape dont l'élément n'est pas à l'écran est sautée. |
 | 67 | « Passer » et mémoire du tutoriel | « Passer » (ou Échap) ne ferme que l'onglet en cours ; les autres se présentent quand même à leur première visite. Les onglets vus sont retenus par appareil et par profil (`DeviceState.tour`), jamais synchronisés : le format des données ne change pas. |
 
+### Validée le 24/10/2026
+
+| # | Sujet | Décision |
+|---|---|---|
+| 68 | Noms des catégories par défaut | Quatre noms trop personnels sont remplacés, identifiants inchangés : « Service et pourboires » devient « Revenus annexes », « Missions freelance » « Activité indépendante », « Revenus de trading » « Revenus de placements », « Compte de trading » « Autres placements ». Ces quatre catégories sont créées avec l'horodatage 2 au lieu de 0 (`RENAMED_AT`) : une catégorie par défaut jamais modifiée d'une version précédente (horodatée 0) prend le nouveau nom à la synchronisation, un nom choisi par l'utilisateur gagne toujours, et l'ancien fichier, repris à l'horodatage 1 (décision 34), ne remet plus l'ancien nom de ces quatre catégories. Un appareil qui ne se synchronise pas garde ses noms. |
+
 Reporté le 26/09/2026 : le type de compte « Compte professionnel ». Il changerait le format des données, et sa place
 dans les calculs reste à définir (budget du mois, totaux, virements entre comptes pro et perso) ; un profil
 professionnel est une autre piste.

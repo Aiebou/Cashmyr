@@ -11,7 +11,7 @@
   Côté TypeScript : core 227, storage 97, ui 128.
 
 La référence reste [`architecture.md`](architecture.md) : modèle de données, règles de calcul et de fusion, et les
-67 décisions numérotées du §8. Ce document résume. En cas d'écart, `architecture.md` et le code font foi. Le cahier
+68 décisions numérotées du §8. Ce document résume. En cas d'écart, `architecture.md` et le code font foi. Le cahier
 des charges d'origine est dans [`cahier-des-charges.md`](cahier-des-charges.md).
 
 ## Sommaire
@@ -60,7 +60,7 @@ Demandes reçues après le cahier des charges, toutes livrées sauf une :
 
 **Reporté** : le type de compte « Compte professionnel ». Il changerait le format des données, et sa place dans
 les calculs reste à définir ; un « profil professionnel » est l'autre piste. Rien n'est commencé
-(`architecture.md` §8, juste après la décision 67).
+(`architecture.md` §8, après la décision 68).
 
 ## 2. Décisions d'architecture et leurs raisons
 
@@ -151,10 +151,12 @@ Le détail et la formulation exacte sont au §8 d'`architecture.md`. Les raisons
     affichée.
   - Le patrimoine net suit les valeurs déclarées. L'épargne de précaution et les courbes restent en capital injecté.
   - L'ordre des comptes est synchronisé.
-- **Catégories et tags (31, 47, 48)**
+- **Catégories et tags (31, 47, 48, 68)**
   - Même nom, même tag : l'identifiant se déduit du nom normalisé. *Raison :* deux appareils qui créent hors ligne un
     tag de même nom obtiennent le même tag.
   - Un tag au plus par opération. Supprimer un tag ne réécrit rien.
+  - Quatre catégories par défaut ont reçu des noms génériques, horodatés 2 : une catégorie jamais modifiée prend le
+    nouveau nom à la synchronisation, un nom choisi par l'utilisateur gagne toujours (décision 68).
 - **Import, restauration, secours, remise à zéro (16, 32 à 40, 45)**
   - L'import JSON fusionne. Restaurer une copie la fait gagner partout.
   - À la reprise de l'ancien fichier, Cashmyr gagne. *Raison :* réimporter n'ajoute que ce qui manque.
