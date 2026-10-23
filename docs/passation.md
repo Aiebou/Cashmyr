@@ -1,14 +1,17 @@
 # Passation de Cashmyr
 
-État au 23/10/2026, pour reprendre le développement sur un autre Mac à partir d'un clone neuf du dépôt.
+État au 24/10/2026, pour reprendre le développement sur un autre Mac à partir d'un clone neuf du dépôt.
 
-- **Branche `main`** : f633a6b (fusion de la PR #15) au moment de la rédaction, plus la PR qui apporte ce document et
-  `CLAUDE.md`. Rien d'autre en attente : aucun stash, aucun commit ni tag non poussé.
+- **Branche `main`** : 6e7c584 (fusion de la PR #18) au moment de cette mise à jour. Rien d'autre en attente : aucun
+  stash, aucun commit ni tag non poussé.
 - **Version publiée** : 0.4.0, le 26/09/2026.
   - [Release](https://github.com/Aiebou/Cashmyr/releases/tag/v0.4.0), avec `latest.json` signé par la clé `EFBCA89EB0CD97C`.
   - PWA en ligne sur <https://aiebou.github.io/Cashmyr/>.
-- **Tests** : 452 tests TypeScript et 15 tests Rust passent, vérifiés le 23/10/2026 sur un clone neuf (§3).
-  Côté TypeScript : core 227, storage 97, ui 128.
+- **Sur `main` depuis la 0.4.0** : les PR #16 à #18 (passation, cahier des charges, documentation à jour, jeux
+  d'essai neutralisés, catégories par défaut aux noms génériques, décision 68). La PWA les a déjà, puisque chaque
+  fusion la publie ; l'application de bureau les aura avec la prochaine Release.
+- **Tests** : 453 tests TypeScript et 15 tests Rust passent sur `main` (core 228, storage 97, ui 128). La séquence
+  d'installation du §3 a été vérifiée sur un clone neuf le 23/10/2026.
 
 La référence reste [`architecture.md`](architecture.md) : modèle de données, règles de calcul et de fusion, et les
 68 décisions numérotées du §8. Ce document résume. En cas d'écart, `architecture.md` et le code font foi. Le cahier
@@ -50,13 +53,16 @@ Versions publiées depuis :
 | 0.2.0 | 26/09/2026 | #8 à #11 | Montants au centime, valeurs déclarées et trois totaux, cibles du mois, camemberts, remise à zéro, mise à jour au lancement, format 2 (tags, ordre des comptes). Décisions 41 à 50 |
 | 0.3.0 | 26/09/2026 | #12, #13 | Profils : un budget complet par profil, choix au lancement, Paramètres → Profils. Décisions 51 à 61 |
 | 0.4.0 | 26/09/2026 | #14, #15 | En-tête (synchro à gauche, menu du profil), total choisi dans le titre du bandeau, tuile « + Profil », tutoriel. Décisions 62 à 67 |
+| Prochaine | non publiée | #16 à #18 | Passation et `CLAUDE.md`, cahier des charges, documentation à jour, jeux d'essai neutralisés, catégories par défaut aux noms génériques. Décision 68 |
 
 Dates de publication des Releases, heure de Paris : la 0.1.2, la 0.2.0 et la 0.3.0 sont sorties peu après minuit, la 0.4.0 le matin. GitHub, en UTC, les date de la veille.
 
 Demandes reçues après le cahier des charges, toutes livrées sauf une :
 - 23/09 : dettes et 7e onglet, menu « Ajouter », couleurs personnalisables ;
 - 25/09 : liste « Modifications à apporter (v0.1.2) », devenue la 0.2.0 et, pour les profils, la 0.3.0 ;
-- 26/09 : liste « Maj de la v0.3.0 », devenue la 0.4.0.
+- 26/09 : liste « Maj de la v0.3.0 », devenue la 0.4.0 ;
+- 24/10 : jeux d'essai publics et catégories par défaut sans éléments personnels (décision 68), sur `main`, pas
+  encore dans une Release de bureau.
 
 **Reporté** : le type de compte « Compte professionnel ». Il changerait le format des données, et sa place dans
 les calculs reste à définir ; un « profil professionnel » est l'autre piste. Rien n'est commencé
@@ -290,7 +296,7 @@ Ce qui a été mesuré sur le clone neuf :
 | Commande | Durée | Résultat |
 |---|---|---|
 | `pnpm typecheck` | 5 s | core, storage, ui, web, desktop |
-| `pnpm test` | 11 s | core 227, storage 97, ui 128 |
+| `pnpm test` | 11 s | core 227, storage 97, ui 128 (core en compte 228 depuis la décision 68) |
 | `pnpm build:web` | 3 s | `apps/web/dist`, 13 entrées précachées |
 | `cargo clippy --all-targets -- -D warnings` | 44 s | 0 avertissement |
 | `cargo test` | 41 s | 15 tests |
@@ -443,11 +449,9 @@ export Cashmyr dans `~/Documents`, `~/Downloads` ou iCloud Drive, aucun hook Git
 
 ### Avant de quitter l'ancien Mac
 
-0. Valider puis fusionner la PR de cette passation. Tant qu'elle n'est pas fusionnée, un clone de `main` n'a ni
-   `CLAUDE.md` ni ce document.
 1. Ouvrir Cashmyr (bureau) et attendre que la synchronisation passe : plus aucune modification en attente. Par
-   sécurité, exporter aussi une sauvegarde (Paramètres → Sauvegardes), à ranger hors du dépôt dans un endroit chiffré. Si la PWA a servi dans Chrome ou Safari, faire
-   de même dans le navigateur.
+   sécurité, exporter aussi une sauvegarde (Paramètres → Sauvegardes), à ranger hors du dépôt dans un endroit
+   chiffré. Si la PWA a servi dans Chrome ou Safari, faire de même dans le navigateur.
 2. Copier de façon chiffrée `~/.tauri/cashmyr.key` et `cashmyr.key.pub`. Vérifier que le mot de passe de la clé est
    bien noté.
 3. Copier les fichiers de données qui servent encore : `mes-finances.json`, `mes-finances.csv` et
@@ -461,18 +465,22 @@ export Cashmyr dans `~/Documents`, `~/Downloads` ou iCloud Drive, aucun hook Git
    `.claude/launch.json`.
 3. Si tu as copié la mémoire de Claude Code, la placer sous le nouveau chemin.
 4. Installer Cashmyr 0.4.0 depuis la Release. Au premier lancement, l'application non signée s'ouvre par Réglages
-   Système → Confidentialité et sécurité → « Ouvrir quand même » (voir le README). Ensuite, rejoindre le fichier de synchronisation depuis le dossier cloud.
+   Système → Confidentialité et sécurité → « Ouvrir quand même » (voir le README). Ensuite, rejoindre le fichier de
+   synchronisation depuis le dossier cloud.
 
 ### Suite du développement
 
 Aucune fonctionnalité n'est en cours. Restent, du plus pressé au moins pressé :
 
-1. **Essayer dans une vraie fenêtre de bureau ce qui n'a été vérifié que par les tests** : le parcours des profils
+1. **Sortir la prochaine version de bureau**, quand tu le décides (numéro à choisir). Elle apporte la décision 68 :
+   sans elle, une installation neuve du bureau garde les anciens noms des catégories par défaut, alors que la PWA a
+   déjà les nouveaux. Écrire d'abord la section « Nouveautés » de `.github/release-notes.md`, puis suivre le §4.
+2. **Essayer dans une vraie fenêtre de bureau ce qui n'a été vérifié que par les tests** : le parcours des profils
    (créer, changer, supprimer, rejoindre un fichier depuis un profil), puis l'écran de secours, vu seulement dans la
    PWA. Faire ces essais avec la recette d'essai isolé du §7, jamais sur les vraies données.
-2. **Vérifier sur un vrai iPhone** ce que fait « Enregistrer dans Fichiers » face à un fichier de même nom. C'est
+3. **Vérifier sur un vrai iPhone** ce que fait « Enregistrer dans Fichiers » face à un fichier de même nom. C'est
    encore au futur dans `architecture.md` (§6, iOS) ; le README n'en donne qu'une mise en garde générale.
-3. **« Compte professionnel » ou « profil professionnel »** : reporté le 26/09/2026, à rediscuter. Toute piste qui
+4. **« Compte professionnel » ou « profil professionnel »** : reporté le 26/09/2026, à rediscuter. Toute piste qui
    touche aux calculs ou au format passe d'abord par des questions chiffrées.
 
 ## 7. Pièges rencontrés
