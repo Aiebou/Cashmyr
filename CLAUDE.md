@@ -7,6 +7,8 @@ fichier, `finances-sync.json`, dans le dossier cloud de chacun. Le dépôt `Aieb
 À lire avant de toucher au code :
 - [`docs/architecture.md`](docs/architecture.md) : modèle de données, fusion, stockage par plateforme, profils (§9),
   et les décisions numérotées du §8, qui font foi.
+- [`docs/cahier-des-charges.md`](docs/cahier-des-charges.md) : le cahier des charges d'origine (23/09/2026). Les
+  décisions du §8 priment.
 - [`docs/passation.md`](docs/passation.md) : avancement, installation sur un nouveau Mac, procédure de Release,
   fichiers hors dépôt, ce qui reste à faire et les pièges rencontrés.
 

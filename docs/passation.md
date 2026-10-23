@@ -11,7 +11,8 @@
   Côté TypeScript : core 227, storage 97, ui 128.
 
 La référence reste [`architecture.md`](architecture.md) : modèle de données, règles de calcul et de fusion, et les
-67 décisions numérotées du §8. Ce document résume. En cas d'écart, `architecture.md` et le code font foi.
+67 décisions numérotées du §8. Ce document résume. En cas d'écart, `architecture.md` et le code font foi. Le cahier
+des charges d'origine est dans [`cahier-des-charges.md`](cahier-des-charges.md).
 
 ## Sommaire
 
@@ -27,7 +28,7 @@ La référence reste [`architecture.md`](architecture.md) : modèle de données,
 
 ## 1. Avancement, étape par étape
 
-Le cahier des charges du 23/09/2026 fixait un déroulé en six étapes, la première à valider avant d'écrire le reste.
+Le [cahier des charges](cahier-des-charges.md) du 23/09/2026 fixait un déroulé en six étapes, la première à valider avant d'écrire le reste.
 Chaque étape a ensuite été validée avant la suivante. Toutes sont terminées et validées.
 
 | Étape | Contenu | Commits sur `main` | Date |
@@ -398,10 +399,10 @@ Une PR qui change le format des données se fusionne **juste avant le tag**. Sin
 
 ## 5. Fichiers présents uniquement sur l'ancien Mac
 
-Inventaire du 23/10/2026. Il relève des noms, des tailles et des dates ; seul le début de la transcription a été
-relu, pour retrouver le cahier des charges. Aucun autre contenu n'a été ouvert. Il couvre ce qui est ignoré par Git ou hors du dépôt, et qu'un clone ne ramène pas. Les sorties de build
-(`node_modules`, `target`, `dist`), les fichiers générés (`src-tauri/gen/`, `src-tauri/permissions/`) et les
-`.DS_Store` sont exclus.
+Inventaire du 23/10/2026. Il relève des noms, des tailles et des dates. Seul le début de la transcription a été
+relu, pour en tirer le cahier des charges ; aucun autre contenu n'a été ouvert. Il couvre ce qui est ignoré par Git
+ou hors du dépôt, et qu'un clone ne ramène pas. Les sorties de build (`node_modules`, `target`, `dist`), les fichiers
+générés (`src-tauri/gen/`, `src-tauri/permissions/`) et les `.DS_Store` sont exclus.
 
 ### À transférer ou à vérifier
 
@@ -417,8 +418,8 @@ relu, pour retrouver le cahier des charges. Aucun autre contenu n'a été ouvert
 | Chrome, dans le profil où la PWA a été ouverte : `IndexedDB/https_aiebou.github.io_0.indexeddb.leveldb` | Données de la PWA publiée, ouverte dans Chrome | Non : Chrome ne synchronise pas IndexedDB | Si ce navigateur tient des données hors synchronisation : l'ouvrir et synchroniser, ou exporter une sauvegarde. Ne pas copier le dossier. |
 | Même profil Chrome : `IndexedDB/http_localhost_5173.indexeddb.leveldb` | Données de la PWA en développement | Non | Données d'essai : à ignorer, sauf si elles comptent |
 | Safari | Stockage éventuel de la PWA, invérifiable (dossiers aux noms hachés) | Inconnu | Si tu as utilisé la PWA dans Safari, même démarche que pour Chrome |
-| `~/.claude/projects/-Users-aiebou-Desktop-Application-gestion-de-finance-personnelle/memory/` | Mémoire de Claude Code pour ce projet (5 notes et leur index `MEMORY.md`) | Non | L'essentiel est repris dans `CLAUDE.md` et ce document. Pour la garder telle quelle, la copier dans `~/.claude/projects/<chemin absolu du nouveau clone, chaque caractère autre qu'une lettre ou un chiffre remplacé par « - »>/memory/`. Cloner au même chemin garde le même nom de dossier. |
-| La transcription de la session (fichier `.jsonl` du dossier du projet sous `~/.claude/projects/`, et `~/.claude/file-history/`) | Transcription de la session de développement (environ 56 Mo) | Non | Contient le **seul exemplaire du cahier des charges** (première demande, ligne 3 du fichier), voir §6. Copie sûre conseillée. Elle peut contenir des extraits de données réelles : ne jamais la publier, ne l'ouvrir que sur demande explicite. |
+| `~/.claude/projects/-Users-aiebou-Desktop-Application-gestion-de-finance-personnelle/memory/` | Mémoire de Claude Code pour ce projet (ses notes et leur index `MEMORY.md`) | Non | L'essentiel est repris dans `CLAUDE.md` et ce document. Pour la garder telle quelle, la copier dans `~/.claude/projects/<chemin absolu du nouveau clone, chaque caractère autre qu'une lettre ou un chiffre remplacé par « - »>/memory/`. Cloner au même chemin garde le même nom de dossier. |
+| La transcription de la session (fichier `.jsonl` du dossier du projet sous `~/.claude/projects/`, et `~/.claude/file-history/`) | Transcription de la session de développement (environ 56 Mo) | Non | Le cahier des charges qu'elle contenait est maintenant dans `docs/cahier-des-charges.md`. Copie facultative, pour garder l'historique de la session. Elle peut contenir des extraits de données réelles : ne jamais la publier, ne l'ouvrir que sur demande explicite. |
 | Note sur le projet dans le coffre Obsidian (iCloud Drive, dossier `CASHMYR`) | Notes personnelles | Oui, iCloud Drive | Rien à copier ; ne pas la verser dans le dépôt sans la relire |
 
 ### À recréer, sans copier
@@ -449,12 +450,7 @@ export Cashmyr dans `~/Documents`, `~/Downloads` ou iCloud Drive, aucun hook Git
    bien noté.
 3. Copier les fichiers de données qui servent encore : `mes-finances.json`, `mes-finances.csv` et
    `cashmyr-sauvegarde-2026-09-24.json`.
-4. Copier le dossier `memory/` de Claude Code et, conseillé, la transcription de la session.
-5. Mettre le cahier des charges à l'abri : il n'existe que dans la transcription (ligne 3, complétée par les lignes
-   65 et 403 du 23/09). Copier la transcription suffit ; le verser dans le dépôt est une autre décision. Le verser dans le dépôt
-   (`docs/cahier-des-charges.md`) le rendrait public.
-   - Une relecture du texte initial n'y a trouvé ni nom, ni banque, ni montant réel.
-   - La liste du 25/09 serait à paraphraser et à faire relire avant tout versement.
+4. Copier le dossier `memory/` de Claude Code et, si tu veux garder l'historique, la transcription de la session.
 
 ### Sur le nouveau Mac
 
