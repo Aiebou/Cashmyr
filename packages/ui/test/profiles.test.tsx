@@ -103,16 +103,16 @@ describe("ouverture (décision 54)", () => {
     expect(host.saved.profiles).toHaveLength(2);
 
     await user.clear(field);
-    await user.type(field, "Alice");
+    await user.type(field, "Budget perso");
     await user.click(screen.getByRole("button", { name: "Créer et ouvrir" }));
-    expect(await screen.findByRole("heading", { name: "Bienvenue dans « Alice »" })).toBeTruthy();
-    const alice = host.saved.profiles[2]!;
-    expect(alice).toMatchObject({ name: "Alice", syncFileId: null });
-    expect(host.prepared).toEqual([alice.id]);
-    expect(host.noted).toBe(alice.id);
+    expect(await screen.findByRole("heading", { name: "Bienvenue dans « Budget perso »" })).toBeTruthy();
+    const perso = host.saved.profiles[2]!;
+    expect(perso).toMatchObject({ name: "Budget perso", syncFileId: null });
+    expect(host.prepared).toEqual([perso.id]);
+    expect(host.noted).toBe(perso.id);
     // Le nouveau profil figure dans le menu de l'en-tête.
-    await user.click(screen.getByRole("button", { name: "Profil « Alice ». Changer de profil" }));
-    expect(screen.getAllByRole("menuitemradio").map((m) => m.textContent)).toEqual(["Mon budget", "Foyer", "Alice"]);
+    await user.click(screen.getByRole("button", { name: "Profil « Budget perso ». Changer de profil" }));
+    expect(screen.getAllByRole("menuitemradio").map((m) => m.textContent)).toEqual(["Mon budget", "Foyer", "Budget perso"]);
   });
 
   it("la recherche de mise à jour part avant le choix, selon le réglage de l'appareil (décision 59)", async () => {
@@ -169,12 +169,12 @@ describe("Paramètres → Profils", () => {
     const first = within(dialog).getByLabelText("Nom de ce profil-ci");
     expect((first as HTMLInputElement).value).toBe("Mon budget");
     await user.clear(first);
-    await user.type(first, "Alice");
+    await user.type(first, "Budget perso");
     await user.click(within(dialog).getByRole("button", { name: "Créer et ouvrir" }));
 
     await waitFor(() => expect(restart).toHaveBeenCalledTimes(1));
     const [principal, foyer] = host.saved!.profiles;
-    expect(principal).toMatchObject({ id: PRINCIPAL, name: "Alice" });
+    expect(principal).toMatchObject({ id: PRINCIPAL, name: "Budget perso" });
     expect(foyer).toMatchObject({ name: "Foyer", syncFileId: null });
     expect(host.prepared).toEqual([foyer!.id]);
     expect(host.noted).toBe(foyer!.id);

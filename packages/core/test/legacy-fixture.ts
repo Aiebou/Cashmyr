@@ -113,7 +113,7 @@ export function legacyExport() {
           // Créée en « je dois », basculée en « on me doit » : sa catégorie est restée une dépense.
           id: "dx3m1v8q4hzk",
           name: "Dépannage",
-          creditor: "Alex",
+          creditor: "Un particulier",
           direction: "lent",
           principal: 150,
           paidManual: 150,

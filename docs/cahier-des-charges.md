@@ -215,7 +215,7 @@ Module `packages/core`, fonctions pures, chacune couverte par un test.
 **Épargne de précaution**
 - Constituée = somme des soldes des comptes dont `safety` est vrai.
 - Objectif = `safety.amount` en mode montant fixe, sinon `safety.months × moyenne de (needs + wants) sur les 6 derniers mois renseignés`.
-- **Capacité** = `constituée ÷ moyenne mensuelle des dépenses courantes`, affichée en mois avec une décimale, juste sous la ligne d'objectif. Exemple attendu : 1 000 € de dépenses mensuelles, objectif 3 mois soit 3 000 €, 4 500 € constitués → « Capacité actuelle : 4,5 mois de dépenses courantes ».
+- **Capacité** = `constituée ÷ moyenne mensuelle des dépenses courantes`, affichée en mois avec une décimale, juste sous la ligne d'objectif. Exemple attendu : 1 200 € de dépenses mensuelles, objectif 3 mois soit 3 600 €, 5 400 € constitués → « Capacité actuelle : 4,5 mois de dépenses courantes ».
 - Le choix des comptes qui composent le matelas se fait sur la fiche elle-même, par cases à cocher, pas dans un écran de paramètres éloigné.
 - Cette fiche est épinglée par défaut : elle ne disparaît pas du tableau de bord une fois l'objectif atteint.
 
@@ -229,7 +229,7 @@ Module `packages/core`, fonctions pures, chacune couverte par un test.
   - dépense en `bucket = "invest"` : `+ montant` ;
   - dépense en `besoin` ou `envie` : `− montant`, c'est l'objectif qui se vide quand on paie enfin l'achat prévu.
 - Échéance : afficher la date, le temps restant, et la mensualité nécessaire `(cible − avancement) ÷ mois restants`. Une échéance dépassée et non atteinte s'affiche en rouge.
-- Postes : liste ordonnée avec libellé, montant et case « réglé ». Résumé sous la jauge : « 2 postes sur 4 réglés · 600 € sur 1 000 € ».
+- Postes : liste ordonnée avec libellé, montant et case « réglé ». Résumé sous la jauge : « 2 postes sur 4 réglés · 600 € sur 1 500 € ».
 - États et filtrage du tableau de bord : un objectif y apparaît s'il n'est ni archivé, ni masqué, et s'il n'est pas atteint **ou** qu'il est épinglé. Les épinglés passent en tête.
 - L'onglet Objectifs montre tout : en cours, atteints dans leur propre section, archivés dans une liste compacte avec restauration et suppression définitive.
 
@@ -410,7 +410,7 @@ type Debt = Meta & {
 * Charge mensuelle = somme des `installmentAmount` des dettes actives, non soldées, non archivées, en direction `owe`, en mode `installments`, et dont le reste est strictement positif.
 * Total dû = somme des restes des dettes non archivées en direction `owe`.
 
-Ne raisonne pas en « nombre d'échéances réglées » dans les textes affichés : dès qu'un versement sort de l'échéancier, ce compte devient faux. Raisonne toujours en montant restant, puis convertis en nombre d'échéances restantes. La phrase attendue sous la jauge est de cette forme : « reste 1 échéance de 50 € · prochaine le 5 mars 2027 · soldée en mars 2027. »
+Ne raisonne pas en « nombre d'échéances réglées » dans les textes affichés : dès qu'un versement sort de l'échéancier, ce compte devient faux. Raisonne toujours en montant restant, puis convertis en nombre d'échéances restantes. La phrase attendue sous la jauge est de cette forme : « reste 1 échéance de 75 € · prochaine le 5 mars 2027 · soldée en mars 2027. »
 
 **Versement ponctuel**
 
@@ -485,7 +485,7 @@ Ajoute ces cas à la suite de tests, tous dans `packages/core` :
 
 * montant total déduit du nombre et du montant des échéances lorsque le principal n'est pas saisi ;
 * montant réglé combinant `paidManual` et opérations rattachées, dans les deux directions ;
-* versement ponctuel qui laisse une dernière échéance réduite — 1 000 € en 5 × 200 €, 600 € réglés, versement de 350 € : il doit rester une seule échéance, de 50 € ;
+* versement ponctuel qui laisse une dernière échéance réduite — 1 500 € en 5 × 300 €, 900 € réglés, versement de 525 € : il doit rester une seule échéance, de 75 € ;
 * versement hors budget qui incrémente `paidManual` sans créer d'opération ;
 * échéancier d'une dette au 31 sur un mois de 28 jours ;
 * prochaine échéance en retard, et à moins de sept jours ;

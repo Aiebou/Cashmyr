@@ -242,7 +242,7 @@ describe("récurrences", () => {
     const loan = createRecord<Debt>(
       "debt-1",
       {
-        name: "Prêt auto", creditor: "", direction: "owe", principal: 0, paidManual: 0, mode: "installments", installmentAmount: 20_000,
+        name: "Prêt auto", creditor: "", direction: "owe", principal: 0, paidManual: 0, mode: "installments", installmentAmount: 30_000,
         installmentCount: 5, startDate: "2026-10-10", dayOfMonth: 10, categoryId: cat("Crédit"), accountId: courant.id, recurrenceId: "rec-debt",
         hidden: false, pinned: false, settled: false, settledAt: null, archived: false, position: 1, color: 3,
       },
@@ -250,7 +250,7 @@ describe("récurrences", () => {
     );
     const rec = createRecord<Recurrence>(
       "rec-debt",
-      { label: "Échéance — Prêt auto", amount: 20_000, type: "out", categoryId: cat("Crédit"), accountId: courant.id, debtId: "debt-1", dayOfMonth: 10, startMonth: "2026-10", endMonth: "2027-02", active: true },
+      { label: "Échéance — Prêt auto", amount: 30_000, type: "out", categoryId: cat("Crédit"), accountId: courant.id, debtId: "debt-1", dayOfMonth: 10, startMonth: "2026-10", endMonth: "2027-02", active: true },
       1,
     );
     const { repository } = await openSettings();

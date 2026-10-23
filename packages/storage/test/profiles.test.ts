@@ -75,7 +75,7 @@ describe("registre des profils", () => {
   });
 
   it("nom proposé pour le fichier de chaque profil", () => {
-    expect(syncFileNameFor({ id: PRINCIPAL, name: "Alice" })).toBe("finances-sync.json");
+    expect(syncFileNameFor({ id: PRINCIPAL, name: "Budget perso" })).toBe("finances-sync.json");
     expect(syncFileNameFor({ id: FOYER, name: "Foyer Élodie & Marc" })).toBe("finances-sync-foyer-elodie-marc.json");
     expect(syncFileNameFor({ id: FOYER, name: "€ ! ?" })).toBe("finances-sync-0b7e2f4c.json");
     expect(syncFileNameFor({ id: FOYER, name: "a".repeat(60) })).toBe(`finances-sync-${"a".repeat(40)}.json`);

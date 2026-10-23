@@ -29,13 +29,13 @@ describe("avancement d'un objectif", () => {
   });
 
   it("mode opérations rattachées : versements, retrait, puis dépense finale qui vide l'objectif", () => {
-    const g = goal("Voyage Laos", { target: eur(2000) });
+    const g = goal("Voyage", { target: eur(2000) });
     const tagged = { goalId: g.id };
     const saving = [
       transfer("2026-05-01", eur(1000), accs.courant.id, accs.livret.id, tagged),
       transfer("2026-06-01", eur(1000), accs.courant.id, accs.livret.id, tagged),
       transfer("2026-07-01", eur(200), accs.livret.id, accs.courant.id, tagged),
-      income("2026-07-15", eur(150), cats.freelance.id, accs.courant.id, tagged),
+      income("2026-07-15", eur(150), cats.secondaire.id, accs.courant.id, tagged),
       expense("2026-07-20", eur(50), cats.pea.id, accs.courant.id, tagged),
       transfer("2026-07-21", eur(999), accs.courant.id, accs.livret.id),
     ];

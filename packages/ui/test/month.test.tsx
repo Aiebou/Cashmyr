@@ -52,7 +52,7 @@ describe("camemberts du mois", () => {
       app.repository.apply({
         operations: [
           op("in-1", 200_000, "in", "Salaire"),
-          op("in-2", 30_000, "in", "Missions freelance"),
+          op("in-2", 30_000, "in", "Primes"),
           op("out-1", 90_000, "out", "Loyer et charges"),
           op("out-2", 30_000, "out", "Courses"),
           op("out-3", 12_000, "out", "Transport"),
@@ -90,7 +90,7 @@ describe("camemberts du mois", () => {
     expect(plain(within(card("Dépenses par poste")).getByText("Autres (2 postes)").closest("li")!.textContent)).toContain(
       "Vêtements150,00 €Transport120,00 €",
     );
-    expect(rows("Revenus par source")).toEqual(["Salaire2 000,00 €87 %", "Missions freelance300,00 €13 %"]);
+    expect(rows("Revenus par source")).toEqual(["Salaire2 000,00 €87 %", "Primes300,00 €13 %"]);
   });
 
   it("se masquent pour cet appareil seulement, et reviennent", async () => {
