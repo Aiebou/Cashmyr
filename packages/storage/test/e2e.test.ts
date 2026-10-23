@@ -130,7 +130,7 @@ describe("de bout en bout : trois appareils divergents se retrouvent", () => {
       principal: 0,
       paidManual: 0,
       mode: "installments",
-      installmentAmount: 20_000,
+      installmentAmount: 30_000,
       installmentCount: 5,
       startDate: "2026-10-10",
       dayOfMonth: 10,
@@ -150,7 +150,7 @@ describe("de bout en bout : trois appareils divergents se retrouvent", () => {
       setPreference(phone.repo.data.preferences, "splits", { besoin: 6000, envie: 2000, invest: 2000 }, clock.t),
     );
     await phone.repo.apply(
-      recordDebtPayment(phone.repo.data, loan.id, { amount: 35_000, date: TODAY, inBudget: true }, clock.t, "op-versement"),
+      recordDebtPayment(phone.repo.data, loan.id, { amount: 52_500, date: TODAY, inBudget: true }, clock.t, "op-versement"),
     );
     clock.advance(MIN);
     // Le bureau modifie aussi Z, plus tard que Chrome : sa version l'emporte en entier.
@@ -175,7 +175,7 @@ describe("de bout en bout : trois appareils divergents se retrouvent", () => {
     expect(find(data, "op-y")?.deletedAt).not.toBeNull();
     expect(find(data, "op-z")).toMatchObject({ amount: 10_500, note: "" });
     expect(find(data, "op-laptop")).toBeDefined();
-    expect(find(data, "op-versement")).toMatchObject({ debtId: "debt-auto", amount: 35_000, type: "out" });
+    expect(find(data, "op-versement")).toMatchObject({ debtId: "debt-auto", amount: 52_500, type: "out" });
     expect(data.collections.debts.map((d) => d.id)).toEqual(["debt-auto"]);
     expect(data.preferences.theme).toBe("dark");
     expect(data.preferences.splits).toEqual({ besoin: 6000, envie: 2000, invest: 2000 });

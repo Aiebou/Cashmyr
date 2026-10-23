@@ -470,27 +470,7 @@ Aucune fonctionnalité n'est en cours. Restent, du plus pressé au moins pressé
    PWA. Faire ces essais avec la recette d'essai isolé du §7, jamais sur les vraies données.
 2. **Vérifier sur un vrai iPhone** ce que fait « Enregistrer dans Fichiers » face à un fichier de même nom. C'est
    encore au futur dans `architecture.md` (§6, iOS) ; le README n'en donne qu'une mise en garde générale.
-3. **Remettre à jour `architecture.md` et le README**, qui ont pris du retard sur le code (relevé du 23/10/2026) :
-   - `architecture.md` :
-     - §2 : il manque `tour?: { seen: string[] }` au type `DeviceState`.
-     - §8 : une ligne vide coupe le tableau des décisions entre la 18 et la 19, et GitHub affiche les décisions 19
-       à 40 en texte brut.
-     - §9, Démarrage : « dès qu'il y a deux profils, le nom du profil ouvert s'y affiche » est dépassé depuis la
-       décision 63.
-     - Décision 42 : « propre à chaque appareil » est précisé par la décision 59 (« propre à chaque profil sur
-       l'appareil »), sans renvoi.
-     - §1 : l'arborescence oublie `test:rust`, plusieurs fichiers de `core` (`backup.ts`, `dataset.ts`, `names.ts`,
-       `usage.ts`) et `storage/src/latch.ts`. Côté `ui`, la liste est périmée : `components/charts/`, `lib/`,
-       `Shell.tsx`, `boot.tsx`, et pas d'écran « Sync ». Le résumé du `.gitignore` est incomplet. La base
-       `/Cashmyr/` ne vaut qu'en build et en preview.
-     - §8 : quelques notes restent au futur alors que c'est fait (« l'interface arrive à l'étape 4 », « l'updater
-       arrive avec la première Release », « une huitième section »).
-   - README :
-     - le paragraphe « Profils » dit que le nom du profil apparaît à partir de deux profils (dépassé par la
-       décision 63) et ne parle pas de la tuile « + Profil » ;
-     - les prérequis ne mentionnent pas Corepack ;
-     - le `.msi` n'est pas cité parmi les installateurs.
-4. **« Compte professionnel » ou « profil professionnel »** : reporté le 26/09/2026, à rediscuter. Toute piste qui
+3. **« Compte professionnel » ou « profil professionnel »** : reporté le 26/09/2026, à rediscuter. Toute piste qui
    touche aux calculs ou au format passe d'abord par des questions chiffrées.
 
 ## 7. Pièges rencontrés

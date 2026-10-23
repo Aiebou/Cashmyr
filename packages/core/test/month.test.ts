@@ -8,7 +8,7 @@ describe("agrégats d'un mois", () => {
   const data = build({
     operations: [
       income(`${M}-01`, eur(3000), cats.salaire.id, accs.courant.id),
-      income(`${M}-12`, eur(500), cats.freelance.id, accs.courant.id),
+      income(`${M}-12`, eur(500), cats.secondaire.id, accs.courant.id),
       expense(`${M}-05`, eur(800), cats.loyer.id, accs.courant.id),
       expense(`${M}-06`, eur(200), cats.courses.id, accs.courant.id),
       expense(`${M}-07`, eur(150), cats.resto.id, accs.courant.id),
@@ -26,7 +26,7 @@ describe("agrégats d'un mois", () => {
     expect(a.income).toBe(eur(3500));
     expect(a.incomeBySource).toEqual([
       { categoryId: cats.salaire.id, amount: eur(3000) },
-      { categoryId: cats.freelance.id, amount: eur(500) },
+      { categoryId: cats.secondaire.id, amount: eur(500) },
     ]);
   });
 

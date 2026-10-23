@@ -38,18 +38,18 @@ describe("tags (décisions 47 et 48)", () => {
   it("Opérations : filtre par tag, entrées, sorties et solde du mois ; les transferts listés sans compter", async () => {
     const user = userEvent.setup();
     const app = await renderApp();
-    await addOperation(app, "Dépense", "21", "Propfirm FTMO");
-    await addOperation(app, "Revenu", "19,99", "Propfirm FTMO");
-    await addOperation(app, "Transfert", "100", "Propfirm FTMO");
+    await addOperation(app, "Dépense", "21", "Projet Alpha");
+    await addOperation(app, "Revenu", "19,99", "Projet Alpha");
+    await addOperation(app, "Transfert", "100", "Projet Alpha");
     await addOperation(app, "Dépense", "5", "Autre projet");
     act(() => app.actions.setTab("operations"));
-    await user.selectOptions(screen.getByLabelText("Tag"), "Propfirm FTMO");
+    await user.selectOptions(screen.getByLabelText("Tag"), "Projet Alpha");
     // Le signe moins dépend de la version d'ICU : trait d'union ou signe moins.
     expect(plain(screen.getByText(/opérations sur/).textContent)).toMatch(
       /^3 opérations sur 4 · Entrées 19,99 € · Sorties 21,00 € · Solde [−-]1,01 € · 1 transfert non compté$/,
     );
     // Le tag s'affiche dans la liste.
-    expect(screen.getAllByText("Propfirm FTMO", { selector: "span" }).length).toBeGreaterThanOrEqual(3);
+    expect(screen.getAllByText("Projet Alpha", { selector: "span" }).length).toBeGreaterThanOrEqual(3);
   });
 
   it("Paramètres : renommer garde les opérations ; supprimer les laisse intactes, sans afficher le tag", async () => {
@@ -80,7 +80,7 @@ describe("tags (décisions 47 et 48)", () => {
     const app = await renderApp();
     act(() => app.actions.openModal({ kind: "recurrence" }));
     const dialog = await screen.findByRole("dialog", { name: "Nouvelle récurrence" });
-    await user.type(within(dialog).getByLabelText("Libellé"), "Abonnement Anthropic");
+    await user.type(within(dialog).getByLabelText("Libellé"), "Abonnement en ligne");
     await user.type(within(dialog).getByLabelText("Montant"), "21");
     await user.selectOptions(within(dialog).getByLabelText("Catégorie"), "Abonnements");
     await user.type(within(dialog).getByLabelText("Tag"), "Société A");

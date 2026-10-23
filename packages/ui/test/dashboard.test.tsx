@@ -25,7 +25,7 @@ const loan = (extra: Partial<Debt> = {}): Debt =>
       principal: 0,
       paidManual: 0,
       mode: "installments",
-      installmentAmount: 20_000,
+      installmentAmount: 30_000,
       installmentCount: 5,
       startDate: "2026-07-10",
       dayOfMonth: 10,
@@ -71,18 +71,18 @@ describe("bandeau du tableau de bord", () => {
       repository.apply({
         accounts: [{ ...accounts.livret, declaredValue: 310_000, declaredAt: TODAY, updatedAt: 2 }],
         debts: [loan()],
-        operations: [op("op-1", "2026-07-10", 20_000, "out", { categoryId: cat("Crédit"), accountId: accounts.courant.id, debtId: "debt-1" })],
+        operations: [op("op-1", "2026-07-10", 30_000, "out", { categoryId: cat("Crédit"), accountId: accounts.courant.id, debtId: "debt-1" })],
       }),
     );
     const banner = bannerSection("Total de mes comptes (valeurs déclarées) aujourd'hui");
-    // 1 250 − 200 sur le courant, 3 100 déclarés sur le livret.
-    expect(within(banner).getByText(/^4\s150,00\s€$/)).toBeTruthy();
+    // 1 250 − 300 sur le courant, 3 100 déclarés sur le livret.
+    expect(within(banner).getByText(/^4\s050,00\s€$/)).toBeTruthy();
     const legend = within(banner).getAllByRole("listitem").map((li) => li.textContent);
     expect(legend[1]).toMatch(/^Livret A3\s100,00\s€injecté 3\s000,00\s€$/);
     expect(banner.textContent).toMatch(/Valeur injectée \(hors comptes courants\) : 3\s000,00\s€\./);
     expect(banner.textContent).not.toMatch(/sans valeur déclarée/);
-    // 800 € restent dus.
-    expect(banner.textContent).toMatch(/Dettes restantes : 800,00\s€\. Patrimoine net : 3\s350,00\s€\./);
+    // 1 200 € restent dus.
+    expect(banner.textContent).toMatch(/Dettes restantes : 1\s200,00\s€\. Patrimoine net : 2\s850,00\s€\./);
   });
 
   it("le total se choisit, propre à l'appareil : rien ne part en synchronisation", async () => {
@@ -163,20 +163,20 @@ describe("graphiques et textes", () => {
     expect(niceTicks(0, 0)).toEqual([0]);
   });
 
-  it("phrase de dette : « reste 1 échéance de 50 € · prochaine le 10 novembre 2026 · soldée en novembre 2026. »", () => {
-    // 1 000 € en 5 × 200 € de juillet à novembre, 950 € réglés.
-    const d = loan({ paidManual: 95_000 });
+  it("phrase de dette : « reste 1 échéance de 75 € · prochaine le 10 novembre 2026 · soldée en novembre 2026. »", () => {
+    // 1 500 € en 5 × 300 € de juillet à novembre, 1 425 € réglés.
+    const d = loan({ paidManual: 142_500 });
     const data = applyChanges(emptyDataset(), { debts: [d] });
     const text = debtSentence(debtView(data, d, TODAY, TODAY), TODAY).replace(/ | /g, " ");
-    expect(text).toBe("reste 1 échéance de 50,00 € · prochaine le 10 novembre 2026 · soldée en novembre 2026.");
+    expect(text).toBe("reste 1 échéance de 75,00 € · prochaine le 10 novembre 2026 · soldée en novembre 2026.");
   });
 
   it("phrase de dette : échéance en retard, dernière réduite", () => {
-    const d = loan({ paidManual: 15_000 });
+    const d = loan({ paidManual: 22_500 });
     const data = applyChanges(emptyDataset(), { debts: [d] });
     const text = debtSentence(debtView(data, d, TODAY, TODAY), TODAY).replace(/ | /g, " ");
     expect(text).toBe(
-      "reste 5 échéances, 4 de 200,00 € puis 50,00 € · en retard depuis le 10 juillet 2026 · soldée en novembre 2026.",
+      "reste 5 échéances, 4 de 300,00 € puis 75,00 € · en retard depuis le 10 juillet 2026 · soldée en novembre 2026.",
     );
   });
 });

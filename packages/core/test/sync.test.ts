@@ -20,7 +20,7 @@ import { DAY, eur, expense, NOW, world } from "./fixtures";
 
 const A = { id: "device-A", label: "Mac" };
 const B = { id: "device-B", label: "iPhone" };
-const C = { id: "device-C", label: "Vieux PC" };
+const C = { id: "device-C", label: "Appareil C" };
 const HOUR = 3_600_000;
 const T0 = NOW;
 

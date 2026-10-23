@@ -58,8 +58,8 @@ const launch = (data: Dataset, today: string, now = NOW) =>
 
 describe("montant total", () => {
   it("déduit du nombre et du montant des échéances lorsque le principal n'est pas saisi", () => {
-    expect(debtTotal(loan())).toBe(eur(1000));
-    expect(debtTotal(loan({ principal: eur(950) }))).toBe(eur(950));
+    expect(debtTotal(loan())).toBe(eur(1500));
+    expect(debtTotal(loan({ principal: eur(1400) }))).toBe(eur(1400));
     expect(debtTotal(loan({ mode: "free", installmentAmount: 0, installmentCount: 0 }))).toBe(0);
     expect(debtTotal(loan({ mode: "free", principal: eur(300) }))).toBe(eur(300));
   });
@@ -71,16 +71,16 @@ describe("montant réglé", () => {
     const data = build({
       debts: [d],
       operations: [
-        pay(d, "2026-09-01", 200),
+        pay(d, "2026-09-01", 300),
         transfer("2026-09-02", eur(50), courant.id, accs.livret.id, { debtId: d.id }),
         income("2026-09-03", eur(30), cats.salaire.id, courant.id, { debtId: d.id }),
         expense("2026-09-04", eur(999), credit.id, courant.id),
-        pay(d, "2026-09-30", 400),
+        pay(d, "2026-09-30", 600),
       ],
     });
-    expect(debtPaid(data, d, TODAY)).toBe(eur(100 + 200 + 50 - 30));
+    expect(debtPaid(data, d, TODAY)).toBe(eur(100 + 300 + 50 - 30));
     // Un versement daté plus tard ne compte qu'à sa date.
-    expect(debtPaid(data, d, "2026-09-30")).toBe(eur(720));
+    expect(debtPaid(data, d, "2026-09-30")).toBe(eur(1020));
   });
 
   it("« on me doit » : paidManual + revenus − tout le reste", () => {
@@ -88,27 +88,27 @@ describe("montant réglé", () => {
     const data = build({
       debts: [d],
       operations: [
-        income("2026-09-01", eur(200), repaid.id, courant.id, { debtId: d.id }),
+        income("2026-09-01", eur(300), repaid.id, courant.id, { debtId: d.id }),
         expense("2026-09-02", eur(50), cats.resto.id, courant.id, { debtId: d.id }),
         transfer("2026-09-03", eur(20), courant.id, accs.livret.id, { debtId: d.id }),
       ],
     });
-    expect(debtPaid(data, d, TODAY)).toBe(eur(100 + 200 - 50 - 20));
+    expect(debtPaid(data, d, TODAY)).toBe(eur(100 + 300 - 50 - 20));
   });
 });
 
 describe("versement ponctuel", () => {
-  // 1 000 € en 5 × 200 € (juillet → novembre), 600 € réglés.
+  // 1 500 € en 5 × 300 € (juillet → novembre), 900 € réglés.
   const d = loan({ startDate: "2026-07-10" });
-  const before = build({ debts: [d], operations: [pay(d, "2026-07-10", 200), pay(d, "2026-08-10", 200), pay(d, "2026-09-10", 200)] });
+  const before = build({ debts: [d], operations: [pay(d, "2026-07-10", 300), pay(d, "2026-08-10", 300), pay(d, "2026-09-10", 300)] });
 
-  it("dans le budget : crée une vraie dépense, et laisse une dernière échéance réduite de 50 €", () => {
-    const changes = recordDebtPayment(before, d.id, { amount: eur(350), date: TODAY, inBudget: true }, NOW, "op-versement");
+  it("dans le budget : crée une vraie dépense, et laisse une dernière échéance réduite de 75 €", () => {
+    const changes = recordDebtPayment(before, d.id, { amount: eur(525), date: TODAY, inBudget: true }, NOW, "op-versement");
     expect(changes.operations).toEqual([
       expect.objectContaining({
         id: "op-versement",
         type: "out",
-        amount: eur(350),
+        amount: eur(525),
         date: TODAY,
         note: "Versement — Prêt auto",
         categoryId: credit.id,
@@ -118,20 +118,20 @@ describe("versement ponctuel", () => {
     ]);
     const after = applyChanges(before, changes);
     const view = debtView(after, d, TODAY, TODAY);
-    expect(view).toMatchObject({ paid: eur(950), remaining: eur(50), installmentsLeft: 1, lastAmount: eur(50), covered: 4 });
-    expect(view.next).toMatchObject({ date: "2026-11-10", amount: eur(50), status: "upcoming" });
+    expect(view).toMatchObject({ paid: eur(1425), remaining: eur(75), installmentsLeft: 1, lastAmount: eur(75), covered: 4 });
+    expect(view.next).toMatchObject({ date: "2026-11-10", amount: eur(75), status: "upcoming" });
     expect(view.payoffDate).toBe("2026-11-10");
     // L'argent a quitté le compte : le budget du mois le reflète.
-    expect(monthAggregates(after, "2026-09").needs).toBe(eur(200 + 350));
+    expect(monthAggregates(after, "2026-09").needs).toBe(eur(300 + 525));
   });
 
   it("hors budget : incrémente paidManual sans créer d'opération", () => {
-    const changes = recordDebtPayment(before, d.id, { amount: eur(350), date: TODAY, inBudget: false }, NOW);
+    const changes = recordDebtPayment(before, d.id, { amount: eur(525), date: TODAY, inBudget: false }, NOW);
     expect(changes.operations).toBeUndefined();
-    expect(changes.debts).toEqual([expect.objectContaining({ id: d.id, paidManual: eur(350) })]);
+    expect(changes.debts).toEqual([expect.objectContaining({ id: d.id, paidManual: eur(525) })]);
     const after = applyChanges(before, changes);
-    expect(debtView(after, after.collections.debts[0]!, TODAY, TODAY).remaining).toBe(eur(50));
-    expect(monthAggregates(after, "2026-09").needs).toBe(eur(200));
+    expect(debtView(after, after.collections.debts[0]!, TODAY, TODAY).remaining).toBe(eur(75));
+    expect(monthAggregates(after, "2026-09").needs).toBe(eur(300));
   });
 
   it("« on me doit » : un remboursement reçu est un revenu", () => {
@@ -195,7 +195,7 @@ describe("prochaine échéance", () => {
 
   it("avance avec les paiements, même hors échéancier", () => {
     const d = loan({ startDate: "2026-09-10" });
-    const data = build({ debts: [d], operations: [pay(d, "2026-09-10", 200), pay(d, "2026-09-15", 200)] });
+    const data = build({ debts: [d], operations: [pay(d, "2026-09-10", 300), pay(d, "2026-09-15", 300)] });
     expect(debtView(data, d, TODAY, TODAY).next).toMatchObject({ date: "2026-11-10", index: 2 });
   });
 
@@ -204,7 +204,7 @@ describe("prochaine échéance", () => {
     // Nouvel emprunt de 300 € sur la même dette : un revenu rattaché retranche du réglé.
     const data = build({ debts: [d], operations: [income("2026-09-20", eur(300), cats.salaire.id, courant.id, { debtId: d.id })] });
     const view = debtView(data, d, TODAY, TODAY);
-    expect(view).toMatchObject({ remaining: eur(1300), installmentsLeft: 7, uncovered: eur(300), payoffDate: "2027-02-10" });
+    expect(view).toMatchObject({ remaining: eur(1800), installmentsLeft: 6, uncovered: eur(300), payoffDate: "2027-02-10" });
     expect(view.next).toMatchObject({ index: 0, date: "2026-10-10" });
   });
 });
@@ -215,19 +215,19 @@ describe("charge mensuelle, total dû, patrimoine net", () => {
   const archived = loan({ name: "Archivé", archived: true });
   const lent = loan({ name: "Prêté", direction: "lent", categoryId: repaid.id });
   const free = loan({ name: "Libre", mode: "free", principal: eur(900), installmentAmount: eur(300) });
-  const paidOff = loan({ name: "Remboursé", paidManual: eur(1000) });
+  const paidOff = loan({ name: "Remboursé", paidManual: eur(1500) });
   const data = build({ debts: [active, settled, archived, lent, free, paidOff] });
 
   it("charge mensuelle : sans les dettes soldées, archivées, prêtées, libres ou déjà remboursées", () => {
-    expect(monthlyDebtLoad(data, TODAY)).toBe(eur(200));
+    expect(monthlyDebtLoad(data, TODAY)).toBe(eur(300));
   });
 
   it("total dû : restes des dettes « je dois » ni archivées ni soldées", () => {
-    expect(totalOwed(data, TODAY)).toBe(eur(1000 + 900));
+    expect(totalOwed(data, TODAY)).toBe(eur(1500 + 900));
   });
 
   it("patrimoine net = total des comptes − total dû", () => {
-    expect(netWorth(data, TODAY, TODAY)).toBe(eur(5000 - 1900));
+    expect(netWorth(data, TODAY, TODAY)).toBe(eur(5000 - 2400));
   });
 
   it("bandeau : reste par dette et charge rapportée au revenu moyen", () => {
@@ -236,11 +236,11 @@ describe("charge mensuelle, total dû, patrimoine net", () => {
     });
     const o = debtsOverview({ ...withIncome, preferences: { ...withIncome.preferences, averageWindow: 3 } }, TODAY, TODAY);
     expect(o.byDebt.map((b) => [b.debt.name, b.remaining])).toEqual([
-      ["Actif", eur(1000)],
+      ["Actif", eur(1500)],
       ["Libre", eur(900)],
     ]);
-    expect(o).toMatchObject({ totalOwed: eur(1900), monthlyLoad: eur(200), averageIncome: eur(2000) });
-    expect(o.loadRatio).toBeCloseTo(0.1, 10);
+    expect(o).toMatchObject({ totalOwed: eur(2400), monthlyLoad: eur(300), averageIncome: eur(2000) });
+    expect(o.loadRatio).toBeCloseTo(0.15, 10);
   });
 });
 
@@ -266,15 +266,15 @@ describe("tableau de bord", () => {
   });
 
   it("propose « marquer soldée » quand il ne reste rien", () => {
-    const d = loan({ paidManual: eur(1000) });
+    const d = loan({ paidManual: eur(1500) });
     expect(debtView(build({ debts: [d] }), d, TODAY, TODAY).suggestSettled).toBe(true);
   });
 });
 
 describe("prélèvement automatique", () => {
-  // 5 × 200 € de juillet à novembre ; juillet et août réglés.
+  // 5 × 300 € de juillet à novembre ; juillet et août réglés.
   const d = loan({ startDate: "2026-07-10" });
-  const base = build({ debts: [d], operations: [pay(d, "2026-07-10", 200), pay(d, "2026-08-10", 200)] });
+  const base = build({ debts: [d], operations: [pay(d, "2026-07-10", 300), pay(d, "2026-08-10", 300)] });
 
   it("début au mois de la prochaine échéance, fin au mois de la dernière, debtId propagé", () => {
     const changes = createDebtRecurrence(base, d.id, TODAY, NOW);
@@ -284,7 +284,7 @@ describe("prélèvement automatique", () => {
       startMonth: "2026-09",
       endMonth: "2026-11",
       dayOfMonth: 10,
-      amount: eur(200),
+      amount: eur(300),
       type: "out",
       categoryId: credit.id,
       accountId: courant.id,
@@ -295,9 +295,9 @@ describe("prélèvement automatique", () => {
 
     let data = launch(applyChanges(base, changes), TODAY);
     const generated = data.collections.operations.filter((o) => o.recurrenceId === rec!.id);
-    expect(generated.map((o) => [o.date, o.amount, o.debtId])).toEqual([["2026-09-10", eur(200), d.id]]);
+    expect(generated.map((o) => [o.date, o.amount, o.debtId])).toEqual([["2026-09-10", eur(300), d.id]]);
     // Les occurrences font baisser le reste dû.
-    expect(debtView(data, d, TODAY, TODAY).remaining).toBe(eur(400));
+    expect(debtView(data, d, TODAY, TODAY).remaining).toBe(eur(600));
     data = launch(data, "2026-12-31");
     expect(debtView(data, d, "2026-12-31", "2026-12-31")).toMatchObject({ remaining: 0, suggestSettled: true });
     expect(data.collections.operations.filter((o) => o.debtId === d.id)).toHaveLength(5);
@@ -309,7 +309,7 @@ describe("prélèvement automatique", () => {
   });
 
   it("refusé sans catégorie ni compte, en mode libre, ou s'il ne reste rien", () => {
-    const cases = [debt(), loan({ mode: "free", principal: eur(100) }), loan({ paidManual: eur(1000) })];
+    const cases = [debt(), loan({ mode: "free", principal: eur(100) }), loan({ paidManual: eur(1500) })];
     for (const c of cases) expect(() => createDebtRecurrence(build({ debts: [c] }), c.id, TODAY, NOW)).toThrow(DebtActionError);
   });
 
@@ -348,14 +348,14 @@ describe("prélèvement automatique", () => {
 });
 
 describe("prélèvement et versement ponctuel : les prélèvements suivent l'échéancier", () => {
-  // 1 000 € en 5 × 200 € : 10/10, 10/11, 10/12, 10/01, 10/02.
+  // 1 500 € en 5 × 300 € : 10/10, 10/11, 10/12, 10/01, 10/02.
   const d = loan();
   const start = build({ debts: [d] });
   const withRec = applyChanges(start, createDebtRecurrence(start, d.id, TODAY, NOW));
   const afterOctober = launch(withRec, "2026-10-10");
   const prepaid = applyChanges(
     afterOctober,
-    recordDebtPayment(afterOctober, d.id, { amount: eur(350), date: "2026-10-20", inBudget: true }, NOW, "prepay"),
+    recordDebtPayment(afterOctober, d.id, { amount: eur(525), date: "2026-10-20", inBudget: true }, NOW, "prepay"),
   );
   const debits = (data: Dataset) =>
     data.collections.operations
@@ -363,15 +363,15 @@ describe("prélèvement et versement ponctuel : les prélèvements suivent l'éc
       .map((o) => [o.date, o.amount])
       .sort();
 
-  it("rien le 10/11, 200 € le 10/12, 200 € le 10/01, 50 € le 10/02 : 1 000 € tout juste", () => {
+  it("rien le 10/11, 300 € le 10/12, 300 € le 10/01, 75 € le 10/02 : 1 500 € tout juste", () => {
     const end = launch(prepaid, "2027-02-28");
     expect(debits(end)).toEqual([
-      ["2026-10-10", eur(200)],
-      ["2026-12-10", eur(200)],
-      ["2027-01-10", eur(200)],
-      ["2027-02-10", eur(50)],
+      ["2026-10-10", eur(300)],
+      ["2026-12-10", eur(300)],
+      ["2027-01-10", eur(300)],
+      ["2027-02-10", eur(75)],
     ]);
-    expect(debtView(end, d, "2027-02-28", "2027-02-28")).toMatchObject({ paid: eur(1000), remaining: 0 });
+    expect(debtView(end, d, "2027-02-28", "2027-02-28")).toMatchObject({ paid: eur(1500), remaining: 0 });
   });
 
   it("même résultat en lançant l'application chaque mois qu'en rattrapant d'un coup", () => {
@@ -382,11 +382,11 @@ describe("prélèvement et versement ponctuel : les prélèvements suivent l'éc
 
   it("la fiche et les prélèvements prévus disent la même chose", () => {
     const view = debtView(prepaid, d, "2026-10-21", "2026-10-21");
-    expect(view.next).toMatchObject({ date: "2026-12-10", amount: eur(200) });
+    expect(view.next).toMatchObject({ date: "2026-12-10", amount: eur(300) });
     const planned = (month: string) => plannedOccurrences(prepaid, month, "2026-10-21").map((p) => [p.date, p.amount]);
     expect(planned("2026-11")).toEqual([]);
-    expect(planned("2026-12")).toEqual([["2026-12-10", eur(200)]]);
-    expect(planned("2027-02")).toEqual([["2027-02-10", eur(50)]]);
+    expect(planned("2026-12")).toEqual([["2026-12-10", eur(300)]]);
+    expect(planned("2027-02")).toEqual([["2027-02-10", eur(75)]]);
   });
 
   it("rien n'est prélevé sur une dette marquée soldée", () => {
@@ -395,13 +395,13 @@ describe("prélèvement et versement ponctuel : les prélèvements suivent l'éc
   });
 
   it("en mode libre, chaque prélèvement est plafonné au reste dû", () => {
-    const free = loan({ mode: "free", principal: eur(500), installmentAmount: 0, installmentCount: 0 });
+    const free = loan({ mode: "free", principal: eur(700), installmentAmount: 0, installmentCount: 0 });
     const rec = {
       id: "rec-free",
       updatedAt: 1,
       deletedAt: null,
       label: "Remboursement",
-      amount: eur(200),
+      amount: eur(300),
       type: "out" as const,
       categoryId: credit.id,
       accountId: courant.id,
@@ -413,8 +413,8 @@ describe("prélèvement et versement ponctuel : les prélèvements suivent l'éc
     };
     const data = launch(build({ debts: [free], recurrences: [rec] }), TODAY);
     expect(debits(data)).toEqual([
-      ["2026-06-05", eur(200)],
-      ["2026-07-05", eur(200)],
+      ["2026-06-05", eur(300)],
+      ["2026-07-05", eur(300)],
       ["2026-08-05", eur(100)],
     ]);
   });
@@ -428,7 +428,7 @@ describe("intégrité", () => {
     expect(validateDataset(wrongKind).join()).toMatch(/attend une catégorie « in »/);
     const noSchedule = build({ debts: [loan({ installmentAmount: 0 })] });
     expect(validateDataset(noSchedule).join()).toMatch(/un échéancier exige/);
-    const tooBig = build({ debts: [loan({ principal: eur(1200) })] });
+    const tooBig = build({ debts: [loan({ principal: eur(1800) })] });
     expect(validateDataset(tooBig).join()).toMatch(/dépasse ce que couvrent les échéances/);
     const orphan = build({ operations: [expense(TODAY, eur(1), credit.id, courant.id, { debtId: "absente" })] });
     expect(validateDataset(orphan).join()).toMatch(/debtId : référence introuvable/);
@@ -445,13 +445,13 @@ describe("intégrité", () => {
 describe("calcul automatique de l'échéancier (décision 41)", () => {
   it("montant par échéance : total ÷ nombre, au centime supérieur", () => {
     expect(completeSchedule("installment", { total: 200_000, count: 5 })).toBe(40_000);
-    // 1 000 € en 3 : 333,34 €, la dernière échéance réduite à 333,32 € par l'échéancier.
-    expect(completeSchedule("installment", { total: 100_000, count: 3 })).toBe(33_334);
+    // 1 600 € en 3 : 533,34 €, la dernière échéance réduite à 533,32 € par l'échéancier.
+    expect(completeSchedule("installment", { total: 160_000, count: 3 })).toBe(53_334);
   });
 
   it("nombre d'échéances : total ÷ montant, à l'entier supérieur", () => {
     expect(completeSchedule("count", { total: 123_000, installment: 12_300 })).toBe(10);
-    expect(completeSchedule("count", { total: 100_000, installment: 30_000 })).toBe(4);
+    expect(completeSchedule("count", { total: 160_000, installment: 50_000 })).toBe(4);
   });
 
   it("montant total : montant × nombre", () => {
@@ -459,20 +459,20 @@ describe("calcul automatique de l'échéancier (décision 41)", () => {
   });
 
   it("le total ne dépasse jamais ce que couvrent les échéances, et la dernière est réduite", () => {
-    const debt = loan({ principal: 100_000, installmentAmount: completeSchedule("installment", { total: 100_000, count: 3 })!, installmentCount: 3 });
+    const debt = loan({ principal: 160_000, installmentAmount: completeSchedule("installment", { total: 160_000, count: 3 })!, installmentCount: 3 });
     expect(validateDataset(build({ debts: [debt] }))).toEqual([]);
     const view = debtView(build({ debts: [debt] }), debt, TODAY, TODAY);
     expect(view.installmentsLeft).toBe(3);
-    expect(view.lastAmount).toBe(33_332);
+    expect(view.lastAmount).toBe(53_332);
 
-    const byAmount = loan({ principal: 100_000, installmentAmount: 30_000, installmentCount: completeSchedule("count", { total: 100_000, installment: 30_000 })! });
+    const byAmount = loan({ principal: 160_000, installmentAmount: 50_000, installmentCount: completeSchedule("count", { total: 160_000, installment: 50_000 })! });
     expect(debtView(build({ debts: [byAmount] }), byAmount, TODAY, TODAY).lastAmount).toBe(10_000);
   });
 
   it("rien quand le calcul n'a pas de sens", () => {
-    expect(completeSchedule("installment", { total: 100_000, count: null })).toBeNull();
+    expect(completeSchedule("installment", { total: 160_000, count: null })).toBeNull();
     expect(completeSchedule("installment", { total: 0, count: 3 })).toBeNull();
-    expect(completeSchedule("count", { total: 100_000, installment: 0 })).toBeNull();
+    expect(completeSchedule("count", { total: 160_000, installment: 0 })).toBeNull();
     // Plus de 1 200 échéances.
     expect(completeSchedule("count", { total: 1_000_000, installment: 1 })).toBeNull();
     expect(completeSchedule("total", { installment: 100, count: 1_201 })).toBeNull();

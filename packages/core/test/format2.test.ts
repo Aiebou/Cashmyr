@@ -80,17 +80,17 @@ describe("tags (décisions 47 et 48)", () => {
   });
 
   it("supprimé : les opérations le gardent sans l'afficher ; recréé sous le même nom, il revient avec elles", () => {
-    const { tag, changes } = resolveTag(base(), "Propfirm FTMO", NOW);
-    const op = income("2026-09-10", 1_999, cats.freelance.id, accs.courant.id, { tagId: tag.id });
+    const { tag, changes } = resolveTag(base(), "Projet Alpha", NOW);
+    const op = income("2026-09-10", 1_999, cats.secondaire.id, accs.courant.id, { tagId: tag.id });
     let data = applyChanges(base(), { ...changes, operations: [op] });
     data = applyChanges(data, deleteTag(data, tag.id, NOW + 10));
     expect(validateDataset(data)).toEqual([]);
     expect(data.collections.operations[0]!.tagId).toBe(tag.id);
     expect(shownTag(data, tag.id)).toBeUndefined();
-    const again = resolveTag(data, "propfirm ftmo", NOW + 20);
-    expect(again.tag).toMatchObject({ id: tag.id, deletedAt: null, name: "propfirm ftmo" });
+    const again = resolveTag(data, "projet alpha", NOW + 20);
+    expect(again.tag).toMatchObject({ id: tag.id, deletedAt: null, name: "projet alpha" });
     expect(again.tag.updatedAt).toBeGreaterThan(NOW + 10);
-    expect(shownTag(applyChanges(data, again.changes), tag.id)?.name).toBe("propfirm ftmo");
+    expect(shownTag(applyChanges(data, again.changes), tag.id)?.name).toBe("projet alpha");
   });
 
   it("renommer garde l'identité ; un nouveau tag reprenant l'ancien nom en reçoit une autre ; pas de doublon de nom", () => {
@@ -113,7 +113,7 @@ describe("tags (décisions 47 et 48)", () => {
   });
 
   it("une récurrence taguée transmet son tag à chaque occurrence", () => {
-    const { tag, changes } = resolveTag(base(), "Abonnements pro", NOW);
+    const { tag, changes } = resolveTag(base(), "Abonnements", NOW);
     const rec = recurrence({ type: "out", amount: 2_100, dayOfMonth: 5, startMonth: "2026-08", categoryId: cats.resto.id, accountId: accs.courant.id, tagId: tag.id });
     const data = applyChanges(base(), { ...changes, recurrences: [rec] });
     const generated = materializeRecurrences(data, "2026-09-23", NOW);
@@ -123,7 +123,7 @@ describe("tags (décisions 47 et 48)", () => {
 
   it("totaux d'un tag : entrées, sorties, solde ; les transferts sont listés sans compter", () => {
     const ops = [
-      income("2026-09-01", 1_999, cats.freelance.id, accs.courant.id),
+      income("2026-09-01", 1_999, cats.secondaire.id, accs.courant.id),
       expense("2026-09-02", 2_100, cats.resto.id, accs.courant.id),
       transfer("2026-09-03", 50_000, accs.courant.id, accs.livret.id),
     ];

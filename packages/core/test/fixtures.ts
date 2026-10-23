@@ -79,7 +79,7 @@ export function debt(extra: Partial<Debt> = {}): Debt {
     principal: 0,
     paidManual: 0,
     mode: "installments",
-    installmentAmount: eur(200),
+    installmentAmount: eur(300),
     installmentCount: 5,
     startDate: "2026-10-10",
     dayOfMonth: 10,
@@ -114,7 +114,7 @@ export function dataset(parts: Partial<Collections>, prefs: Partial<Preferences>
 export function world() {
   const cats = {
     salaire: category("Salaire", "in"),
-    freelance: category("Missions freelance", "in"),
+    secondaire: category("Revenu secondaire", "in"),
     loyer: category("Loyer et charges", "out", "besoin"),
     courses: category("Courses", "out", "besoin"),
     resto: category("Restaurants et bars", "out", "envie"),

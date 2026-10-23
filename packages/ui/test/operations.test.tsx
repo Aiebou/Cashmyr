@@ -42,7 +42,7 @@ const loan = createRecord<Debt>(
     name: "Prêt auto",
     creditor: "",
     direction: "owe",
-    principal: 100_000,
+    principal: 150_000,
     paidManual: 0,
     mode: "free",
     installmentAmount: 0,

@@ -9,13 +9,16 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 
 ```
 .
-├── package.json                 scripts racine : dev:web, dev:desktop, build:web, build:desktop, test, typecheck
+├── package.json                 scripts racine : dev:web, dev:desktop, build:web, build:desktop, test, test:rust,
+│                                typecheck
 ├── pnpm-workspace.yaml          packages/*, apps/*
 ├── tsconfig.base.json           strict, noUncheckedIndexedAccess
 ├── LICENSE                      MIT
 ├── README.md
-├── .gitignore                   node_modules, dist, target, *.local.json,
-│                                mes-finances*.json, finances-sync*.json
+├── .gitignore                   données (mes-finances*, finances-sync*, cashmyr-*, exports/, *.sqlite*,
+│                                *.local.json), clés (*.key, .tauri/), .env*, sorties de build,
+│                                .claude/launch.json
+├── CLAUDE.md                    l'essentiel pour une session de Claude Code
 ├── .github/
 │   ├── release-notes.md         texte de chaque Release
 │   ├── scripts/check-latest.mjs contrôle de latest.json avant publication (plateformes, version, clé)
@@ -25,6 +28,8 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │       └── release.yml          tag v* → versions et tests → brouillon → tauri-action (macOS universel,
 │                                Windows, Linux) → publication une fois latest.json complet
 ├── docs/architecture.md         ce document, tenu à jour
+├── docs/cahier-des-charges.md   le cahier des charges d'origine (23/09/2026)
+├── docs/passation.md            avancement, installation, Release, pièges
 │
 ├── packages/core/               pur : ni React, ni stockage, ni Date.now() implicite
 │   ├── src/
@@ -34,6 +39,10 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │   │   ├── validate.ts          validation des invariants, erreurs explicites
 │   │   ├── ids.ts               uuid v4, uuid v5 déterministes
 │   │   ├── records.ts           create / touch / tombstone : pose updatedAt et deletedAt
+│   │   ├── dataset.ts           jeu vide, préférences par défaut, ordre des blocs normalisé
+│   │   ├── names.ts             nom nettoyé, clé d'identité d'un nom (tags, profils)
+│   │   ├── usage.ts             références vivantes à un compte ou une catégorie (décisions 30, 31)
+│   │   ├── backup.ts            export JSON, lecture d'une sauvegarde ou d'un fichier de synchronisation
 │   │   ├── calc/
 │   │   │   ├── month.ts         income, incomeBySource, needs, wants, saved, spent, balance
 │   │   │   ├── averages.ts      revenu moyen, dépenses moyennes
@@ -59,33 +68,38 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │   └── test/                    *.test.ts, une fixture synthétique (jamais tes données)
 │
 ├── packages/storage/            dépôt local, moteur de synchronisation, adaptateurs par plateforme
-│   └── src/
+│   ├── src/
 │       ├── types.ts             Platform, ProfileHost, LocalStore, SyncFile, FileIO, AppUpdates, DeviceState (§5)
 │       ├── profiles.ts          registre des profils de l'appareil, noms, fichier de chaque profil (§9)
 │       ├── repository.ts        Repository : jeu en mémoire, validation, récurrences, modifications en attente
 │       ├── engine.ts            SyncEngine : lire → fusionner → adopter → écrire, différé 2 s, état affiché
 │       ├── recovery.ts          écran de secours : copies vérifiées, restauration, retour à zéro (décisions 38 à 40)
 │       ├── reset.ts             remise à zéro de cet appareil (décision 45)
+│       ├── latch.ts             annonce qui rappelle la dernière valeur aux abonnés tardifs
 │       ├── web/                 entrée « @cashmyr/storage/web » : IndexedDB, File System Access,
 │       │                        mode assisté, exports, détection du mode, service worker (updates.ts)
 │       └── tauri/               entrée « @cashmyr/storage/tauri » : fichier local atomique,
 │                                commandes Rust de synchronisation, dialogues natifs, updater (updates.ts)
-│   test/                        adaptateurs, dépôt, moteur, et bout en bout à trois appareils
+│   └── test/                    adaptateurs, dépôt, moteur, et bout en bout à trois appareils
 │
 ├── packages/ui/                 tous les écrans, aucune détection de plateforme
 │   └── src/
+│       ├── boot.tsx             startApp : registre des profils, écran de choix, écran de secours, démarrage
 │       ├── App.tsx              reçoit `platform: Platform` en prop, le fournit par contexte
+│       ├── Shell.tsx            en-tête (synchro, Ajouter, menu du profil), onglets, sélecteur de période
 │       ├── store/               Zustand : données, préférences, période affichée, UI
 │       ├── tour/                tutoriel : étapes de chaque onglet, bulle et mise en lumière (décisions 65 à 67)
-│       ├── screens/             Dashboard, Month, Goals, Accounts, Operations, Settings, Sync, Recovery,
-│       │                        ProfilePicker (« Qui utilise Cashmyr ? »)
-│       ├── components/          OperationModal, Gauge, SegmentedBar, BarChart12, LineChart,
-│       │                        ReorderableBlock, PeriodPicker, EmptyState…
-│       ├── theme/               tokens.css (clair / sombre), fonts/*.woff2 + OFL.txt
-│       └── format.ts            Intl.NumberFormat fr-FR
+│       ├── screens/             Dashboard, Month, Goals, Debts, Accounts (et AccountsBanner), Operations,
+│       │                        OperationModal, Welcome, Recovery, ProfilePicker (« Qui utilise Cashmyr ? ») ;
+│       │                        settings/ : une section par carte de Paramètres (Synchronisation comprise)
+│       ├── components/          Menu, Modal, Reorderable, figures (jauges, barres segmentées), charts/
+│       │                        (DonutChart, MonthsChart, RankingChart, SavingsChart)…
+│       ├── lib/                 format.ts (Intl.NumberFormat fr-FR), exports, imports, filtres, textes calculés
+│       └── theme/               tokens.css (clair / sombre), fonts/*.woff2 + OFL.txt
 │
 └── apps/
-    ├── web/                     index.html, main.tsx, vite.config.ts (base = /Cashmyr/, vite-plugin-pwa :
+    ├── web/                     index.html, main.tsx, vite.config.ts (base /Cashmyr/ en build et en preview,
+    │   │                        / en dev ; vite-plugin-pwa :
     │   │                        manifeste et précache ; CSP en balise meta)
     │   ├── icons/maskable.svg   source des icônes maskable et apple-touch-icon
     │   ├── public/              icons/ (192, 512, maskable 192 et 512), apple-touch-icon.png
@@ -256,6 +270,8 @@ export type DeviceState = {
   display?: { bannerTotal?: "declared" | "injected" | "injectedOutsideCurrent"; accountRoles?: Role[];
               hideMonthCharts?: boolean; checkUpdatesOnLaunch?: boolean };
                                    // choix d'affichage de l'appareil (0.2.0), absents = valeurs par défaut
+  tour?: { seen: string[] };       // onglets dont le tutoriel a été vu (0.4.0, décisions 65 à 67) ;
+                                   // absent = profil d'avant le tutoriel, qui ne le voit pas
 };
 ```
 
@@ -500,7 +516,6 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | 16 | Import | Tout champ ou cas inconnu fait échouer l'import. |
 | 17 | Updater bureau | Vérification sur clic seulement ; plugins `updater` et `process` en plus. **Remplacée par la décision 46** (0.2.0). |
 | 18 | Noms | Cashmyr · `io.github.aiebou.cashmyr` · dépôt `Aiebou/Cashmyr` · base `/Cashmyr/` · PWA `https://aiebou.github.io/Cashmyr/` · updater `https://github.com/Aiebou/Cashmyr/releases/latest/download/latest.json`. |
-
 | 19 | Moyennes annuelles | Mois en cours exclu, car incomplet. |
 | 20 | Purge | Jamais pour une pierre tombale encore référencée par une ligne vivante. |
 | 21 | Sans fichier de synchronisation | Aucune purge. |
@@ -528,8 +543,8 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 
 | # | Sujet | Décision |
 |---|---|---|
-| 41 | Montant total, montant par échéance et nombre d'échéances d'une dette | Deux champs remplis donnent le troisième, à la création comme à la modification, en mode échéancier seulement. Montant = total ÷ nombre, arrondi au centime supérieur : la dernière échéance est réduite, comme l'échéancier le fait déjà (1 000 € en 3 → 333,34 €, la dernière 333,32 €). Nombre = total ÷ montant, arrondi à l'entier supérieur (1 000 € par 300 € → 4, la dernière 100 €). Total = montant × nombre. Le total ne dépasse donc jamais l'échéancier. |
-| 42 | Total du bandeau des comptes | Trois totaux au choix, propre à chaque appareil : **par défaut**, soldes des comptes courants plus valeur déclarée des comptes épargne, placement et autre ; tout en capital injecté (le total d'avant) ; capital injecté hors comptes courants. Un compte courant ne compte jamais que son solde. Un compte épargne, placement ou autre sans valeur déclarée compte pour son capital injecté, et le bandeau comme Mes comptes le signalent (« valeur non déclarée », rouge discret). La ligne « Valeur déclarée : écart » devient « Valeur injectée (hors comptes courants) ». |
+| 41 | Montant total, montant par échéance et nombre d'échéances d'une dette | Deux champs remplis donnent le troisième, à la création comme à la modification, en mode échéancier seulement. Montant = total ÷ nombre, arrondi au centime supérieur : la dernière échéance est réduite, comme l'échéancier le fait déjà (1 600 € en 3 → 533,34 €, la dernière 533,32 €). Nombre = total ÷ montant, arrondi à l'entier supérieur (1 600 € par 500 € → 4, la dernière 100 €). Total = montant × nombre. Le total ne dépasse donc jamais l'échéancier. |
+| 42 | Total du bandeau des comptes | Trois totaux au choix, propre à chaque appareil (à chaque profil sur l'appareil depuis la décision 59) : **par défaut**, soldes des comptes courants plus valeur déclarée des comptes épargne, placement et autre ; tout en capital injecté (le total d'avant) ; capital injecté hors comptes courants. Un compte courant ne compte jamais que son solde. Un compte épargne, placement ou autre sans valeur déclarée compte pour son capital injecté, et le bandeau comme Mes comptes le signalent (« valeur non déclarée », rouge discret). La ligne « Valeur déclarée : écart » devient « Valeur injectée (hors comptes courants) ». |
 | 43 | Valeur déclarée et date affichée | Elle n'a pas d'historique : elle ne compte que si elle a été déclarée au plus tard à la date affichée (31/12 d'une année passée), sinon le capital injecté. Une valeur sans date, reprise de l'ancienne application, ne compte que pour aujourd'hui. |
 | 44 | Patrimoine net | Total en valeurs déclarées (décision 42, quel que soit le total choisi) moins le total dû. L'épargne de précaution, la courbe d'épargne et les indicateurs de l'année restent en capital injecté. |
 | 45 | Remise à zéro | Deux gestes, chacun confirmé, chacun précédé d'une copie de sauvegarde. **Cet appareil** : les modifications en attente partent d'abord dans le fichier (synchronisation automatique), le fichier est oublié, les données locales et l'état de l'appareil (sauf son identifiant et son nom) sont retirés, l'application repart de l'accueil ; le fichier et les autres appareils ne changent pas. **Partout** : un passage de synchronisation, puis chaque ligne vivante devient une suppression et chaque réglage reprend sa valeur par défaut, horodatés maintenant ; la synchronisation porte l'effacement partout, et une ligne modifiée ailleurs après l'effacement revient (décision 1). Réimporter ensuite une sauvegarde ou l'ancien fichier ne rend rien (décisions 32 et 34) ; « Restaurer » la copie prise juste avant (décision 33) remet tout. L'accueil revient dès qu'il ne reste aucune ligne vivante ; ses catégories par défaut reprennent alors les suppressions qu'il connaît avec un horodatage plus récent. |
@@ -580,11 +595,11 @@ Lectures validées avec la section dettes :
   identifiant dérivé de la dette.
 - Le drapeau « soldée » est manuel ; la carte propose « Marquer soldée » quand le reste est nul.
 - Charge mensuelle rapportée au revenu moyen du mois en cours.
-- Les couleurs personnalisées font partie du schéma dès maintenant, l'interface arrive à l'étape 4 ;
+- Les couleurs personnalisées font partie du schéma dès l'étape 2, leur interface est venue à l'étape 4 ;
   `categoryColors` est une seule clé de fusion.
 
 Pour l'étape 4 : le surtitre du bandeau dit « aujourd'hui » pour l'année en cours comme pour une année
-future, et le test des champs masqués demande `jsdom` et Testing Library.
+future, et le test des champs masqués passe par `jsdom` et Testing Library.
 Écran Dettes, choix d'interface validés le 23/09/2026 :
 - Le sens d'une dette ne se modifie plus dès qu'une opération ou un prélèvement y est rattaché ; sinon
   chaque opération changerait de signe dans le réglé.
@@ -618,7 +633,7 @@ Enveloppe Tauri, choix validés le 23/09/2026 :
 - Glisser-déposer natif des fichiers désactivé sur la fenêtre, pour que le réordonnancement des blocs
   (glisser-déposer HTML) marche aussi sous Windows.
 - Icône : l'anneau des trois usages (besoins 50 %, envies 30 %, mise de côté 20 %) sur une tuile claire.
-- L'updater (clés, `latest.json`, bouton « Rechercher une mise à jour ») arrive avec la première
+- L'updater (clés, `latest.json`, bouton « Rechercher une mise à jour ») est arrivé avec la première
   Release, à l'étape 6, comme prévu au §5.
 
 Reprise, choix d'interface validés le 24/09/2026 :
@@ -661,8 +676,8 @@ Publication (étape 6), choix validés le 24/09/2026 :
   fonctionne désormais hors ligne.
 - Avant de recharger ou de redémarrer : un passage de synchronisation s'il reste des modifications en
   attente (mode automatique), puis les écritures locales se terminent.
-- Paramètres gagne une huitième section, « Application » : version en service et, sur le bureau, « Rechercher une
-  mise à jour ». Une vérification impossible donne la raison technique entre parenthèses, en anglais, telle que
+- Paramètres gagne une section « Application » (la huitième à l'époque ; Tags et Profils sont venues ensuite) :
+  version en service et, sur le bureau, « Rechercher une mise à jour ». Une vérification impossible donne la raison technique entre parenthèses, en anglais, telle que
   Tauri la renvoie.
 - Icônes de la PWA : tuile de l'icône de bureau pour « any » ; pour « maskable » et l'apple-touch-icon, fond plein
   et anneau réduit à 85 %, dans la zone sûre.
@@ -748,7 +763,7 @@ type ProfileEntry = {
 type ProfileRegistry = {
   version: 1;
   profiles: ProfileEntry[];
-  checkUpdatesOnLaunch: boolean;  // bureau : réglage de l'appareil, plus d'un profil (décisions 46 et 59)
+  checkUpdatesOnLaunch: boolean;  // bureau : réglage de l'appareil, et non plus d'un profil (décisions 46 et 59)
 };
 ```
 
@@ -796,8 +811,9 @@ d'affichage, fichier de synchronisation) et, sur le web, le handle du fichier. C
   « Qui utilise Cashmyr ? ». Le reste du démarrage ne change pas, écran de secours compris : il porte sur le
   profil ouvert, avec un lien « Changer de profil ».
 - La recherche de mise à jour au lancement ne dépend d'aucun profil : elle part avant le choix.
-- **En-tête** : dès qu'il y a deux profils, le nom du profil ouvert s'y affiche. Il ouvre un menu avec les
-  autres profils et « Gérer les profils ».
+- **En-tête** : le nom du profil ouvert s'y affiche toujours, à droite de « Ajouter ». Il ouvre un menu avec les
+  profils, « Nouveau profil… » et « Gérer les profils » (décision 63, qui remplace l'affichage à partir de deux
+  profils de la 0.3.0).
 - **Changer de profil** passe par le même chemin qu'un rechargement pour mise à jour : un passage de
   synchronisation s'il reste des modifications en attente (mode automatique), la fin des écritures, puis
   la relance sur l'autre profil.
