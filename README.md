@@ -15,7 +15,7 @@ s'enregistre sur l'appareil et fonctionne ensuite hors ligne. Pour l'installer c
 - Safari sur iPhone ou iPad : Partager → « Sur l'écran d'accueil ».
 
 **Application de bureau** : dans la [dernière Release](https://github.com/Aiebou/Cashmyr/releases/latest),
-le `.dmg` universel pour macOS 12 ou plus récent, le `-setup.exe` pour Windows, l'`.AppImage`, le `.deb` ou le
+le `.dmg` universel pour macOS 12 ou plus récent, le `-setup.exe` (ou le `.msi`) pour Windows, l'`.AppImage`, le `.deb` ou le
 `.rpm` pour Linux. Les versions suivantes sont proposées au lancement (Paramètres → Application permet de le
 désactiver) et par « Rechercher une mise à jour » ; elles ne s'installent que sur ton clic.
 
@@ -43,8 +43,9 @@ Paramètres). À chaque fusion, la version la plus récente de chaque élément 
 
 Un même appareil peut porter plusieurs budgets : le tien, celui du foyer, celui d'un proche. Chaque profil a ses
 comptes, ses opérations, ses réglages et son propre fichier de synchronisation ; rien ne passe d'un profil à l'autre.
-Paramètres → Profils les crée, les renomme et les supprime. Dès qu'il y en a deux, Cashmyr demande à chaque lancement
-qui l'utilise, et le nom du profil ouvert, en haut de l'écran, permet d'en changer.
+Le nom du profil ouvert, en haut à droite, ouvre un menu pour changer de profil ou en créer un ; Paramètres → Profils
+les renomme et les supprime. Dès qu'il y en a deux, Cashmyr demande à chaque lancement qui l'utilise, et la tuile
+« + Profil » de cet écran en crée un nouveau.
 
 - **Partager un profil**, celui du foyer par exemple : crée un profil sur chaque appareil concerné et fais-leur
   rejoindre le même fichier de synchronisation (`finances-sync-foyer.json`, par exemple).
@@ -90,8 +91,10 @@ L'export de l'ancienne application (`mes-finances.json`) se reprend par « Repre
 
 ## Développer
 
-Prérequis : Node 22 ou plus récent, pnpm (la version est fixée par `packageManager`) et, pour le bureau, Rust
-stable avec les [prérequis de Tauri](https://tauri.app/start/prerequisites/).
+Prérequis : Node 22 ou plus récent (24 comme la CI), pnpm fourni par Corepack (`corepack enable` ; la version est
+fixée par `packageManager`) et, pour le bureau, Rust stable avec les
+[prérequis de Tauri](https://tauri.app/start/prerequisites/). Pas à pas sur un nouveau Mac :
+[`docs/passation.md`](docs/passation.md).
 
 ```bash
 pnpm install
