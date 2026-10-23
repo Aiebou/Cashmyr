@@ -8,13 +8,20 @@ import type { Bucket, Category, SeriesColor } from "./model";
  * n'en a qu'un jeu, et deux appareils qui les créent aussi. La dernière version du code de
  * l'ancienne application ne crée plus que `r1`… `d24` et nomme `r5` « Gains de trading » :
  * un fichier qui en viendrait garde ses noms, qui l'emportent à la reprise.
+ *
+ * Décision 68 : quatre noms trop personnels ont été remplacés (`renamed`). Ces catégories sont
+ * horodatées `RENAMED_AT` au lieu de 0 : une catégorie jamais modifiée d'une version précédente
+ * prend le nouveau nom à la synchronisation, un nom choisi par l'utilisateur gagne toujours, et
+ * l'ancien fichier (horodaté 1, décision 34) ne remet plus l'ancien nom.
  */
-export const DEFAULT_CATEGORIES: readonly { legacy: string; name: string; kind: "in" | "out"; bucket?: Bucket }[] = [
+export const RENAMED_AT = 2;
+
+export const DEFAULT_CATEGORIES: readonly { legacy: string; name: string; kind: "in" | "out"; bucket?: Bucket; renamed?: true }[] = [
   { legacy: "r1", name: "Salaire", kind: "in" },
-  { legacy: "r2", name: "Service et pourboires", kind: "in" },
-  { legacy: "r3", name: "Missions freelance", kind: "in" },
+  { legacy: "r2", name: "Revenus annexes", kind: "in", renamed: true },
+  { legacy: "r3", name: "Activité indépendante", kind: "in", renamed: true },
   { legacy: "r4", name: "Primes", kind: "in" },
-  { legacy: "r5", name: "Revenus de trading", kind: "in" },
+  { legacy: "r5", name: "Revenus de placements", kind: "in", renamed: true },
   { legacy: "r6", name: "Aides et remboursements", kind: "in" },
   { legacy: "r7", name: "Autre revenu", kind: "in" },
   { legacy: "d8", name: "Loyer et charges", kind: "out", bucket: "besoin" },
@@ -38,7 +45,7 @@ export const DEFAULT_CATEGORIES: readonly { legacy: string; name: string; kind: 
   { legacy: "d26", name: "PEA et ETF", kind: "out", bucket: "invest" },
   { legacy: "d27", name: "Assurance-vie", kind: "out", bucket: "invest" },
   { legacy: "d28", name: "PER", kind: "out", bucket: "invest" },
-  { legacy: "d29", name: "Compte de trading", kind: "out", bucket: "invest" },
+  { legacy: "d29", name: "Autres placements", kind: "out", bucket: "invest", renamed: true },
   { legacy: "d30", name: "Crypto", kind: "out", bucket: "invest" },
 ];
 
@@ -51,12 +58,12 @@ export function categoryColors(kinds: readonly ("in" | "out")[]): SeriesColor[] 
   return kinds.map((kind) => (kind === "in" ? income++ % 7 : 0) as SeriesColor);
 }
 
-/** Jeu de départ, horodaté 0 : la moindre version écrite ailleurs l'emporte. */
+/** Jeu de départ, horodaté 0 (`RENAMED_AT` pour les noms remplacés) : la moindre version écrite ailleurs l'emporte. */
 export function defaultCategories(): Category[] {
   const colors = categoryColors(DEFAULT_CATEGORIES.map((d) => d.kind));
   return DEFAULT_CATEGORIES.map((d, i) => ({
     id: legacyCategoryId(d.legacy),
-    updatedAt: 0,
+    updatedAt: d.renamed ? RENAMED_AT : 0,
     deletedAt: null,
     name: d.name,
     kind: d.kind,

@@ -18,7 +18,7 @@ async function addOperation(app: App, type: "Dépense" | "Revenu" | "Transfert",
   await user.click(within(dialog).getByRole("radio", { name: type }));
   await user.type(within(dialog).getByLabelText("Montant"), amount);
   if (type === "Dépense") await user.selectOptions(within(dialog).getByLabelText("Catégorie"), "Abonnements");
-  if (type === "Revenu") await user.selectOptions(within(dialog).getByLabelText("Catégorie"), "Revenus de trading");
+  if (type === "Revenu") await user.selectOptions(within(dialog).getByLabelText("Catégorie"), "Revenus de placements");
   if (type === "Transfert") await user.selectOptions(within(dialog).getByLabelText("Vers"), "Livret A");
   await user.type(within(dialog).getByLabelText("Tag"), tag);
   await user.click(within(dialog).getByRole("button", { name: "Enregistrer" }));
