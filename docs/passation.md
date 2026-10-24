@@ -2,15 +2,14 @@
 
 État au 25/10/2026, pour reprendre le développement sur un autre Mac à partir d'un clone neuf du dépôt.
 
-- **Branche `main`** : ca9336f (fusion de la PR #19) au moment de cette mise à jour. Rien d'autre en attente : aucun
-  stash, aucun commit ni tag non poussé.
-- **Version publiée** : 0.4.0, le 26/09/2026.
-  - [Release](https://github.com/Aiebou/Cashmyr/releases/tag/v0.4.0), avec `latest.json` signé par la clé `EFBCA89EB0CD97C`.
+- **Version publiée** : 0.4.1, le 25/10/2026, tag `v0.4.1` sur 2408377 (fusion de la PR #21).
+  - [Release](https://github.com/Aiebou/Cashmyr/releases/tag/v0.4.1), avec `latest.json` contrôlé : 13 entrées,
+    toutes signées par la clé `EFBCA89EB0CD97C`.
   - PWA en ligne sur <https://aiebou.github.io/Cashmyr/>.
-- **Sur `main` depuis la 0.4.0** : les PR #16 à #19 (passation, cahier des charges, documentation à jour, jeux
-  d'essai neutralisés, catégories par défaut aux noms génériques, décision 68). La PWA les a déjà, puisque chaque
-  fusion la publie ; l'application de bureau les aura avec la prochaine Release.
-- **Tests** : 453 tests TypeScript et 15 tests Rust passent sur `main` (core 228, storage 97, ui 128). La séquence
+- **Sur `main` depuis la 0.4.1** : la PR « Mes comptes » (« Vos comptes » en premier, modification d'un compte sur
+  place), premier morceau de la liste du 25/10 (voir §6). La PWA l'a dès sa fusion ; l'application de bureau l'aura
+  avec la 0.5.0.
+- **Tests** : 455 tests TypeScript et 15 tests Rust passent (core 228, storage 97, ui 130). La séquence
   d'installation du §3 a été vérifiée sur un clone neuf le 23/10/2026.
 
 La référence reste [`architecture.md`](architecture.md) : modèle de données, règles de calcul et de fusion, et les
@@ -53,16 +52,17 @@ Versions publiées depuis :
 | 0.2.0 | 26/09/2026 | #8 à #11 | Montants au centime, valeurs déclarées et trois totaux, cibles du mois, camemberts, remise à zéro, mise à jour au lancement, format 2 (tags, ordre des comptes). Décisions 41 à 50 |
 | 0.3.0 | 26/09/2026 | #12, #13 | Profils : un budget complet par profil, choix au lancement, Paramètres → Profils. Décisions 51 à 61 |
 | 0.4.0 | 26/09/2026 | #14, #15 | En-tête (synchro à gauche, menu du profil), total choisi dans le titre du bandeau, tuile « + Profil », tutoriel. Décisions 62 à 67 |
-| Prochaine | non publiée | #16 à #19 | Passation et `CLAUDE.md`, cahier des charges, documentation à jour, jeux d'essai neutralisés, catégories par défaut aux noms génériques, état de `main` dans la passation. Décision 68 |
+| 0.4.1 | 25/10/2026 | #16 à #21 | Passation et `CLAUDE.md`, cahier des charges, documentation à jour, jeux d'essai neutralisés, catégories par défaut aux noms génériques. Décision 68 |
+| Prochaine (0.5.0) | non publiée | Mes comptes | « Vos comptes » avant « Mouvements de l'année », modification d'un compte depuis Mes comptes |
 
-Dates de publication des Releases, heure de Paris : la 0.1.2, la 0.2.0 et la 0.3.0 sont sorties peu après minuit, la 0.4.0 le matin. GitHub, en UTC, les date de la veille.
+Dates de publication des Releases, heure de Paris : la 0.1.2, la 0.2.0 et la 0.3.0 sont sorties peu après minuit, la 0.4.0 le matin, la 0.4.1 vers 1 h 30. GitHub, en UTC, les date de la veille.
 
 Demandes reçues après le cahier des charges, toutes livrées sauf une :
 - 23/09 : dettes et 7e onglet, menu « Ajouter », couleurs personnalisables ;
 - 25/09 : liste « Modifications à apporter (v0.1.2) », devenue la 0.2.0 et, pour les profils, la 0.3.0 ;
 - 26/09 : liste « Maj de la v0.3.0 », devenue la 0.4.0 ;
-- 24/10 : jeux d'essai publics et catégories par défaut sans éléments personnels (décision 68), sur `main`, pas
-  encore dans une Release de bureau.
+- 24/10 : jeux d'essai publics et catégories par défaut sans éléments personnels (décision 68), livrés en 0.4.1 ;
+- 25/10 : liste « DTI, budgets, ergonomie », en cours (§6).
 
 **Reporté** : le type de compte « Compte professionnel ». Il changerait le format des données, et sa place dans
 les calculs reste à définir ; un « profil professionnel » est l'autre piste. Rien n'est commencé
@@ -439,7 +439,7 @@ générés (`src-tauri/gen/`, `src-tauri/permissions/`) et les `.DS_Store` sont 
 | `~/.gitconfig` et `.git/config` local | `user.name`, `user.email` | `git config` (§3) |
 | `~/.config/gh/`, trousseau macOS | Connexion de `gh` et identifiants Git | `gh auth login`, puis `gh auth setup-git`. Le jeton doit avoir *Contents*, *Workflows* et *Pull requests* en écriture. |
 | `~/.local/bin/pnpm`, `~/.cargo`, `~/.rustup`, `/opt/homebrew/bin/gh`, `/usr/local/bin/node` | Outils | Réinstaller (§3) |
-| `/Applications/Cashmyr.app` (0.4.0) | Application installée | La retélécharger depuis la Release |
+| `/Applications/Cashmyr.app` (0.4.1) | Application installée | La retélécharger depuis la Release |
 | `~/Library/WebKit/io.github.aiebou.cashmyr/`, `~/Library/Caches/io.github.aiebou.cashmyr/`, `~/Library/Preferences/io.github.aiebou.cashmyr.plist` | WebView, cache, préférences macOS | Recréés tout seuls |
 
 Rien d'autre n'a été trouvé : aucun `.env`, `.pem`, `.p12` ni autre clé liée au projet, aucun autre clone, aucun
@@ -464,17 +464,21 @@ export Cashmyr dans `~/Documents`, `~/Downloads` ou iCloud Drive, aucun hook Git
 2. Remettre l'identité Git, reconnecter `gh` (`gh auth login --scopes workflow`, `gh auth setup-git`) et recréer
    `.claude/launch.json`.
 3. Si tu as copié la mémoire de Claude Code, la placer sous le nouveau chemin.
-4. Installer Cashmyr 0.4.0 depuis la Release. Au premier lancement, l'application non signée s'ouvre par Réglages
+4. Installer Cashmyr 0.4.1 depuis la Release. Au premier lancement, l'application non signée s'ouvre par Réglages
    Système → Confidentialité et sécurité → « Ouvrir quand même » (voir le README). Ensuite, rejoindre le fichier de
    synchronisation depuis le dossier cloud.
 
 ### Suite du développement
 
-Aucune fonctionnalité n'est en cours. Restent, du plus pressé au moins pressé :
+Restent, du plus pressé au moins pressé :
 
-1. **Sortir la prochaine version de bureau**, quand tu le décides (numéro à choisir). Elle apporte la décision 68 :
-   sans elle, une installation neuve du bureau garde les anciens noms des catégories par défaut, alors que la PWA a
-   déjà les nouveaux. Écrire d'abord la section « Nouveautés » de `.github/release-notes.md`, puis suivre le §4.
+1. **La liste du 25/10/2026**, dont toutes les règles ont été validées ce jour-là (décisions à inscrire au §8 à
+   partir de la 69, chacune dans la PR qui l'applique). Découpage convenu :
+   - 0.5.0, sans changement de format : Mes comptes (faite), puis « Catégories » et bouton « Haut de page » sur
+     téléphone, puis le DTI (onglet Dettes et indicateurs de l'année), puis le menu latéral du bureau ;
+   - 0.6.0, format 3, PR empilées et fusionnées juste avant le tag : budgets et types modulables (modèle, calculs,
+     migration, nouvelles catégories par défaut appliquées aussi aux profils existants), leur interface, puis les
+     comptes rattachés aux types, avec les parts réservées et la précaution.
 2. **Essayer dans une vraie fenêtre de bureau ce qui n'a été vérifié que par les tests** : le parcours des profils
    (créer, changer, supprimer, rejoindre un fichier depuis un profil), puis l'écran de secours, vu seulement dans la
    PWA. Faire ces essais avec la recette d'essai isolé du §7, jamais sur les vraies données.
@@ -571,6 +575,8 @@ Aucune fonctionnalité n'est en cours. Restent, du plus pressé au moins pressé
   `afterEach`.
 - **Jamais de vraies données dans les fixtures.** Éprouver la reprise sur le vrai fichier seulement à la demande de
   l'utilisateur, avec une sonde temporaire jamais ajoutée à Git, qui n'affiche ni montant ni nom, supprimée aussitôt.
+- **Délai de 5 s** : sur le Mac mini (Node 26), trois tests de `ui` (tutoriel, tags) dépassent ce délai quand toute la
+  suite tourne, sur `main` comme sur une branche. Ils passent seuls et en CI.
 - **Un format « plus récent »** s'écrit `SCHEMA_VERSION + 1` dans les tests, jamais en dur.
 
 ### CSS et textes

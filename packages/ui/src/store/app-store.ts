@@ -64,6 +64,7 @@ export type Modal =
   | { kind: "create-goal" }
   | { kind: "create-debt" }
   | { kind: "create-account"; stay?: boolean }
+  | { kind: "edit-account"; accountId: string }
   | { kind: "recurrence"; editId?: string }
   | { kind: "delete-category"; categoryId: string }
   | { kind: "create-profile" }

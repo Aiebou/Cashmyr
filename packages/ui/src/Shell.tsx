@@ -16,6 +16,7 @@ import { MonthScreen } from "./screens/MonthScreen";
 import { OperationsScreen } from "./screens/OperationsScreen";
 import { OperationModal } from "./screens/OperationModal";
 import { RecurrenceModal } from "./screens/RecurrenceModal";
+import { EditAccountModal } from "./screens/settings/AccountsSection";
 import { DeleteCategoryModal } from "./screens/settings/DeleteCategoryModal";
 import { CreateProfileModal, DeleteProfileModal } from "./screens/settings/ProfileModals";
 import { SettingsScreen } from "./screens/settings/SettingsScreen";
@@ -178,6 +179,8 @@ function Modals() {
       return <CreateDebtModal />;
     case "create-account":
       return <CreateAccountModal stay={modal.stay ?? false} />;
+    case "edit-account":
+      return <EditAccountModal accountId={modal.accountId} />;
     case "recurrence":
       return <RecurrenceModal key={modal.editId ?? "new"} {...(modal.editId ? { editId: modal.editId } : {})} />;
     case "delete-category":

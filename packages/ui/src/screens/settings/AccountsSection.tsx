@@ -9,12 +9,13 @@ import {
   type AccountUsage,
   type Role,
 } from "@cashmyr/core";
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import { ConfirmDelete } from "../../components/ConfirmDelete";
 import { Button, Checkbox, Field, InlineAmount, InlineOptionalAmount, InlineText, Select } from "../../components/controls";
 import { Dot } from "../../components/figures";
 import { PlusIcon } from "../../components/icons";
 import { Card } from "../../components/layout";
+import { Modal } from "../../components/Modal";
 import { liveAccounts, ROLE_LABELS } from "../../lib/data";
 import { count, dayLong } from "../../lib/format";
 import { useActions, useApp } from "../../store/context";
@@ -31,7 +32,11 @@ export function usageText(usage: Partial<AccountUsage>): string {
   return parts.length <= 1 ? (parts[0] ?? "") : `${parts.slice(0, -1).join(", ")} et ${parts[parts.length - 1]}`;
 }
 
-function AccountItem({ account }: { account: Account }) {
+/**
+ * Les champs d'un compte, enregistrés un à un comme partout dans Paramètres. Servent à la liste de
+ * Paramètres → Comptes et à la fenêtre « Modifier le compte » de Mes comptes.
+ */
+function AccountEditor({ account }: { account: Account }) {
   const data = useApp((st) => st.data);
   const today = useApp((st) => st.today);
   const { apply } = useActions();
@@ -40,7 +45,7 @@ function AccountItem({ account }: { account: Account }) {
   const save = (patch: Partial<Account>) => apply({ accounts: [touch(account, patch, Date.now())] });
 
   return (
-    <li>
+    <>
       <div className={s.accountGrid}>
         <Field
           label={
@@ -100,7 +105,40 @@ function AccountItem({ account }: { account: Account }) {
           <ConfirmDelete label="Supprimer le compte" onConfirm={() => apply(deleteAccount(data, account.id, Date.now()), undefined, "Compte supprimé")} />
         )}
       </div>
+    </>
+  );
+}
+
+function AccountItem({ account }: { account: Account }) {
+  return (
+    <li>
+      <AccountEditor account={account} />
     </li>
+  );
+}
+
+/** Mes comptes : les mêmes champs que Paramètres → Comptes, sans quitter l'écran. */
+export function EditAccountModal({ accountId }: { accountId: string }) {
+  const account = useApp((st) => liveAccounts(st.data).find((a) => a.id === accountId));
+  const { closeModal } = useActions();
+  // Supprimé ici ou par une synchronisation pendant que la fenêtre est ouverte : elle se ferme.
+  useEffect(() => {
+    if (!account) closeModal();
+  }, [account, closeModal]);
+  if (!account) return null;
+  return (
+    <Modal
+      title="Modifier le compte"
+      onClose={closeModal}
+      footer={
+        <Button variant="primary" onClick={closeModal}>
+          Terminé
+        </Button>
+      }
+    >
+      <p className={s.muted}>Chaque modification s'enregistre aussitôt, sur tous tes appareils.</p>
+      <AccountEditor account={account} />
+    </Modal>
   );
 }
 

@@ -14,9 +14,9 @@ import {
   type Role,
 } from "@cashmyr/core";
 import { useMemo, useState } from "react";
-import { Button, cx, ToggleChips } from "../components/controls";
+import { Button, cx, IconButton, ToggleChips } from "../components/controls";
 import { Dot } from "../components/figures";
-import { PlusIcon } from "../components/icons";
+import { PencilIcon, PlusIcon } from "../components/icons";
 import { Card, Empty, ScreenTitle, Stack } from "../components/layout";
 import { dropBefore, MoveBar, moveAmongVisible, useReorderDrag } from "../components/Reorderable";
 import { liveAccounts, ROLE_LABELS } from "../lib/data";
@@ -104,13 +104,15 @@ type TileProps = {
   figures: ReturnType<typeof accountFigures>;
   /** Mode « Modifier l'ordre » : poignée et flèches sur chaque tuile. */
   ordering: { index: number; count: number; onMove(id: string, delta: -1 | 1): void; onDropOn(dragged: string, target: string, after: boolean): void } | null;
+  /** Ouvre « Modifier le compte », hors du mode « Modifier l'ordre ». */
+  onEdit(): void;
 };
 
 /**
  * Un compte. Épargne, placement et autre : la valeur déclarée en avant, le capital injecté dessous
  * (décision 42) ; sans valeur déclarée à cette date, le capital injecté, sur fond rouge discret.
  */
-function AccountTile({ data, account, asOf, today, figures, ordering }: TileProps) {
+function AccountTile({ data, account, asOf, today, figures, ordering, onEdit }: TileProps) {
   const drag = useReorderDrag(account.id, "application/x-cashmyr-account", (dragged, target, after) => ordering?.onDropOn(dragged, target, after));
   const f = figures.get(account.id);
   if (!f) return null;
@@ -140,7 +142,7 @@ function AccountTile({ data, account, asOf, today, figures, ordering }: TileProp
             <span className={s.missing}>{account.declaredValue !== undefined ? "valeur déclarée après cette date" : "valeur non déclarée"}</span>
           )}
         </div>
-        {ordering && (
+        {ordering ? (
           <MoveBar
             name={account.name}
             what="le compte"
@@ -149,6 +151,10 @@ function AccountTile({ data, account, asOf, today, figures, ordering }: TileProp
             grip={drag.grip}
             onMove={(delta) => ordering.onMove(account.id, delta)}
           />
+        ) : (
+          <IconButton label={`Modifier ${account.name}`} className={s.edit} onClick={onEdit}>
+            <PencilIcon size={18} />
+          </IconButton>
         )}
       </div>
       {declared !== null && (
@@ -166,7 +172,7 @@ function AccountTile({ data, account, asOf, today, figures, ordering }: TileProp
 
 function AccountList({ data, accounts, asOf, today, ordering }: { data: Dataset; accounts: Account[]; asOf: Day; today: Day; ordering: boolean }) {
   const figures = useMemo(() => accountFigures(data, asOf), [data, asOf]);
-  const { apply } = useActions();
+  const { apply, openModal } = useActions();
   // Décision 49 : l'ordre est celui de tous les comptes ; un filtre actif ne déplace que parmi ceux qu'il montre.
   const order = liveAccounts(data).map((a) => a.id);
   const visible = accounts.map((a) => a.id);
@@ -182,6 +188,7 @@ function AccountList({ data, accounts, asOf, today, ordering }: { data: Dataset;
             asOf={asOf}
             today={today}
             figures={figures}
+            onEdit={() => openModal({ kind: "edit-account", accountId: account.id })}
             ordering={
               ordering
                 ? {
@@ -197,7 +204,7 @@ function AccountList({ data, accounts, asOf, today, ordering }: { data: Dataset;
       </ul>
       <p className={s.muted}>
         Capital injecté = solde de départ, plus tout ce qui est entré, moins tout ce qui est sorti : jamais une valeur de marché. Pour
-        les comptes d'épargne, de placement et autres, la valeur déclarée se saisit dans Paramètres → Comptes.
+        les comptes d'épargne, de placement et autres, la valeur déclarée se saisit avec le crayon de chaque compte.
       </p>
     </>
   );
@@ -258,9 +265,6 @@ export function AccountsScreen() {
           />
         </div>
       )}
-      <Card title="Mouvements de l'année" subtitle={period}>
-        <YearFlows data={data} accounts={shown} year={year} asOf={asOf} />
-      </Card>
       <Card
         tour="accounts-list"
         title="Vos comptes"
@@ -275,6 +279,9 @@ export function AccountsScreen() {
       >
         {ordering && <p className={s.muted}>L'ordre choisi vaut partout, sur tous tes appareils : bandeau, listes et saisie.</p>}
         <AccountList data={data} accounts={shown} asOf={asOf} today={today} ordering={ordering} />
+      </Card>
+      <Card title="Mouvements de l'année" subtitle={period}>
+        <YearFlows data={data} accounts={shown} year={year} asOf={asOf} />
       </Card>
     </Stack>
   );

@@ -129,7 +129,7 @@ export const TOUR: Record<Tab, TourStep[]> = {
     {
       target: at("accounts-list"),
       title: "Vos comptes",
-      text: "Solde, valeur déclarée et capital injecté de chaque compte. « Modifier l'ordre » les range comme tu veux.",
+      text: "Solde, valeur déclarée et capital injecté de chaque compte. Le crayon modifie un compte, « Modifier l'ordre » les range comme tu veux.",
     },
   ],
   operations: [

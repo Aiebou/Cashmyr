@@ -37,14 +37,14 @@ const frame = (title: string) => screen.getByRole("heading", { name: title, leve
 const row = (list: HTMLElement, name: string) => within(list).getAllByRole("listitem").find((li) => li.textContent?.includes(name))!;
 
 describe("Mes comptes", () => {
-  it("dans l'ordre : bandeau, les deux boutons, Mouvements de l'année, Vos comptes", async () => {
+  it("dans l'ordre : bandeau, les deux boutons, Vos comptes, Mouvements de l'année", async () => {
     await openAccounts();
     const order = [
       bannerSection("Total de mes comptes (valeurs déclarées) aujourd'hui"),
       screen.getByRole("button", { name: "Ajouter un compte" }),
       screen.getByRole("button", { name: "Nouveau transfert" }),
-      screen.getByRole("heading", { name: "Mouvements de l'année" }),
       screen.getByRole("heading", { name: "Vos comptes" }),
+      screen.getByRole("heading", { name: "Mouvements de l'année" }),
     ];
     for (let i = 1; i < order.length; i++) {
       expect(order[i - 1]!.compareDocumentPosition(order[i]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -132,6 +132,44 @@ describe("Mes comptes", () => {
     act(() => store.getState().actions.openModal({ kind: "operation", type: "out" }));
     const dialog = await screen.findByRole("dialog", { name: "Nouvelle opération" });
     expect(within(within(dialog).getByLabelText("Compte")).getAllByRole("option").map((o) => o.textContent)).toEqual(["Livret A", "Compte courant"]);
+  });
+
+  it("le crayon modifie un compte sur place, avec les champs de Paramètres → Comptes", async () => {
+    const user = userEvent.setup();
+    const { repository } = await openAccounts();
+    await user.click(within(frame("Vos comptes")).getByRole("button", { name: "Modifier Livret A" }));
+    const d = await screen.findByRole("dialog", { name: "Modifier le compte" });
+    const name = within(d).getByLabelText("Nom du compte");
+    await user.clear(name);
+    await user.type(name, "Livret bleu{Enter}");
+    const declared = within(d).getByLabelText("Valeur déclarée");
+    await user.clear(declared);
+    await user.type(declared, "3 200{Enter}");
+    await user.click(within(d).getByLabelText("Épargne de précaution"));
+    expect(repository.data.collections.accounts.find((a) => a.id === livret.id)).toMatchObject({
+      name: "Livret bleu",
+      declaredValue: 320_000,
+      safety: !livret.safety,
+    });
+    await user.click(within(d).getByRole("button", { name: "Terminé" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(within(frame("Vos comptes")).getByRole("button", { name: "Modifier Livret bleu" })).toBeTruthy();
+    // En mode « Modifier l'ordre », les flèches prennent la place du crayon.
+    await user.click(within(frame("Vos comptes")).getByRole("button", { name: "Modifier l'ordre" }));
+    expect(within(frame("Vos comptes")).queryByRole("button", { name: "Modifier Livret bleu" })).toBeNull();
+  });
+
+  it("un compte inutilisé se supprime depuis sa fenêtre, qui se ferme", async () => {
+    const user = userEvent.setup();
+    const { repository } = await openAccounts();
+    const pea = createRecord<Account>("acc-pea", { name: "PEA", role: "invest", opening: 0, safety: false, color: 2 }, 1);
+    await act(() => repository.apply({ accounts: [pea] }));
+    await user.click(within(frame("Vos comptes")).getByRole("button", { name: "Modifier PEA" }));
+    const d = await screen.findByRole("dialog", { name: "Modifier le compte" });
+    await user.click(within(d).getByRole("button", { name: "Supprimer le compte" }));
+    await user.click(within(d).getByRole("button", { name: "Supprimer" }));
+    expect(repository.data.collections.accounts.find((a) => a.id === "acc-pea")!.deletedAt).not.toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Modifier le compte" })).toBeNull();
   });
 
   it("un compte épargne, placement ou autre sans valeur déclarée le signale", async () => {
