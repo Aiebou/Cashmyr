@@ -1,13 +1,13 @@
 # Passation de Cashmyr
 
-État au 24/10/2026, pour reprendre le développement sur un autre Mac à partir d'un clone neuf du dépôt.
+État au 25/10/2026, pour reprendre le développement sur un autre Mac à partir d'un clone neuf du dépôt.
 
-- **Branche `main`** : 6e7c584 (fusion de la PR #18) au moment de cette mise à jour. Rien d'autre en attente : aucun
+- **Branche `main`** : ca9336f (fusion de la PR #19) au moment de cette mise à jour. Rien d'autre en attente : aucun
   stash, aucun commit ni tag non poussé.
 - **Version publiée** : 0.4.0, le 26/09/2026.
   - [Release](https://github.com/Aiebou/Cashmyr/releases/tag/v0.4.0), avec `latest.json` signé par la clé `EFBCA89EB0CD97C`.
   - PWA en ligne sur <https://aiebou.github.io/Cashmyr/>.
-- **Sur `main` depuis la 0.4.0** : les PR #16 à #18 (passation, cahier des charges, documentation à jour, jeux
+- **Sur `main` depuis la 0.4.0** : les PR #16 à #19 (passation, cahier des charges, documentation à jour, jeux
   d'essai neutralisés, catégories par défaut aux noms génériques, décision 68). La PWA les a déjà, puisque chaque
   fusion la publie ; l'application de bureau les aura avec la prochaine Release.
 - **Tests** : 453 tests TypeScript et 15 tests Rust passent sur `main` (core 228, storage 97, ui 128). La séquence
@@ -53,7 +53,7 @@ Versions publiées depuis :
 | 0.2.0 | 26/09/2026 | #8 à #11 | Montants au centime, valeurs déclarées et trois totaux, cibles du mois, camemberts, remise à zéro, mise à jour au lancement, format 2 (tags, ordre des comptes). Décisions 41 à 50 |
 | 0.3.0 | 26/09/2026 | #12, #13 | Profils : un budget complet par profil, choix au lancement, Paramètres → Profils. Décisions 51 à 61 |
 | 0.4.0 | 26/09/2026 | #14, #15 | En-tête (synchro à gauche, menu du profil), total choisi dans le titre du bandeau, tuile « + Profil », tutoriel. Décisions 62 à 67 |
-| Prochaine | non publiée | #16 à #18 | Passation et `CLAUDE.md`, cahier des charges, documentation à jour, jeux d'essai neutralisés, catégories par défaut aux noms génériques. Décision 68 |
+| Prochaine | non publiée | #16 à #19 | Passation et `CLAUDE.md`, cahier des charges, documentation à jour, jeux d'essai neutralisés, catégories par défaut aux noms génériques, état de `main` dans la passation. Décision 68 |
 
 Dates de publication des Releases, heure de Paris : la 0.1.2, la 0.2.0 et la 0.3.0 sont sorties peu après minuit, la 0.4.0 le matin. GitHub, en UTC, les date de la veille.
 
