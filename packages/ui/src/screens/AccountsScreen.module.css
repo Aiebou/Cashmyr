@@ -124,6 +124,10 @@
   gap: 2px;
   text-align: right;
 }
+.edit {
+  align-self: center;
+  flex: none;
+}
 .figureNote {
   font-size: 12px;
   color: var(--ink-3);
