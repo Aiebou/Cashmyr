@@ -12,7 +12,7 @@
 - **Lot 0.6.0 en cours** (format 3) : la PR « format 3 : budgets et types » (branche `format-3-budgets`,
   décisions 71 à 82) ouvre une pile de PR à fusionner ensemble juste avant le tag, jamais seule : la PWA publiée
   écrirait sinon un format que les applications de bureau en 0.5 refuseraient.
-- **Tests** : 486 tests TypeScript et 15 tests Rust passent sur la branche du format 3 (core 251, storage 97, ui 138). La séquence
+- **Tests** : 489 tests TypeScript et 15 tests Rust passent sur la branche du format 3 (core 254, storage 97, ui 138). La séquence
   d'installation du §3 a été vérifiée sur un clone neuf le 23/10/2026.
 
 La référence reste [`architecture.md`](architecture.md) : modèle de données, règles de calcul et de fusion, et les

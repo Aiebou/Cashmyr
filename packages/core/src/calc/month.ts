@@ -1,5 +1,6 @@
 import { indexOf, type DatasetIndex } from "../dataset";
-import type { Budget, Cents, Dataset, Month, Operation, Role } from "../model";
+import { defaultBudgetId } from "../defaults";
+import type { Account, Budget, Cents, Dataset, Month, Operation, Role } from "../model";
 
 const SAVING_ROLES: ReadonlySet<Role> = new Set<Role>(["epargne", "invest"]);
 export const isSavingRole = (role: Role | undefined): boolean => role !== undefined && SAVING_ROLES.has(role);
@@ -22,6 +23,8 @@ export type MonthAggregates = {
   saved: Cents;
   /** La part des virements dans `saved` : vers un compte épargne ou placement, moins ce qui en revient. */
   transferred: Cents;
+  /** Les mêmes virements, par budget d'épargne qui les reçoit (décision 80). */
+  transferredByBudget: Record<string, Cents>;
   /** Dépensé : dépenses des budgets de dépense (décision 74). */
   spent: Cents;
   balance: Cents;
@@ -33,6 +36,17 @@ export type MonthAggregates = {
 export function budgetOf(ix: DatasetIndex, categoryId: string | undefined): Budget | undefined {
   const budgetId = categoryId ? ix.categories.get(categoryId)?.budgetId : undefined;
   return budgetId ? ix.budgets.get(budgetId) : undefined;
+}
+
+/**
+ * Budget d'épargne d'un compte épargne ou placement (décision 80) : celui de son type principal, si
+ * c'est un budget d'épargne (supprimé compris) ; sinon, et sans type, le budget « Épargne » par défaut.
+ */
+export function savingBudgetOf(ix: DatasetIndex, account: Pick<Account, "typeIds">): string {
+  const principal = account.typeIds?.[0];
+  const budgetId = principal ? ix.types.get(principal)?.budgetId : undefined;
+  const budget = budgetId ? ix.budgets.get(budgetId) : undefined;
+  return budget?.nature === "save" ? budget.id : defaultBudgetId("invest");
 }
 
 /** Effet d'une opération sur les agrégats du mois. */
@@ -66,8 +80,14 @@ function accumulate(
     case "tx": {
       const to = op.toAccountId ? ix.accounts.get(op.toAccountId) : undefined;
       const from = op.fromAccountId ? ix.accounts.get(op.fromAccountId) : undefined;
-      if (isSavingRole(to?.role)) acc.transferred += op.amount;
-      if (isSavingRole(from?.role)) acc.transferred -= op.amount;
+      const move = (account: Account | undefined, amount: Cents) => {
+        if (!isSavingRole(account?.role)) return;
+        const id = savingBudgetOf(ix, account!);
+        acc.transferred += amount;
+        acc.transferredByBudget[id] = (acc.transferredByBudget[id] ?? 0) + amount;
+      };
+      move(to, op.amount);
+      move(from, -op.amount);
       return;
     }
   }
@@ -85,6 +105,7 @@ export function monthAggregates(data: Dataset, month: Month): MonthAggregates {
     byBudget: {},
     saved: 0,
     transferred: 0,
+    transferredByBudget: {},
     spent: 0,
     balance: 0,
     unclassified: 0,

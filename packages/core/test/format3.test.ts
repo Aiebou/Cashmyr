@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyChanges,
   assertValidDataset,
+  budgetActual,
   defaultBudgetId,
   defaultCategories,
   defaultTypeId,
@@ -266,5 +267,44 @@ describe("validation du format 3", () => {
     const gone = ok.collections.budgets.map((b) => (b.id === WANTS ? { ...b, deletedAt: NOW, updatedAt: NOW } : b));
     const data = { ...ok, collections: { ...ok.collections, budgets: gone, operations: [expense("2026-09-03", eur(40), cats.resto.id, accs.courant.id)] } };
     expect(monthAggregates(data, "2026-09").byBudget).toEqual({ [WANTS]: eur(40) });
+  });
+});
+
+describe("virements et budgets d'épargne (décision 80)", () => {
+  const { cats, accs } = world();
+  const formation = { id: "budget-formation", updatedAt: NOW, deletedAt: null, name: "Formation", nature: "save" as const, position: 4, color: 4 as const };
+  const course = { id: "type-cours", updatedAt: NOW, deletedAt: null, budgetId: formation.id, name: "Cours", position: 1, objective: null };
+  const charge = defaultTypeId("charges-fixes");
+  const lep = account("LEP", "epargne", { typeIds: [course.id, PRECAUTION_TYPE_ID] });
+  const livret = account("Livret", "epargne");
+  const odd = account("Compte à terme", "epargne", { typeIds: [charge] });
+  const base = dataset({ categories: Object.values(cats), accounts: [accs.courant, lep, livret, odd] });
+  const data: Dataset = {
+    ...base,
+    collections: {
+      ...base.collections,
+      budgets: [...base.collections.budgets, formation],
+      types: [...base.collections.types, course],
+      operations: [
+        transfer("2026-09-02", eur(300), accs.courant.id, lep.id),
+        transfer("2026-09-03", eur(200), accs.courant.id, livret.id),
+        transfer("2026-09-04", eur(50), lep.id, accs.courant.id),
+        transfer("2026-09-05", eur(40), accs.courant.id, odd.id),
+      ],
+    },
+  };
+  const a = monthAggregates(data, "2026-09");
+
+  it("vers un compte, dans le budget de son type principal ; retirés, ils en sortent", () => {
+    expect(budgetActual(a, formation)).toBe(eur(300 - 50));
+  });
+
+  it("sans type, ou avec un type principal d'un budget de dépense, dans le budget « Épargne » par défaut", () => {
+    expect(budgetActual(a, { id: SAVED })).toBe(eur(200 + 40));
+    expect(budgetActual(a, { id: NEEDS })).toBe(0);
+  });
+
+  it("la mise de côté du mois reste la somme de tous les virements nets", () => {
+    expect(a.saved).toBe(eur(300 + 200 - 50 + 40));
   });
 });

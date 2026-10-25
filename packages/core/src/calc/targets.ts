@@ -1,7 +1,6 @@
 import type { AverageWindow, Cents, Dataset, Month } from "../model";
 import { applyBasisPoints } from "../money";
 import { averageIncome } from "./averages";
-import { defaultBudgetId } from "../defaults";
 import type { Budget } from "../model";
 import { monthAggregates, type MonthAggregates } from "./month";
 
@@ -33,12 +32,9 @@ export function monthTargets(data: Dataset, month: Month): Targets {
 }
 
 /**
- * Ce qu'un budget a reçu dans le mois, à comparer à sa cible : ses dépenses. Les virements vers
- * l'épargne et les placements comptent dans le budget « Épargne » par défaut, comme ils comptaient
- * dans la mise de côté. Leur place quand plusieurs budgets d'épargne existent reste à trancher
- * avant de permettre d'en créer.
+ * Ce qu'un budget a reçu dans le mois, à comparer à sa cible : ses dépenses, et pour un budget
+ * d'épargne les virements nets vers les comptes dont il est le budget (décision 80).
  */
 export function budgetActual(agg: MonthAggregates, budget: Pick<Budget, "id">): Cents {
-  const own = agg.byBudget[budget.id] ?? 0;
-  return budget.id === defaultBudgetId("invest") ? own + agg.transferred : own;
+  return (agg.byBudget[budget.id] ?? 0) + (agg.transferredByBudget[budget.id] ?? 0);
 }
