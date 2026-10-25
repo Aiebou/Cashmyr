@@ -160,7 +160,7 @@
   align-items: center;
 }
 .categoryRow.withBucket {
-  grid-template-columns: minmax(0, 1fr) 170px auto;
+  grid-template-columns: minmax(0, 1fr) 170px 170px auto;
 }
 .categoryList > li {
   padding: 6px 0;
@@ -303,7 +303,6 @@
   }
   .categoryRow.withBucket > select {
     grid-column: 1;
-    grid-row: 2;
   }
   .status {
     grid-template-columns: minmax(0, 1fr);
@@ -311,5 +310,63 @@
   }
   .status dd + dt {
     margin-top: 8px;
+  }
+}
+
+/* Budgets : une ligne par budget, ses types dessous (décisions 71 à 87). */
+.budget {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+.budgetRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 130px 110px auto;
+  gap: 10px;
+  align-items: center;
+}
+.budgetActions {
+  display: inline-flex;
+  align-items: center;
+}
+.types {
+  display: grid;
+  gap: 4px;
+  margin-left: 36px;
+}
+.typeList {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.typeRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+@media (max-width: 640px) {
+  .budgetRow {
+    grid-template-columns: auto minmax(0, 1fr) 96px;
+  }
+  /* Pastille et nom sur la première ligne ; nature et part dessous. */
+  .budgetRow > :nth-child(2) {
+    grid-column: 2 / -1;
+  }
+  .budgetRow > :nth-child(3) {
+    grid-column: 2;
+  }
+  .budgetRow > :nth-child(4) {
+    grid-column: 3;
+  }
+  .budgetActions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+  .types {
+    margin-left: 12px;
   }
 }

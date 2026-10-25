@@ -17,6 +17,7 @@ import { OperationsScreen } from "./screens/OperationsScreen";
 import { OperationModal } from "./screens/OperationModal";
 import { RecurrenceModal } from "./screens/RecurrenceModal";
 import { EditAccountModal } from "./screens/settings/AccountsSection";
+import { CreateBudgetModal, DeleteBudgetModal } from "./screens/settings/BudgetModals";
 import { DeleteCategoryModal } from "./screens/settings/DeleteCategoryModal";
 import { CreateProfileModal, DeleteProfileModal } from "./screens/settings/ProfileModals";
 import { SETTINGS_TOC, SettingsScreen } from "./screens/settings/SettingsScreen";
@@ -181,6 +182,10 @@ function Modals() {
       return <CreateAccountModal stay={modal.stay ?? false} />;
     case "edit-account":
       return <EditAccountModal accountId={modal.accountId} />;
+    case "create-budget":
+      return <CreateBudgetModal />;
+    case "delete-budget":
+      return <DeleteBudgetModal budgetId={modal.budgetId} />;
     case "recurrence":
       return <RecurrenceModal key={modal.editId ?? "new"} {...(modal.editId ? { editId: modal.editId } : {})} />;
     case "delete-category":

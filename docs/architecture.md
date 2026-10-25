@@ -629,6 +629,22 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 | 80 | Virements et budgets d'épargne | Un virement vers un compte épargne ou placement compte dans la jauge du budget du type principal de ce compte ; un virement qui en sort s'en retire. Sans type, ou si ce type appartient à un budget de dépense, il compte dans le budget « Épargne » par défaut. Exemple : 300 € vers un LEP de type principal « Cours » (budget Formation) et 200 € vers un livret sans type : Formation 300 €, Épargne 200 €. La mise de côté du mois reste la somme de tous ces virements nets (décision 74). Validée le 25/10/2026. |
 | 81 | Format 3 | Collections `budgets` et `types` ; `budgetId` et `typeId` sur les catégories, `typeIds` sur les comptes, `typeId` sur les opérations et les récurrences ; `splits` par budget, `budgetColors` ; `safety` (compte et réglage) et `bucketColors` disparaissent. Mise à niveau à la lecture, fonction pure des données : deux appareils obtiennent les mêmes lignes. Un profil vide ne reçoit ni budget ni type. Base IndexedDB en version 3 (deux magasins). Les modifications en attente suivent les réglages déplacés. Une version 0.5 refuse le format 3 (« Mets l'application à jour ») sans rien perdre : chaque appareil doit passer en 0.6.0. |
 | 82 | Reprise de l'ancien fichier | Les trois usages vont dans les trois budgets par défaut, sans type ; la vérification croisée compare besoins, envies et mise de côté à Dépenses courantes, Loisirs et Épargne. Le réglage de précaution devient l'objectif de son type, horodaté 4 : il l'emporte sur un objectif jamais modifié, jamais sur une modification. Ses catégories restent horodatées 1 et cèdent donc aux catégories par défaut du format 3. |
+| 83 | Changer la nature d'un budget | Permis, après une confirmation qui annonce l'effet sur les mois passés, chiffres à l'appui : « 2 opérations, 103,50 € en tout, passent de « dépensé » à « mis de côté » ». Les jauges et le taux d'épargne changent en conséquence. |
+| 84 | Supprimer un type | Ses catégories restent dans leur budget, sans type ; les comptes le perdent, et s'il était leur type principal, le suivant le devient. Les opérations et les récurrences gardent leur rattachement, dont le montant revient au type principal du compte (décision 78). La confirmation annonce ce que le type réservait : LEP [Précaution, Projet] avec 1 200 € réservés à Projet, Projet supprimé, la précaution passe de 8 800 € à 10 000 €. |
+| 85 | Le type « Épargne de précaution » | Il se renomme, il ne se supprime pas : il porte l'objectif de précaution (décision 79). |
+| 86 | Le budget « Épargne » par défaut | Il se renomme ; il ne se supprime pas et reste de nature « épargne » : il contient le type de précaution et reçoit les virements vers un compte sans type (décision 80). |
+| 87 | Supprimer un autre budget (point 13) | Ses catégories passent dans le budget choisi, sans type ; ses types sont supprimés, avec les effets de la décision 84 ; sa part de la répartition s'ajoute à celle du budget choisi (Formation 10 % vers Épargne 20 % : Épargne 30 %). La confirmation annonce le changement des mois passés. Le dernier budget ne se supprime pas. |
+
+Format 3, choix d'interface validés le 25/10/2026 (P6) :
+- **Paramètres → Budgets** (anciennement « Budget ») : une carte « Budgets », une ligne par budget avec sa couleur, son
+  nom modifiable sur place, sa nature, sa part, deux flèches pour l'ordre et la corbeille (ni pour « Épargne », ni pour
+  le dernier budget). Ses types dessous : renommer sur place, supprimer après confirmation (pas la précaution), ajouter.
+  « Nouveau budget » demande un nom et une nature ; il arrive à 0 %. La répartition s'enregistre toujours d'un bouton,
+  à 100 %. Sur téléphone, le nom prend la largeur, nature et part dessous.
+- **Supprimer un budget** ouvre une fenêtre : le budget qui reçoit ses catégories, la part qui s'y ajoute, le montant
+  des mois passés qui change de budget.
+- **Paramètres → Catégories** : chaque dépense a un menu « Type », limité aux types de son budget, plus « Sans
+  type » ; changer de budget retire le type. La couleur d'un budget se choisit dans Budgets.
 
 Version 0.5.0, choix d'interface validés le 25/10/2026 (liste du 25/10, points 18 à 20) :
 - **Mes comptes** : « Vos comptes » avant « Mouvements de l'année » ; un crayon sur chaque compte ouvre « Modifier le
