@@ -2,13 +2,13 @@
 
 État au 25/10/2026, pour reprendre le développement sur un autre Mac à partir d'un clone neuf du dépôt.
 
-- **Version publiée** : 0.4.1, le 25/10/2026, tag `v0.4.1` sur 2408377 (fusion de la PR #21).
-  - [Release](https://github.com/Aiebou/Cashmyr/releases/tag/v0.4.1), avec `latest.json` contrôlé : 13 entrées,
-    toutes signées par la clé `EFBCA89EB0CD97C`.
+- **Version publiée** : 0.5.0, le 25/10/2026, tag `v0.5.0` sur la fusion de la PR de version (`release-0.5.0`).
+  - [Release](https://github.com/Aiebou/Cashmyr/releases/tag/v0.5.0), avec `latest.json` contrôlé par
+    `check-latest.mjs` (clé `EFBCA89EB0CD97C`).
   - PWA en ligne sur <https://aiebou.github.io/Cashmyr/>.
-- **Sur `main` depuis la 0.4.1** : le lot 0.5.0 de la liste du 25/10 (voir §6) : Mes comptes (PR #22),
+- **Contenu de la 0.5.0** : le lot sans changement de format de la liste du 25/10 (voir §6) : Mes comptes (PR #22),
   « Catégories » et « Haut de page » (PR #23), taux d'endettement (PR #24, décisions 69 et 70), menu latéral du grand
-  écran. La PWA les a dès leur fusion ; l'application de bureau les aura avec la 0.5.0, à publier.
+  écran (PR #25).
 - **Tests** : 465 tests TypeScript et 15 tests Rust passent (core 230, storage 97, ui 138). La séquence
   d'installation du §3 a été vérifiée sur un clone neuf le 23/10/2026.
 
@@ -53,16 +53,17 @@ Versions publiées depuis :
 | 0.3.0 | 26/09/2026 | #12, #13 | Profils : un budget complet par profil, choix au lancement, Paramètres → Profils. Décisions 51 à 61 |
 | 0.4.0 | 26/09/2026 | #14, #15 | En-tête (synchro à gauche, menu du profil), total choisi dans le titre du bandeau, tuile « + Profil », tutoriel. Décisions 62 à 67 |
 | 0.4.1 | 25/10/2026 | #16 à #21 | Passation et `CLAUDE.md`, cahier des charges, documentation à jour, jeux d'essai neutralisés, catégories par défaut aux noms génériques. Décision 68 |
-| Prochaine (0.5.0) | non publiée | #22 à #24, menu latéral | « Vos comptes » avant « Mouvements de l'année », modification d'un compte depuis Mes comptes ; « Catégories », « Haut de page » sur téléphone ; taux d'endettement dans Dettes et dans les indicateurs de l'année ; menu latéral repliable sur grand écran. Décisions 69 et 70 |
+| 0.5.0 | 25/10/2026 | #22 à #26 | « Vos comptes » avant « Mouvements de l'année », modification d'un compte depuis Mes comptes ; « Catégories », « Haut de page » sur téléphone ; taux d'endettement dans Dettes et dans les indicateurs de l'année ; menu latéral repliable sur grand écran. Décisions 69 et 70 |
 
-Dates de publication des Releases, heure de Paris : la 0.1.2, la 0.2.0 et la 0.3.0 sont sorties peu après minuit, la 0.4.0 le matin, la 0.4.1 vers 1 h 30. GitHub, en UTC, les date de la veille.
+Dates de publication des Releases, heure de Paris : la 0.1.2, la 0.2.0 et la 0.3.0 sont sorties peu après minuit, la 0.4.0 le matin, la 0.4.1 vers 1 h 30, la 0.5.0 le même jour. GitHub, en UTC, les date de la veille.
 
 Demandes reçues après le cahier des charges, toutes livrées sauf une :
 - 23/09 : dettes et 7e onglet, menu « Ajouter », couleurs personnalisables ;
 - 25/09 : liste « Modifications à apporter (v0.1.2) », devenue la 0.2.0 et, pour les profils, la 0.3.0 ;
 - 26/09 : liste « Maj de la v0.3.0 », devenue la 0.4.0 ;
 - 24/10 : jeux d'essai publics et catégories par défaut sans éléments personnels (décision 68), livrés en 0.4.1 ;
-- 25/10 : liste « DTI, budgets, ergonomie », en cours (§6).
+- 25/10 : liste « DTI, budgets, ergonomie » : la partie sans changement de format livrée en 0.5.0, le reste en
+  cours (§6).
 
 **Reporté** : le type de compte « Compte professionnel ». Il changerait le format des données, et sa place dans
 les calculs reste à définir ; un « profil professionnel » est l'autre piste. Rien n'est commencé
@@ -439,7 +440,7 @@ générés (`src-tauri/gen/`, `src-tauri/permissions/`) et les `.DS_Store` sont 
 | `~/.gitconfig` et `.git/config` local | `user.name`, `user.email` | `git config` (§3) |
 | `~/.config/gh/`, trousseau macOS | Connexion de `gh` et identifiants Git | `gh auth login`, puis `gh auth setup-git`. Le jeton doit avoir *Contents*, *Workflows* et *Pull requests* en écriture. |
 | `~/.local/bin/pnpm`, `~/.cargo`, `~/.rustup`, `/opt/homebrew/bin/gh`, `/usr/local/bin/node` | Outils | Réinstaller (§3) |
-| `/Applications/Cashmyr.app` (0.4.1) | Application installée | La retélécharger depuis la Release |
+| `/Applications/Cashmyr.app` (0.5.0) | Application installée | La retélécharger depuis la Release |
 | `~/Library/WebKit/io.github.aiebou.cashmyr/`, `~/Library/Caches/io.github.aiebou.cashmyr/`, `~/Library/Preferences/io.github.aiebou.cashmyr.plist` | WebView, cache, préférences macOS | Recréés tout seuls |
 
 Rien d'autre n'a été trouvé : aucun `.env`, `.pem`, `.p12` ni autre clé liée au projet, aucun autre clone, aucun
@@ -464,7 +465,7 @@ export Cashmyr dans `~/Documents`, `~/Downloads` ou iCloud Drive, aucun hook Git
 2. Remettre l'identité Git, reconnecter `gh` (`gh auth login --scopes workflow`, `gh auth setup-git`) et recréer
    `.claude/launch.json`.
 3. Si tu as copié la mémoire de Claude Code, la placer sous le nouveau chemin.
-4. Installer Cashmyr 0.4.1 depuis la Release. Au premier lancement, l'application non signée s'ouvre par Réglages
+4. Installer Cashmyr 0.5.0 depuis la Release. Au premier lancement, l'application non signée s'ouvre par Réglages
    Système → Confidentialité et sécurité → « Ouvrir quand même » (voir le README). Ensuite, rejoindre le fichier de
    synchronisation depuis le dossier cloud.
 
@@ -474,9 +475,8 @@ Restent, du plus pressé au moins pressé :
 
 1. **La liste du 25/10/2026**, dont toutes les règles ont été validées ce jour-là (décisions à inscrire au §8 à
    partir de la 69, chacune dans la PR qui l'applique). Découpage convenu :
-   - 0.5.0, sans changement de format : Mes comptes, « Catégories » et bouton « Haut de page » sur
-     téléphone, puis le DTI (onglet Dettes et indicateurs de l'année), puis le menu latéral du grand écran, tous faits ; reste à
-     publier la 0.5.0 (§4) ;
+   - 0.5.0, sans changement de format, publiée : Mes comptes, « Catégories » et bouton « Haut de page » sur
+     téléphone, le DTI (onglet Dettes et indicateurs de l'année), le menu latéral du grand écran ;
    - 0.6.0, format 3, PR empilées et fusionnées juste avant le tag : budgets et types modulables (modèle, calculs,
      migration, nouvelles catégories par défaut appliquées aussi aux profils existants), leur interface, puis les
      comptes rattachés aux types, avec les parts réservées et la précaution.
