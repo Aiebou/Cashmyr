@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Segmented } from "../../components/controls";
+import { ArrowUpIcon } from "../../components/icons";
 import { Card, ScreenTitle, Stack } from "../../components/layout";
 import { useActions, useApp } from "../../store/context";
 import { AccountsSection } from "./AccountsSection";
@@ -36,7 +37,7 @@ const SECTIONS: { id: string; title: string; content: ReactNode }[] = [
   { id: "budget", title: "Budget", content: <BudgetSection /> },
   { id: "comptes", title: "Comptes", content: <AccountsSection /> },
   { id: "recurrences", title: "Récurrences", content: <RecurrencesSection /> },
-  { id: "categories", title: "Catégories et couleurs", content: <CategoriesSection /> },
+  { id: "categories", title: "Catégories", content: <CategoriesSection /> },
   { id: "tags", title: "Tags", content: <TagsSection /> },
   { id: "profils", title: "Profils", content: <ProfilesSection /> },
   { id: "synchronisation", title: "Synchronisation", content: <SyncSection /> },
@@ -45,11 +46,43 @@ const SECTIONS: { id: string; title: string; content: ReactNode }[] = [
   { id: "application", title: "Application", content: <AppSection /> },
 ];
 
+/**
+ * « Haut de page », sur téléphone seulement (la feuille de style le cache au-delà) : il apparaît une fois
+ * qu'on a défilé d'un écran, ramène en haut et rend le focus au sommaire.
+ */
+function BackToTop({ toc }: { toc: React.RefObject<HTMLElement | null> }) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const update = () => setVisible(window.scrollY > window.innerHeight);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
+  if (!visible) return null;
+  return (
+    <button
+      type="button"
+      className={s.top}
+      aria-label="Haut de page"
+      title="Haut de page"
+      onClick={() => {
+        // Retour immédiat : un défilement animé s'arrête à mi-chemin quand le focus change.
+        window.scrollTo({ top: 0 });
+        toc.current?.querySelector("a")?.focus({ preventScroll: true });
+      }}
+    >
+      <ArrowUpIcon size={20} />
+    </button>
+  );
+}
+
 export function SettingsScreen() {
+  const toc = useRef<HTMLElement>(null);
   return (
     <Stack gap={22}>
       <ScreenTitle title="Paramètres" />
-      <nav aria-label="Sections des paramètres" data-tour="settings-toc">
+      <BackToTop toc={toc} />
+      <nav ref={toc} aria-label="Sections des paramètres" data-tour="settings-toc">
         <ul className={s.toc}>
           {SECTIONS.map((sec) => (
             <li key={sec.id}>

@@ -23,6 +23,28 @@
   color: var(--ink);
   border-color: var(--ink-3);
 }
+/* « Haut de page » : téléphone seulement, juste au-dessus du bouton « Nouvelle dépense ». */
+.top {
+  position: fixed;
+  right: max(26px, calc(env(safe-area-inset-right) + 6px));
+  bottom: calc(max(20px, env(safe-area-inset-bottom)) + 68px);
+  z-index: 30;
+  display: none;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+@media (max-width: 640px) {
+  .top {
+    display: grid;
+  }
+}
 .section {
   display: grid;
   gap: 14px;
