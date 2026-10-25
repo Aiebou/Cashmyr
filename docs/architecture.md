@@ -51,7 +51,7 @@ et ce document suit le code : toute règle qui change ici change aussi dans `pac
 │   │   │   ├── safety.ts        constituée, objectif, capacité
 │   │   │   ├── goals.ts         cible, avancement, échéance, mensualité, filtrage
 │   │   │   ├── debts.ts         total, réglé, reste, échéancier, charge, total dû, filtrage
-│   │   │   └── year.ts          indicateurs annuels, séries 12 mois, classement
+│   │   │   └── year.ts          indicateurs annuels (dont le taux d'endettement), séries 12 mois, classement
 │   │   ├── debts.ts             versement ponctuel, prélèvement créé depuis une dette
 │   │   ├── colors.ts            accesseur unique de couleur, choix et réinitialisation
 │   │   ├── reset.ts             remise à zéro partout, catégories de l'accueil (décision 45)
@@ -587,6 +587,13 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 |---|---|---|
 | 68 | Noms des catégories par défaut | Quatre noms trop personnels sont remplacés, identifiants inchangés : « Service et pourboires » devient « Revenus annexes », « Missions freelance » « Activité indépendante », « Revenus de trading » « Revenus de placements », « Compte de trading » « Autres placements ». Ces quatre catégories sont créées avec l'horodatage 2 au lieu de 0 (`RENAMED_AT`) : une catégorie par défaut jamais modifiée d'une version précédente (horodatée 0) prend le nouveau nom à la synchronisation, un nom choisi par l'utilisateur gagne toujours, et l'ancien fichier, repris à l'horodatage 1 (décision 34), ne remet plus l'ancien nom de ces quatre catégories. Un appareil qui ne se synchronise pas garde ses noms. |
 
+### Validées le 25/10/2026 (version 0.5.0)
+
+| # | Sujet | Décision |
+|---|---|---|
+| 69 | Taux d'endettement (DTI), onglet Dettes | Somme des montants d'échéance des dettes « je dois » en cours (mode échéances, ni soldées ni archivées, reste positif), divisée par le revenu moyen des N mois qui précèdent le mois en cours, revenus nets tels que saisis (décision 7). C'est la charge mensuelle déjà affichée, désormais nommée : 250 € + 100 € d'échéances pour 2 000 € de revenu moyen donnent 17,5 %. Les dettes en remboursement libre n'y entrent pas, et l'encart le dit. Affiché au dixième, sans seuil coloré. |
+| 70 | Taux d'endettement de l'année | Ce qui a vraiment été payé : la somme des sorties rattachées à une dette « je dois » (dette supprimée comprise), divisée par la somme des revenus des mêmes mois. Ce sont les mois des moyennes annuelles : mois en cours exclu (décision 19), pas avant la première opération ; une année passée compte jusqu'au 31/12. Ni les versements hors budget (`paidManual`, sans date), ni les transferts, ni les revenus rattachés à une dette n'y entrent. Neuf mois à 300 € pour 18 000 € de revenus donnent 15 %. Sans revenu, « — ». |
+
 Reporté le 26/09/2026 : le type de compte « Compte professionnel ». Il changerait le format des données, et sa place
 dans les calculs reste à définir (budget du mois, totaux, virements entre comptes pro et perso) ; un profil
 professionnel est une autre piste.
@@ -600,7 +607,7 @@ Lectures validées avec la section dettes :
 - Prélèvement créé depuis une dette : du mois de la prochaine échéance à celui de la dernière, avec un
   identifiant dérivé de la dette.
 - Le drapeau « soldée » est manuel ; la carte propose « Marquer soldée » quand le reste est nul.
-- Charge mensuelle rapportée au revenu moyen du mois en cours.
+- Charge mensuelle rapportée au revenu moyen du mois en cours (le taux d'endettement de la décision 69).
 - Les couleurs personnalisées font partie du schéma dès l'étape 2, leur interface est venue à l'étape 4 ;
   `categoryColors` est une seule clé de fusion.
 

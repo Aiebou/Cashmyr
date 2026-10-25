@@ -145,6 +145,8 @@
 
 .stat {
   display: grid;
+  /* Dans une rangée de tuiles de hauteurs différentes, les valeurs restent alignées. */
+  align-content: start;
   gap: 2px;
   padding: 14px 16px;
   border: 1px solid var(--rule);

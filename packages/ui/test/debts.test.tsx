@@ -60,7 +60,7 @@ const debt = (app: Awaited<ReturnType<typeof openDebts>>, id = "debt-1") =>
   app.repository.data.collections.debts.find((d) => d.id === id)!;
 
 describe("bandeau des dettes", () => {
-  it("reste à rembourser, barre par dette, charge mensuelle rapportée au revenu moyen", async () => {
+  it("reste à rembourser, barre par dette, taux d'endettement (décision 69)", async () => {
     const lent = loan({ direction: "lent", name: "Avance personnelle", categoryId: null, color: 1 });
     await openDebts(
       [loan({ paidManual: 90_000 }), { ...lent, id: "debt-2" }],
@@ -71,7 +71,22 @@ describe("bandeau des dettes", () => {
     expect(plain(banner.textContent)).toMatch(/^Reste à rembourser aujourd'hui600,00 €/);
     expect(within(banner).getAllByRole("listitem").map((li) => plain(li.textContent))).toEqual(["Prêt auto600,00 €"]);
     // 300 € d'échéance pour 2 000 € de revenu moyen (fenêtre tronquée au premier mois d'activité).
-    expect(plain(banner.textContent)).toMatch(/Charge mensuelle : 300,00 €, soit 15 % du revenu moyen des 6 derniers mois \(2 000,00 €\)\./);
+    expect(plain(banner.textContent)).toMatch(
+      /Taux d'endettement \(DTI\) : 15 %, soit une charge mensuelle de 300,00 € sur un revenu moyen de 2 000,00 € \(6 derniers mois\)\./,
+    );
+    expect(plain(banner.textContent)).not.toMatch(/remboursement libre/);
+  });
+
+  it("taux au dixième ; une dette en remboursement libre est annoncée hors du taux", async () => {
+    const free = loan({ name: "Avance familiale", mode: "free", principal: 60_000, installmentAmount: 0, installmentCount: 0, color: 2 });
+    await openDebts(
+      [loan({ installmentAmount: 35_000 }), { ...free, id: "debt-2" }],
+      [salary("s-6", "2026-06-05"), salary("s-7", "2026-07-05"), salary("s-8", "2026-08-05")],
+    );
+    const banner = screen.getByText("Reste à rembourser aujourd'hui").closest("section")!;
+    // 350 € ÷ 2 000 € = 17,5 % ; la dette libre n'a pas de mensualité.
+    expect(plain(banner.textContent)).toMatch(/Taux d'endettement \(DTI\) : 17,5 %/);
+    expect(plain(banner.textContent)).toMatch(/Ta dette en remboursement libre n'y entre pas : sans échéance fixe, elle n'a pas de mensualité\./);
   });
 
   it("sans revenu moyen, la charge est donnée seule", async () => {

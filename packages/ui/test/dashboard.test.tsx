@@ -156,6 +156,32 @@ describe("cibles du mois en cours", () => {
   });
 });
 
+describe("indicateurs de l'année", () => {
+  it("taux d'endettement : remboursements des mois écoulés ÷ leurs revenus (décision 70)", async () => {
+    const { repository } = await renderApp();
+    const salary = (id: string, date: string) => op(id, date, 200_000, "in", { categoryId: cat("Salaire"), accountId: accounts.courant.id });
+    const repay = (id: string, date: string) =>
+      op(id, date, 35_000, "out", { categoryId: cat("Crédit"), accountId: accounts.courant.id, debtId: "debt-1" });
+    await act(() =>
+      repository.apply({
+        debts: [loan()],
+        operations: [
+          salary("in-7", "2026-07-05"),
+          salary("in-8", "2026-08-05"),
+          repay("out-7", "2026-07-10"),
+          repay("out-8", "2026-08-10"),
+          // Septembre est le mois en cours : il n'entre pas.
+          repay("out-9", "2026-09-10"),
+        ],
+      }),
+    );
+    const stats = screen.getByRole("heading", { name: "Indicateurs de l'année" }).closest("section")!;
+    const tile = within(stats).getByText("Taux d'endettement (DTI)").parentElement!;
+    // 700 € ÷ 4 000 € = 17,5 %.
+    expect(tile.textContent?.replace(/[\u00a0\u202f]/g, " ")).toBe("Taux d'endettement (DTI)17,5 %Remboursements de dettes ÷ revenus, sur 2 mois écoulés de 2026");
+  });
+});
+
 describe("graphiques et textes", () => {
   it("graduations propres, zéro compris", () => {
     expect(niceTicks(0, 3_120_00)).toEqual([0, 100_000, 200_000, 300_000, 400_000]);

@@ -239,7 +239,7 @@ describe("charge mensuelle, total dû, patrimoine net", () => {
       ["Actif", eur(1500)],
       ["Libre", eur(900)],
     ]);
-    expect(o).toMatchObject({ totalOwed: eur(2400), monthlyLoad: eur(300), averageIncome: eur(2000) });
+    expect(o).toMatchObject({ totalOwed: eur(2400), monthlyLoad: eur(300), averageIncome: eur(2000), freeOwed: 1 });
     expect(o.loadRatio).toBeCloseTo(0.15, 10);
   });
 });
