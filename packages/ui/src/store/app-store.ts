@@ -41,6 +41,7 @@ export const DEFAULT_DISPLAY: DisplayPrefs = {
   bannerTotal: "declared",
   accountRoles: [],
   hideMonthCharts: false,
+  sideNavCollapsed: false,
   checkUpdatesOnLaunch: true,
 };
 
