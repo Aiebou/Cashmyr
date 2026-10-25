@@ -57,6 +57,10 @@ export const count = plural;
 const percent = new Intl.NumberFormat("fr-FR", { style: "percent", maximumFractionDigits: 0 });
 export const ratio = (r: number) => percent.format(r);
 
+const percentOneDecimal = new Intl.NumberFormat("fr-FR", { style: "percent", maximumFractionDigits: 1 });
+/** Taux d'endettement, au dixième : « 17,5 % », « 15 % ». */
+export const debtRatio = (r: number) => percentOneDecimal.format(r);
+
 /** Capacité en mois, une décimale : « 6,0 » */
 export const oneDecimal = (n: number) =>
   new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);

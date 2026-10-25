@@ -29,7 +29,7 @@ import { Card, Empty, Grid } from "../components/layout";
 import { dropBefore, moveAmongVisible, ReorderableBlock } from "../components/Reorderable";
 import { debtSentence } from "../lib/debt-text";
 import { BUCKET_LABELS, categoryName } from "../lib/data";
-import { count, dayLong, money, ofMonth, oneDecimal, ratio, timeLeft } from "../lib/format";
+import { count, dayLong, debtRatio, money, ofMonth, oneDecimal, ratio, timeLeft } from "../lib/format";
 import { targetCaption } from "../lib/targets-text";
 import type { Tab } from "../store/app-store";
 import { useActions, useApp } from "../store/context";
@@ -146,6 +146,12 @@ function StatsBlock({ data, year, today }: { data: Dataset; year: number; today:
       <Stat label="Revenu moyen" value={ys.averageIncome.value !== null ? money(ys.averageIncome.value) : "—"} note={over} />
       <Stat label="Taux d'épargne de l'année" value={ys.savingsRate !== null ? ratio(ys.savingsRate) : "—"} note="Mis de côté ÷ revenus" />
       <Stat label="Dépenses moyennes par mois" value={ys.averageSpending.value !== null ? money(ys.averageSpending.value) : "—"} note={`Besoins et envies, ${over}`} />
+      {/* Décision 70 : ce qui a vraiment été payé sur les dettes, mêmes mois que les moyennes. */}
+      <Stat
+        label="Taux d'endettement (DTI)"
+        value={ys.debtToIncome.ratio !== null ? debtRatio(ys.debtToIncome.ratio) : "—"}
+        note={`Remboursements de dettes ÷ revenus, ${over}`}
+      />
     </Grid>
   );
 }

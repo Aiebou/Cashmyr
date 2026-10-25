@@ -161,8 +161,10 @@ export type DebtsOverview = {
   monthlyLoad: Cents;
   /** Revenu moyen du mois en cours, même règle que l'écran Mois. */
   averageIncome: Cents | null;
-  /** Charge mensuelle ÷ revenu moyen ; null sans revenu moyen. Ratio d'affichage. */
+  /** Charge mensuelle ÷ revenu moyen : le taux d'endettement (décision 69) ; null sans revenu moyen. Ratio d'affichage. */
   loadRatio: number | null;
+  /** Dettes « je dois » en remboursement libre encore dues : sans échéance, elles n'entrent pas dans la charge. */
+  freeOwed: number;
 };
 
 export function debtsOverview(data: Dataset, asOf: Day, today: Day): DebtsOverview {
@@ -177,6 +179,7 @@ export function debtsOverview(data: Dataset, asOf: Day, today: Day): DebtsOvervi
     monthlyLoad,
     averageIncome: avg,
     loadRatio: avg !== null && avg > 0 ? monthlyLoad / avg : null,
+    freeOwed: byDebt.filter((d) => d.debt.mode === "free").length,
   };
 }
 

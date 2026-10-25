@@ -25,6 +25,19 @@ export type YearSummary = {
   savingsCurve: { month: Month; total: Cents }[];
   /** Besoins et envies par catégorie, du plus gros au plus petit. */
   ranking: { categoryId: string; bucket: "besoin" | "envie"; amount: Cents }[];
+  /** Taux d'endettement de l'année (décision 70). */
+  debtToIncome: DebtToIncome;
+};
+
+export type DebtToIncome = {
+  /** Mêmes mois que les moyennes annuelles : mois en cours exclu, pas avant la première opération. */
+  months: Month[];
+  /** Σ sorties rattachées à une dette « je dois » sur ces mois. */
+  paid: Cents;
+  /** Σ revenus de ces mois. */
+  income: Cents;
+  /** paid ÷ income ; null sans revenu. Ratio d'affichage, jamais stocké. */
+  ratio: number | null;
 };
 
 /** Mois écoulés de l'année servant aux moyennes annuelles. */
@@ -81,5 +94,24 @@ export function yearSummary(data: Dataset, year: number, today: Day): YearSummar
       total: savingsOverview(data, minDay(lastDayOf(m.month), today)).total,
     })),
     ranking: [...ranking.values()].sort((a, b) => b.amount - a.amount || a.categoryId.localeCompare(b.categoryId)),
+    debtToIncome: debtToIncome(data, elapsed),
   };
+}
+
+/**
+ * Ce qui a vraiment été payé sur les dettes « je dois », rapporté aux revenus des mêmes mois : les
+ * sorties portant un `debtId`, dette supprimée comprise (une référence reste lisible). Ni les
+ * versements hors budget (`paidManual`, sans date), ni les transferts, ni les revenus rattachés.
+ */
+export function debtToIncome(data: Dataset, months: readonly Month[]): DebtToIncome {
+  const ix = indexOf(data);
+  let paid = 0;
+  let income = 0;
+  for (const month of months) {
+    income += monthAggregates(data, month).income;
+    for (const op of ix.opsByMonth.get(month) ?? []) {
+      if (op.type === "out" && op.debtId && ix.debts.get(op.debtId)?.direction === "owe") paid += op.amount;
+    }
+  }
+  return { months: [...months], paid, income, ratio: income > 0 ? paid / income : null };
 }

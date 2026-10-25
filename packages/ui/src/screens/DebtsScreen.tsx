@@ -44,7 +44,7 @@ import { ArchiveIcon, CheckIcon, EyeIcon, EyeOffIcon, PinIcon, RepeatIcon, Resto
 import { Card, ScreenTitle, SectionTitle, Stack } from "../components/layout";
 import { debtSentence } from "../lib/debt-text";
 import { liveAccounts } from "../lib/data";
-import { dayLong, money, monthLong, monthShort, ofMonth, ratio } from "../lib/format";
+import { dayLong, debtRatio, money, monthLong, monthShort, ofMonth, ratio } from "../lib/format";
 import { computedHint, editSchedule, type ScheduleState } from "../lib/schedule-fields";
 import { useActions, useApp } from "../store/context";
 import { DebtCategoryOptions, DIRECTION_LABELS, useDebtForm, type Direction } from "./DebtForm";
@@ -92,10 +92,11 @@ function Banner({ asOf, today }: { asOf: string; today: string }) {
   let load;
   if (o.monthlyLoad === 0) load = <p>Aucune échéance mensuelle en cours.</p>;
   else if (o.loadRatio !== null && o.averageIncome !== null) {
+    // Décision 69 : échéances mensuelles des dettes « je dois » en cours ÷ revenu moyen, sans seuil coloré.
     load = (
       <p>
-        Charge mensuelle : <strong>{money(o.monthlyLoad)}</strong>, soit <strong>{ratio(o.loadRatio)}</strong> du revenu moyen des{" "}
-        {prefs.averageWindow} derniers mois ({money(o.averageIncome)}).
+        Taux d'endettement (DTI) : <strong>{debtRatio(o.loadRatio)}</strong>, soit une charge mensuelle de{" "}
+        <strong>{money(o.monthlyLoad)}</strong> sur un revenu moyen de {money(o.averageIncome)} ({prefs.averageWindow} derniers mois).
       </p>
     );
   } else {
@@ -113,7 +114,16 @@ function Banner({ asOf, today }: { asOf: string; today: string }) {
       </p>
       <p className={s.big}>{money(o.totalOwed)}</p>
       <SegmentedBar label="Reste par dette" segments={segments} />
-      <div className={s.lines}>{load}</div>
+      <div className={s.lines}>
+        {load}
+        {o.freeOwed > 0 && (
+          <p className={s.muted}>
+            {o.freeOwed === 1
+              ? "Ta dette en remboursement libre n'y entre pas : sans échéance fixe, elle n'a pas de mensualité."
+              : `Tes ${o.freeOwed} dettes en remboursement libre n'y entrent pas : sans échéance fixe, elles n'ont pas de mensualité.`}
+          </p>
+        )}
+      </div>
     </section>
   );
 }
