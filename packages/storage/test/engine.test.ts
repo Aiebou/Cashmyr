@@ -67,7 +67,7 @@ describe("mode automatique", () => {
     const cloud = new CloudFile();
     const d = await device("tauri", cloud);
     await d.repo.apply(seed);
-    expect(d.engine.state).toMatchObject({ mode: "auto-tauri", automatic: true, status: "unconfigured", pending: 6 });
+    expect(d.engine.state).toMatchObject({ mode: "auto-tauri", automatic: true, status: "unconfigured", pending: 15 });
     expect(d.timers.count).toBe(0);
   });
 
@@ -170,7 +170,7 @@ describe("mode automatique", () => {
     const refuse = await device("fs-access", cloud, new Clock(), { confirmFirstJoin: vi.fn(async () => false) });
     await refuse.repo.apply({ ...seed, operations: [op("op-b", "2026-09-05", 100, "cat-courses", "acc-courant", 2)] });
     expect(await refuse.engine.connect("open")).toEqual({ kind: "skipped", reason: "cancelled" });
-    expect(refuse.hooks.confirmFirstJoin).toHaveBeenCalledWith({ localRecords: 7, fileRecords: 6, fileName: "finances-sync.json" });
+    expect(refuse.hooks.confirmFirstJoin).toHaveBeenCalledWith({ localRecords: 16, fileRecords: 15, fileName: "finances-sync.json" });
     expect(opIds(fileData(cloud))).toEqual([]);
     expect(refuse.repo.device.sync.fileId).toBeNull();
 
@@ -288,7 +288,7 @@ describe("mode assisté", () => {
     await phone.repo.apply(seed);
     expect(await phone.engine.createAssistedFile()).toMatchObject({ kind: "merged", offerReady: true });
     await phone.engine.offerMerged();
-    expect(phone.engine.state.pending).toBe(6);
+    expect(phone.engine.state.pending).toBe(15);
     await phone.browser.saveLastOfferOver(cloud);
     phone.browser.nextPick = { name: "finances-sync.json", content: cloud.content! };
     await phone.engine.syncNow();

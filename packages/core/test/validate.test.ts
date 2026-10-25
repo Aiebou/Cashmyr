@@ -25,10 +25,10 @@ describe("validation", () => {
     expect(issuesWith({ accounts: [{ ...accs.pea, opening: 0.1 }] }).join()).toMatch(/opening invalide/);
   });
 
-  it("une catégorie de dépense doit avoir une enveloppe", () => {
-    const { bucket, ...noBucket } = cats.loyer;
-    void bucket;
-    expect(issuesWith({ categories: [noBucket] }).join()).toMatch(/enveloppe/);
+  it("une catégorie de dépense doit avoir un budget", () => {
+    const { budgetId, ...noBudget } = cats.loyer;
+    void budgetId;
+    expect(issuesWith({ categories: [noBudget] }).join()).toMatch(/doit avoir un budget/);
   });
 
   it("forme des opérations selon leur type", () => {

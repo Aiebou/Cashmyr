@@ -3,7 +3,7 @@ import {
   indexOf,
   orderAccounts,
   type Account,
-  type Bucket,
+  type Budget,
   type Category,
   type Dataset,
   type Debt,
@@ -11,12 +11,6 @@ import {
   type Operation,
   type SeriesColor,
 } from "@cashmyr/core";
-
-export const BUCKET_LABELS: Record<Bucket, string> = {
-  besoin: "Besoins",
-  envie: "Envies",
-  invest: "Mise de côté",
-};
 
 export const ROLE_LABELS: Record<Account["role"], string> = {
   courant: "Compte courant",
@@ -32,13 +26,43 @@ export const liveCategories = (data: Dataset, kind: "in" | "out"): Category[] =>
     .filter((c) => c.deletedAt === null && c.kind === kind)
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
-/** Catégories de dépense groupées par usage, dans l'ordre Besoins, Envies, Mise de côté. */
-export function expenseGroups(data: Dataset): { bucket: Bucket; label: string; categories: Category[] }[] {
+const byPosition = (a: { position: number; name: string }, b: { position: number; name: string }) =>
+  a.position - b.position || a.name.localeCompare(b.name, "fr");
+
+/** Budgets vivants, dans leur ordre (décision 71). */
+export const liveBudgets = (data: Dataset): Budget[] => data.collections.budgets.filter((b) => b.deletedAt === null).sort(byPosition);
+
+/**
+ * Budgets de la répartition : les vivants, puis un budget supprimé sur un autre appareil qui y
+ * garde une part, signalé jusqu'au prochain enregistrement (décision 75).
+ */
+export function splitBudgets(data: Dataset): Budget[] {
+  const ix = indexOf(data);
+  const gone = Object.entries(data.preferences.splits)
+    .filter(([id, bp]) => bp > 0 && ix.budgets.get(id)?.deletedAt != null)
+    .map(([id]) => ix.budgets.get(id)!);
+  return [...liveBudgets(data), ...gone.sort(byPosition)];
+}
+
+export function budgetName(data: Dataset, id: string | undefined): string {
+  const b = id ? indexOf(data).budgets.get(id) : undefined;
+  if (!b) return "Sans budget";
+  return b.deletedAt === null ? b.name : deleted(b.name);
+}
+
+/** Couleur d'un budget, supprimé compris ; gris sans budget. */
+export function budgetColor(data: Dataset, id: string | undefined): string {
+  const b = id ? indexOf(data).budgets.get(id) : undefined;
+  return b ? colorFor(data.preferences, { kind: "budget", budget: b }) : "var(--ink-3)";
+}
+
+/** Catégories de dépense groupées par budget vivant, dans l'ordre des budgets. */
+export function expenseGroups(data: Dataset): { budget: Budget; label: string; categories: Category[] }[] {
   const all = liveCategories(data, "out");
-  return (["besoin", "envie", "invest"] as Bucket[]).map((bucket) => ({
-    bucket,
-    label: BUCKET_LABELS[bucket],
-    categories: all.filter((c) => c.bucket === bucket),
+  return liveBudgets(data).map((budget) => ({
+    budget,
+    label: budget.name,
+    categories: all.filter((c) => c.budgetId === budget.id),
   }));
 }
 
@@ -79,7 +103,7 @@ export function operationColor(data: Dataset, op: Operation): string {
   const c = op.categoryId ? indexOf(data).categories.get(op.categoryId) : undefined;
   if (!c) return "var(--ink-3)";
   if (op.type === "in") return colorFor(prefs, { kind: "income", category: c });
-  return c.bucket ? colorFor(prefs, { kind: "bucket", bucket: c.bucket }) : "var(--ink-3)";
+  return budgetColor(data, c.budgetId);
 }
 
 /** Prochaine couleur de série : attribuée dans l'ordre de création. */

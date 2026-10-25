@@ -1,5 +1,5 @@
 import { indexOf, type DatasetIndex } from "../dataset";
-import type { Cents, Dataset, Month, Operation, Role } from "../model";
+import type { Budget, Cents, Dataset, Month, Operation, Role } from "../model";
 
 const SAVING_ROLES: ReadonlySet<Role> = new Set<Role>(["epargne", "invest"]);
 export const isSavingRole = (role: Role | undefined): boolean => role !== undefined && SAVING_ROLES.has(role);
@@ -12,18 +12,28 @@ export type MonthAggregates = {
   /** Revenus groupés par catégorie, du plus gros au plus petit. */
   incomeBySource: { categoryId: string; amount: Cents }[];
   /**
-   * Dépenses groupées par catégorie, toutes les dépenses (besoins, envies, épargne), du plus gros
+   * Dépenses groupées par catégorie, toutes les dépenses (épargne comprise), du plus gros
    * au plus petit ; les transferts n'en sont pas. Catégorie introuvable : clé "".
    */
   spendingByCategory: { categoryId: string; amount: Cents }[];
-  needs: Cents;
-  wants: Cents;
+  /** Dépenses par budget, budget supprimé compris (décision 74). */
+  byBudget: Record<string, Cents>;
+  /** Mis de côté : dépenses des budgets d'épargne, et virements nets vers l'épargne et les placements (décision 74). */
   saved: Cents;
+  /** La part des virements dans `saved` : vers un compte épargne ou placement, moins ce qui en revient. */
+  transferred: Cents;
+  /** Dépensé : dépenses des budgets de dépense (décision 74). */
   spent: Cents;
   balance: Cents;
   /** Dépenses dont la catégorie est introuvable : anomalie d'intégrité, signalée à l'écran. */
   unclassified: Cents;
 };
+
+/** Budget d'une catégorie de dépense, supprimé compris ; undefined si la catégorie ou le budget est introuvable. */
+export function budgetOf(ix: DatasetIndex, categoryId: string | undefined): Budget | undefined {
+  const budgetId = categoryId ? ix.categories.get(categoryId)?.budgetId : undefined;
+  return budgetId ? ix.budgets.get(budgetId) : undefined;
+}
 
 /** Effet d'une opération sur les agrégats du mois. */
 function accumulate(
@@ -43,18 +53,21 @@ function accumulate(
     case "out": {
       const key = op.categoryId ?? "";
       spending.set(key, (spending.get(key) ?? 0) + op.amount);
-      const bucket = op.categoryId ? ix.categories.get(op.categoryId)?.bucket : undefined;
-      if (bucket === "besoin") acc.needs += op.amount;
-      else if (bucket === "envie") acc.wants += op.amount;
-      else if (bucket === "invest") acc.saved += op.amount;
-      else acc.unclassified += op.amount;
+      const budget = budgetOf(ix, op.categoryId);
+      if (!budget) {
+        acc.unclassified += op.amount;
+        return;
+      }
+      acc.byBudget[budget.id] = (acc.byBudget[budget.id] ?? 0) + op.amount;
+      if (budget.nature === "save") acc.saved += op.amount;
+      else acc.spent += op.amount;
       return;
     }
     case "tx": {
       const to = op.toAccountId ? ix.accounts.get(op.toAccountId) : undefined;
       const from = op.fromAccountId ? ix.accounts.get(op.fromAccountId) : undefined;
-      if (isSavingRole(to?.role)) acc.saved += op.amount;
-      if (isSavingRole(from?.role)) acc.saved -= op.amount;
+      if (isSavingRole(to?.role)) acc.transferred += op.amount;
+      if (isSavingRole(from?.role)) acc.transferred -= op.amount;
       return;
     }
   }
@@ -69,9 +82,9 @@ export function monthAggregates(data: Dataset, month: Month): MonthAggregates {
     income: 0,
     incomeBySource: [],
     spendingByCategory: [],
-    needs: 0,
-    wants: 0,
+    byBudget: {},
     saved: 0,
+    transferred: 0,
     spent: 0,
     balance: 0,
     unclassified: 0,
@@ -79,7 +92,7 @@ export function monthAggregates(data: Dataset, month: Month): MonthAggregates {
   const sources = new Map<string, Cents>();
   const spending = new Map<string, Cents>();
   for (const op of ops) accumulate(op, ix, acc, sources, spending);
-  acc.spent = acc.needs + acc.wants;
+  acc.saved += acc.transferred;
   acc.balance = acc.income - acc.spent - acc.saved;
   acc.incomeBySource = byAmount(sources);
   acc.spendingByCategory = byAmount(spending);

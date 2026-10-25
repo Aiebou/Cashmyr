@@ -3,7 +3,7 @@ import { addMonthsToDay, monthsAndDaysBetween, wholeMonthsBetween } from "../dat
 import type { Cents, Dataset, Day, Goal, GoalStep } from "../model";
 import { roundDiv } from "../money";
 import { accountFigures } from "./accounts";
-import { isSavingRole } from "./month";
+import { budgetOf, isSavingRole } from "./month";
 
 const liveSteps = (data: Dataset, goalId: string): GoalStep[] =>
   data.collections.goalSteps
@@ -36,9 +36,10 @@ export function goalProgress(data: Dataset, goal: Goal, asOf: Day): Cents {
     if (op.goalId !== goal.id || op.date > asOf) continue;
     if (op.type === "in") progress += op.amount;
     else if (op.type === "out") {
-      const bucket = op.categoryId ? ix.categories.get(op.categoryId)?.bucket : undefined;
-      if (bucket === "invest") progress += op.amount;
-      else if (bucket === "besoin" || bucket === "envie") progress -= op.amount;
+      // Budget d'épargne : l'argent avance l'objectif ; budget de dépense : il le consomme (décision 74).
+      const budget = budgetOf(ix, op.categoryId);
+      if (budget?.nature === "save") progress += op.amount;
+      else if (budget?.nature === "spend") progress -= op.amount;
     } else {
       const to = op.toAccountId ? ix.accounts.get(op.toAccountId) : undefined;
       const from = op.fromAccountId ? ix.accounts.get(op.fromAccountId) : undefined;

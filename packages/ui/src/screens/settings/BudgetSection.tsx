@@ -1,13 +1,11 @@
-import { colorFor, type AverageWindow, type Bucket, type Preferences } from "@cashmyr/core";
+import { type AverageWindow, type Dataset } from "@cashmyr/core";
 import { useId, useState, type FormEvent } from "react";
 import { Button, Field, Segmented, submitOnEnter, TextInput } from "../../components/controls";
 import { Dot } from "../../components/figures";
 import { Card } from "../../components/layout";
-import { BUCKET_LABELS } from "../../lib/data";
+import { budgetColor, budgetName, splitBudgets } from "../../lib/data";
 import { useActions, useApp } from "../../store/context";
 import s from "./Settings.module.css";
-
-const BUCKETS: Bucket[] = ["besoin", "envie", "invest"];
 
 /** Points de base → « 50 » ou « 33,33 ». */
 export const percentText = (bp: number): string =>
@@ -21,21 +19,29 @@ export function parsePercent(text: string): number | null {
   return bp <= 10_000 ? bp : null;
 }
 
-function Splits({ prefs }: { prefs: Preferences }) {
+/**
+ * Un pourcentage par budget (décision 75) : les budgets vivants, et un budget supprimé ailleurs qui
+ * garde une part jusqu'au prochain enregistrement. Enregistrer retire ce dernier de la répartition.
+ */
+function Splits({ data }: { data: Dataset }) {
+  const prefs = data.preferences;
   const { setPreference } = useActions();
   const id = useId();
-  const initial = () => Object.fromEntries(BUCKETS.map((b) => [b, percentText(prefs.splits[b])])) as Record<Bucket, string>;
+  const budgets = splitBudgets(data);
+  const ids = budgets.map((b) => b.id);
+  const live = budgets.filter((b) => b.deletedAt === null).map((b) => b.id);
+  const initial = () => Object.fromEntries(ids.map((b) => [b, percentText(prefs.splits[b] ?? 0)])) as Record<string, string>;
   const [draft, setDraft] = useState(initial);
-  const parsed = BUCKETS.map((b) => parsePercent(draft[b]));
+  const parsed = ids.map((b) => parsePercent(draft[b] ?? "0"));
   const valid = parsed.every((p) => p !== null);
   const sum = parsed.reduce<number>((t, p) => t + (p ?? 0), 0);
-  const dirty = BUCKETS.some((b, i) => parsed[i] !== prefs.splits[b]);
+  const dirty = ids.some((b, i) => parsed[i] !== (prefs.splits[b] ?? 0));
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
     if (!valid || sum !== 10_000 || !dirty) return;
-    const [besoin, envie, invest] = parsed as number[];
-    await setPreference("splits", { besoin: besoin!, envie: envie!, invest: invest! });
+    const next = Object.fromEntries(ids.map((b, i) => [b, parsed[i]!]).filter(([b]) => live.includes(b as string)));
+    await setPreference("splits", next);
   };
 
   let status;
@@ -50,13 +56,13 @@ function Splits({ prefs }: { prefs: Preferences }) {
   } else status = <p className={s.total}>Total : 100 %</p>;
 
   return (
-    <Card title="Répartition cible" subtitle="Part des revenus visée pour chaque usage ; le total doit faire 100 %.">
+    <Card title="Répartition cible" subtitle="Part des revenus visée pour chaque budget ; le total doit faire 100 %.">
       <form className={s.splits} onSubmit={save} onKeyDown={submitOnEnter} noValidate>
-        {BUCKETS.map((b) => (
+        {ids.map((b) => (
           <div key={b} className={s.split}>
             <label className={s.splitLabel} htmlFor={`${id}-${b}`}>
-              <Dot color={colorFor(prefs, { kind: "bucket", bucket: b })} />
-              {BUCKET_LABELS[b]}
+              <Dot color={budgetColor(data, b)} />
+              {budgetName(data, b)}
             </label>
             <span className={s.percent}>
               <TextInput id={`${id}-${b}`} inputMode="decimal" value={draft[b]} onChange={(e) => setDraft({ ...draft, [b]: e.target.value })} autoComplete="off" />
@@ -80,13 +86,14 @@ function Splits({ prefs }: { prefs: Preferences }) {
 }
 
 export function BudgetSection() {
-  const prefs = useApp((st) => st.data.preferences);
+  const data = useApp((st) => st.data);
+  const prefs = data.preferences;
   const { setPreference } = useActions();
   const id = useId();
   return (
     <>
       {/* La clé repart d'un brouillon propre quand la répartition change ailleurs (synchronisation). */}
-      <Splits key={BUCKETS.map((b) => prefs.splits[b]).join("-")} prefs={prefs} />
+      <Splits key={JSON.stringify(prefs.splits)} data={data} />
       <Card title="Calcul des cibles">
         <Field
           label="Base de calcul"

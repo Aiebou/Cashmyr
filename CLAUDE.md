@@ -49,7 +49,7 @@ fichier, `finances-sync.json`, dans le dossier cloud de chacun. Le dépôt `Aieb
   schéma et sa migration, une version de la base IndexedDB si un magasin s'ajoute, une décision validée avant le
   code, et une fusion juste avant le tag.
 - Une règle tranchée s'inscrit comme décision numérotée au §8 d'`architecture.md`, dans la PR qui l'applique. La
-  dernière est la 70.
+  dernière est la 82.
 - Interface en français, **au tutoiement**. Typographie française : élisions, « 1er », espaces insécables.
 - Pas d'italique : aucune police italique n'est embarquée.
 

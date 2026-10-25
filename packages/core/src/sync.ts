@@ -84,6 +84,7 @@ function referencedIds(collections: Collections): Set<string> {
     add(op.debtId);
     add(op.recurrenceId);
     add(op.tagId);
+    add(op.typeId);
   }
   for (const rec of collections.recurrences) {
     if (rec.deletedAt !== null) continue;
@@ -94,6 +95,7 @@ function referencedIds(collections: Collections): Set<string> {
     add(rec.goalId);
     add(rec.debtId);
     add(rec.tagId);
+    add(rec.typeId);
   }
   for (const d of collections.debts) {
     if (d.deletedAt !== null) continue;
@@ -104,6 +106,13 @@ function referencedIds(collections: Collections): Set<string> {
   for (const g of collections.goals) if (g.deletedAt === null) g.accountIds.forEach(add);
   for (const s of collections.goalSteps) if (s.deletedAt === null) add(s.goalId);
   for (const s of collections.skips) if (s.deletedAt === null) add(s.recurrenceId);
+  for (const c of collections.categories) {
+    if (c.deletedAt !== null) continue;
+    add(c.budgetId);
+    add(c.typeId);
+  }
+  for (const a of collections.accounts) if (a.deletedAt === null) a.typeIds?.forEach(add);
+  for (const t of collections.types) if (t.deletedAt === null) add(t.budgetId);
   return refs;
 }
 

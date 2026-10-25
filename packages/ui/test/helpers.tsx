@@ -1,7 +1,15 @@
 import {
   applyChanges,
+  categoryColors,
+  defaultBudgetId,
+  defaultBudgets,
+  defaultTypes,
   emptyDataset,
+  legacyCategoryId,
+  PRECAUTION_TYPE_ID,
   type Account,
+  type Bucket,
+  type Category,
   type Changes,
   type Dataset,
   type Preferences,
@@ -27,7 +35,6 @@ import {
 } from "@cashmyr/storage";
 import { act, render } from "@testing-library/react";
 import { App } from "../src/App";
-import { defaultCategories } from "../src/lib/data";
 import { createAppStore } from "../src/store/app-store";
 
 export const TODAY = "2026-09-23";
@@ -166,9 +173,61 @@ const account = (id: string, name: string, role: Account["role"], opening: numbe
   name,
   role,
   opening,
-  safety: role === "epargne",
+  // Le livret est l'épargne de précaution (décision 79).
+  ...(role === "epargne" ? { typeIds: [PRECAUTION_TYPE_ID] } : {}),
   color: 0,
 });
+
+/**
+ * Catégories des tests de l'interface : celles des versions 0.1 à 0.5, rangées dans les budgets par
+ * défaut du format 3, aux identifiants de l'ancienne application. Les noms des tests restent ainsi
+ * lisibles et stables, sans dépendre de la liste par défaut du moment.
+ */
+export const TEST_CATEGORIES: readonly { legacy: string; name: string; kind: "in" | "out"; bucket?: Bucket }[] = [
+  { legacy: "r1", name: "Salaire", kind: "in" },
+  { legacy: "r2", name: "Revenus annexes", kind: "in" },
+  { legacy: "r3", name: "Activité indépendante", kind: "in" },
+  { legacy: "r4", name: "Primes", kind: "in" },
+  { legacy: "r5", name: "Revenus de placements", kind: "in" },
+  { legacy: "r6", name: "Aides et remboursements", kind: "in" },
+  { legacy: "r7", name: "Autre revenu", kind: "in" },
+  { legacy: "d8", name: "Loyer et charges", kind: "out", bucket: "besoin" },
+  { legacy: "d9", name: "Énergie et eau", kind: "out", bucket: "besoin" },
+  { legacy: "d10", name: "Internet et téléphone", kind: "out", bucket: "besoin" },
+  { legacy: "d11", name: "Assurances", kind: "out", bucket: "besoin" },
+  { legacy: "d12", name: "Courses", kind: "out", bucket: "besoin" },
+  { legacy: "d13", name: "Transport", kind: "out", bucket: "besoin" },
+  { legacy: "d14", name: "Santé", kind: "out", bucket: "besoin" },
+  { legacy: "d15", name: "Impôts", kind: "out", bucket: "besoin" },
+  { legacy: "d16", name: "Crédit", kind: "out", bucket: "besoin" },
+  { legacy: "d17", name: "Frais bancaires", kind: "out", bucket: "besoin" },
+  { legacy: "d18", name: "Restaurants et bars", kind: "out", bucket: "envie" },
+  { legacy: "d19", name: "Sorties et loisirs", kind: "out", bucket: "envie" },
+  { legacy: "d20", name: "Abonnements", kind: "out", bucket: "envie" },
+  { legacy: "d21", name: "Vêtements", kind: "out", bucket: "envie" },
+  { legacy: "d22", name: "Voyages", kind: "out", bucket: "envie" },
+  { legacy: "d23", name: "Cadeaux", kind: "out", bucket: "envie" },
+  { legacy: "d24", name: "Équipement", kind: "out", bucket: "envie" },
+  { legacy: "d25", name: "Épargne de précaution", kind: "out", bucket: "invest" },
+  { legacy: "d26", name: "PEA et ETF", kind: "out", bucket: "invest" },
+  { legacy: "d27", name: "Assurance-vie", kind: "out", bucket: "invest" },
+  { legacy: "d28", name: "PER", kind: "out", bucket: "invest" },
+  { legacy: "d29", name: "Autres placements", kind: "out", bucket: "invest" },
+  { legacy: "d30", name: "Crypto", kind: "out", bucket: "invest" },
+];
+
+export function testCategories(): Category[] {
+  const colors = categoryColors(TEST_CATEGORIES.map((c) => c.kind));
+  return TEST_CATEGORIES.map((c, i) => ({
+    id: legacyCategoryId(c.legacy),
+    updatedAt: 0,
+    deletedAt: null,
+    name: c.name,
+    kind: c.kind,
+    ...(c.bucket ? { budgetId: defaultBudgetId(c.bucket) } : {}),
+    color: colors[i]!,
+  }));
+}
 
 export const accounts = {
   courant: account("acc-courant", "Compte courant", "courant", 125_000),
@@ -218,7 +277,7 @@ export async function renderApp(
   };
   const repository = await Repository.open({ local, deviceLabel: "test", now: () => NOW, today: () => TODAY });
   if (options.seeded !== false) {
-    await repository.apply({ categories: defaultCategories(), accounts: [accounts.courant, accounts.livret] });
+    await repository.apply({ budgets: defaultBudgets(), types: defaultTypes(), categories: testCategories(), accounts: [accounts.courant, accounts.livret] });
   }
   if (options.display) await repository.updateDevice({ display: options.display });
   const engine = new SyncEngine({

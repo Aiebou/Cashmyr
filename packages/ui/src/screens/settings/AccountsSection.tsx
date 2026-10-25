@@ -2,8 +2,11 @@ import {
   accountUsage,
   colorFor,
   deleteAccount,
+  isPrecautionAccount,
   isUsed,
   nextStamp,
+  precautionType,
+  setPrecautionAccount,
   touch,
   type Account,
   type AccountUsage,
@@ -98,7 +101,13 @@ function AccountEditor({ account }: { account: Account }) {
         )}
       </div>
       <div className={s.itemFoot}>
-        <Checkbox label="Épargne de précaution" checked={account.safety} onChange={(e) => save({ safety: e.target.checked })} />
+        {precautionType(data) && (
+          <Checkbox
+            label="Épargne de précaution"
+            checked={isPrecautionAccount(account)}
+            onChange={(e) => apply({ accounts: [setPrecautionAccount(account, e.target.checked, Date.now())] })}
+          />
+        )}
         {isUsed(usage) ? (
           <p className={s.muted}>Utilisé par {usageText(usage)} : il ne peut pas être supprimé.</p>
         ) : (

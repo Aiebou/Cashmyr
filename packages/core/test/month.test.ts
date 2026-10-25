@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { defaultBudgetId } from "../src";
 import { latestOperations, monthAggregates, tombstone } from "../src";
 import { eur, expense, income, transfer, world } from "./fixtures";
 
@@ -39,9 +40,9 @@ describe("agrégats d'un mois", () => {
     ]);
   });
 
-  it("classe les dépenses par enveloppe", () => {
-    expect(a.needs).toBe(eur(1000));
-    expect(a.wants).toBe(eur(150));
+  it("classe les dépenses par budget (décision 74)", () => {
+    expect(a.byBudget[defaultBudgetId("besoin")]).toBe(eur(1000));
+    expect(a.byBudget[defaultBudgetId("envie")]).toBe(eur(150));
     expect(a.spent).toBe(eur(1150));
   });
 

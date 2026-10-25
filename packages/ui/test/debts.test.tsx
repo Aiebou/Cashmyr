@@ -3,7 +3,7 @@ import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { ofMonth } from "../src/lib/format";
-import { defaultCategories } from "../src/lib/data";
+import { testCategories as defaultCategories } from "./helpers";
 import { accounts, renderApp, TODAY } from "./helpers";
 
 afterEach(cleanup);

@@ -47,7 +47,8 @@ describe("premier passage", () => {
     expect(r.document).toMatchObject({ fileId: "file-1", revision: 1, writtenBy: A.id, writtenAt: T0 });
     expect(r.document.devices).toEqual({ [A.id]: { label: "Mac", lastRevision: 1, lastMergeAt: T0 } });
     expect(r.document.collections.operations).toEqual([X]);
-    expect(r.report).toMatchObject({ sent: 12, received: 0, needsWrite: true });
+    // 7 catégories, 4 comptes, 1 opération, et les 3 budgets et 6 types par défaut.
+    expect(r.report).toMatchObject({ sent: 21, received: 0, needsWrite: true });
   });
 
   it("rien à écrire quand rien n'a changé et que l'appareil est à jour", () => {

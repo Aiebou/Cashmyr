@@ -1,4 +1,4 @@
-import type { Account, Bucket, Category, Operation, Role } from "@cashmyr/core";
+import { defaultBudgetId, defaultBudgets, defaultTypes, type Account, type Bucket, type Category, type Operation, type Role } from "@cashmyr/core";
 import type { BrowserEnv, FsFileHandle, HandleStore } from "../src/web";
 import type { FsLike, Invoke, KeyValueLike } from "../src/tauri";
 
@@ -295,7 +295,7 @@ export const cat = (id: string, name: string, kind: "in" | "out", bucket?: Bucke
   deletedAt: null,
   name,
   kind,
-  ...(bucket ? { bucket } : {}),
+  ...(bucket ? { budgetId: defaultBudgetId(bucket) } : {}),
   color: 0,
 });
 
@@ -306,7 +306,6 @@ export const acc = (id: string, name: string, role: Role, opening = 0, updatedAt
   name,
   role,
   opening,
-  safety: role === "epargne",
   color: 0,
 });
 
@@ -320,8 +319,10 @@ export const op = (
   type: "in" | "out" = "out",
 ): Operation => ({ id, updatedAt, deletedAt: null, date, amount, type, note: "", categoryId, accountId });
 
-/** Catégories et comptes de départ. */
+/** Budgets, types, catégories et comptes de départ (format 3). */
 export const seed = {
+  budgets: defaultBudgets(),
+  types: defaultTypes(),
   categories: [
     cat("cat-salaire", "Salaire", "in"),
     cat("cat-courses", "Courses", "out", "besoin"),

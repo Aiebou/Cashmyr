@@ -3,18 +3,22 @@ import {
   asOfForYear,
   colorFor,
   createRecord,
+  defaultPrecautionObjective,
   goalStepsOf,
   goalsByState,
   goalView,
+  isPrecautionAccount,
   isValidDay,
   newId,
+  precautionType,
   safetyStatus,
+  setPrecautionAccount,
   tombstone,
   touch,
   type Cents,
   type Goal,
   type GoalStep,
-  type Preferences,
+  type TypeObjective,
 } from "@cashmyr/core";
 import { useId, useMemo, useState, type FormEvent } from "react";
 import {
@@ -34,7 +38,7 @@ import { Gauge } from "../components/figures";
 import { ArchiveIcon, ArrowDownIcon, ArrowUpIcon, CheckIcon, EyeIcon, EyeOffIcon, PinIcon, RestoreIcon, TrashIcon } from "../components/icons";
 import { ConfirmDelete } from "../components/ConfirmDelete";
 import { Card, ScreenTitle, SectionTitle, Stack } from "../components/layout";
-import { liveAccounts, nextColor } from "../lib/data";
+import { budgetColor, liveAccounts, nextColor } from "../lib/data";
 import { dayLong, money, oneDecimal, ratio, timeLeft } from "../lib/format";
 import { useActions, useApp } from "../store/context";
 import s from "./GoalsScreen.module.css";
@@ -46,21 +50,24 @@ const plural = (n: number, one: string, many: string) => (n > 1 ? many : one);
 function SafetyCard({ asOf }: { asOf: string }) {
   const data = useApp((st) => st.data);
   const today = useApp((st) => st.today);
-  const { apply, setPreference } = useActions();
+  const { apply } = useActions();
   const prefs = data.preferences;
-  const safety = prefs.safety;
+  // Décision 79 : la précaution est l'objectif du type « Épargne de précaution ».
+  const type = precautionType(data);
+  const safety = type?.objective ?? defaultPrecautionObjective();
   const status = useMemo(() => safetyStatus(data, asOf, today), [data, asOf, today]);
   const figures = useMemo(() => accountFigures(data, asOf), [data, asOf]);
   const accounts = liveAccounts(data);
   const id = useId();
-  const setSafety = (patch: Partial<Preferences["safety"]>) => setPreference("safety", { ...safety, ...patch });
+  if (!type) return null;
+  const setSafety = (patch: Partial<TypeObjective>) => apply({ types: [touch(type, { objective: { ...safety, ...patch } }, Date.now())] });
 
   const objectiveLine =
     safety.mode === "amount"
       ? `Objectif : ${money(safety.amount)}`
       : status.objective !== null
-        ? `Objectif : ${safety.months} mois de dépenses courantes, soit ${money(status.objective)}`
-        : `Objectif : ${safety.months} mois de dépenses courantes, dès qu'une moyenne sera disponible`;
+        ? `Objectif : ${safety.months} mois de dépenses, soit ${money(status.objective)}`
+        : `Objectif : ${safety.months} mois de dépenses, dès qu'une moyenne sera disponible`;
 
   return (
     <Card
@@ -84,7 +91,7 @@ function SafetyCard({ asOf }: { asOf: string }) {
     >
       <Gauge
         label="Constituée"
-        color={colorFor(prefs, { kind: "bucket", bucket: "invest" })}
+        color={budgetColor(data, type.budgetId)}
         value={status.constituted}
         target={status.objective}
         caption={status.objective !== null ? `${money(status.constituted)} sur ${money(status.objective)}` : false}
@@ -93,12 +100,12 @@ function SafetyCard({ asOf }: { asOf: string }) {
         <p>{objectiveLine}</p>
         <p className={s.capacity}>
           {status.capacityMonths !== null
-            ? `Capacité actuelle : ${oneDecimal(status.capacityMonths)} mois de dépenses courantes`
+            ? `Capacité actuelle : ${oneDecimal(status.capacityMonths)} mois de dépenses`
             : "Capacité actuelle : pas encore de dépenses moyennes pour la calculer"}
         </p>
         {status.averageSpending !== null && (
           <p className={s.muted}>
-            Dépenses courantes moyennes : {money(status.averageSpending)} par mois, sur les {prefs.averageWindow} derniers mois.
+            Dépenses moyennes : {money(status.averageSpending)} par mois, sur les {prefs.averageWindow} derniers mois.
           </p>
         )}
       </div>
@@ -111,8 +118,8 @@ function SafetyCard({ asOf }: { asOf: string }) {
           accounts.map((a) => (
             <Checkbox
               key={a.id}
-              checked={a.safety}
-              onChange={(e) => apply({ accounts: [touch(a, { safety: e.target.checked }, Date.now())] })}
+              checked={isPrecautionAccount(a)}
+              onChange={(e) => apply({ accounts: [setPrecautionAccount(a, e.target.checked, Date.now())] })}
               label={
                 <span className={s.accountLabel}>
                   {a.name}

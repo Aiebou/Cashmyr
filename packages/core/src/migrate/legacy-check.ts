@@ -2,7 +2,7 @@ import { accountFigures } from "../calc/accounts";
 import { debtPaid } from "../calc/debts";
 import { goalProgress, goalTarget } from "../calc/goals";
 import { monthAggregates } from "../calc/month";
-import { legacyCategoryId } from "../defaults";
+import { defaultBudgetId, legacyCategoryId } from "../defaults";
 import { legacyId } from "../ids";
 import type { Cents, Dataset, Day, Month, Role } from "../model";
 import { formatCents } from "../money";
@@ -119,8 +119,9 @@ export function crossCheckLegacy(file: LegacyExport, data: Dataset): { issues: s
       issues.push(`vérification croisée : ${month} compte ${t.count} opérations dans l'ancienne application et ${a.count} après conversion`);
     }
     compare(`les revenus de ${month}`, t.income, a.income);
-    compare(`les besoins de ${month}`, t.needs, a.needs);
-    compare(`les envies de ${month}`, t.wants, a.wants);
+    // Décision 82 : besoins, envies et mise de côté sont Dépenses courantes, Loisirs et Épargne.
+    compare(`les besoins de ${month}`, t.needs, a.byBudget[defaultBudgetId("besoin")] ?? 0);
+    compare(`les envies de ${month}`, t.wants, a.byBudget[defaultBudgetId("envie")] ?? 0);
     compare(`la mise de côté de ${month}`, t.saved, a.saved);
     compare(`le reste de ${month}`, t.income - t.needs - t.wants - t.saved, a.balance);
   }
@@ -150,7 +151,7 @@ export function crossCheckLegacy(file: LegacyExport, data: Dataset): { issues: s
   const categories = new Map(data.collections.categories.map((c) => [c.id, c]));
   for (const cat of file.cats) {
     const c = categories.get(legacyCategoryId(cat.id));
-    if (!c || c.name !== cat.name || c.kind !== cat.kind || c.bucket !== cat.bucket) {
+    if (!c || c.name !== cat.name || c.kind !== cat.kind || c.budgetId !== (cat.bucket ? defaultBudgetId(cat.bucket) : undefined)) {
       issues.push(`vérification croisée : la catégorie « ${cat.name} » n'a pas été reprise à l'identique`);
     }
   }

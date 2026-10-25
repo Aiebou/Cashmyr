@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { applyChanges, emptyDataset, SCHEMA_VERSION, type Dataset } from "@cashmyr/core";
+import { applyChanges, BUCKETS, defaultBudgetId, emptyDataset, SCHEMA_VERSION, type Dataset } from "@cashmyr/core";
 import { openDB } from "idb";
 import { describe, expect, it } from "vitest";
 import { Repository } from "../src";
@@ -7,11 +7,32 @@ import { TauriFileLocalStore } from "../src/tauri";
 import { IndexedDbLocalStore } from "../src/web";
 import { Clock, MemoryFs, MemoryKv, seed, TODAY } from "./fakes";
 
-/** Les données telles que la version 0.1 les écrivait : format 1, sans collection des tags. */
+const BUCKET_OF: Record<string, string> = Object.fromEntries(BUCKETS.map((b) => [defaultBudgetId(b), b]));
+
+/**
+ * Les données telles que la version 0.1 les écrivait : format 1, sans tags, budgets ni types ; les
+ * catégories ont un usage, les comptes une case « précaution ».
+ */
 function formatOne(): Record<string, unknown> {
-  const data: Dataset = applyChanges(emptyDataset(), seed);
-  const { tags: _tags, ...collections } = data.collections;
-  return { ...data, schemaVersion: 1, collections };
+  const data: Dataset = applyChanges(emptyDataset(), { categories: seed.categories, accounts: seed.accounts });
+  const { tags: _tags, budgets: _budgets, types: _types, ...collections } = data.collections;
+  const { splits, budgetColors: _colors, updatedAt, ...prefs } = data.preferences;
+  return {
+    ...data,
+    schemaVersion: 1,
+    collections: {
+      ...collections,
+      categories: collections.categories.map(({ budgetId, ...c }) => (budgetId ? { ...c, bucket: BUCKET_OF[budgetId] } : c)),
+      accounts: collections.accounts.map((a) => ({ ...a, safety: false })),
+    },
+    preferences: {
+      ...prefs,
+      splits: Object.fromEntries(Object.entries(splits).map(([id, bp]) => [BUCKET_OF[id], bp])),
+      safety: { mode: "months", months: 4, amount: 0, hidden: false, pinned: true },
+      bucketColors: {},
+      updatedAt: { ...updatedAt, safety: 0, bucketColors: 0 },
+    },
+  };
 }
 
 describe("mise à niveau des données locales au format 2 (décision 50)", () => {
@@ -29,6 +50,9 @@ describe("mise à niveau des données locales au format 2 (décision 50)", () =>
     expect(written.schemaVersion).toBe(SCHEMA_VERSION);
     expect(written.collections.tags).toEqual([]);
     expect(written.collections.accounts).toEqual(seed.accounts);
+    // Et jusqu'au format 3 : les budgets par défaut, les catégories rangées dedans (décision 81).
+    expect(written.collections.budgets).toHaveLength(3);
+    expect(written.collections.categories.map((c) => c.budgetId)).toEqual(seed.categories.map((c) => c.budgetId));
     expect((await local.readSnapshot("1")).schemaVersion).toBe(SCHEMA_VERSION);
   });
 
@@ -55,6 +79,7 @@ describe("mise à niveau des données locales au format 2 (décision 50)", () =>
     const reloaded = await local.load();
     expect(reloaded?.schemaVersion).toBe(SCHEMA_VERSION);
     expect(reloaded?.collections.tags).toEqual([]);
+    expect(reloaded?.collections.types).toHaveLength(6);
     expect((await local.readSnapshot("1")).collections.tags).toEqual([]);
   });
 });

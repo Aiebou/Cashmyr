@@ -1,7 +1,8 @@
+import { defaultBudgets, defaultTypes } from "@cashmyr/core";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { defaultCategories } from "../src/lib/data";
+import { testCategories as defaultCategories } from "./helpers";
 import { TOUR } from "../src/tour/steps";
 import { accounts, renderApp } from "./helpers";
 
@@ -83,7 +84,7 @@ describe("tutoriel (décisions 65 à 67)", () => {
     const { repository } = await renderApp({ tour: [], seeded: false });
     expect(screen.getByRole("heading", { name: "Bienvenue" })).toBeTruthy();
     expect(bubble()).toBeNull();
-    await act(() => repository.apply({ categories: defaultCategories(), accounts: [accounts.courant] }));
+    await act(() => repository.apply({ budgets: defaultBudgets(), types: defaultTypes(), categories: defaultCategories(), accounts: [accounts.courant] }));
     expect(await screen.findByRole("heading", { name: "Les sections" })).toBeTruthy();
   });
 });

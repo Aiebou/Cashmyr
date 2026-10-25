@@ -6,10 +6,11 @@ import {
   defaultPreferences,
   eraseEverything,
   hasLiveRecords,
+  DEFAULTS_AT,
   mergeDatasets,
-  RENAMED_AT,
   setPreference,
-  startingCategories,
+  startingDefaults,
+  validateDataset,
   tombstone,
   touch,
   type Dataset,
@@ -62,39 +63,44 @@ describe("remise à zéro partout (décision 45)", () => {
   });
 });
 
-describe("catégories par défaut de l'écran d'accueil", () => {
-  it("horodatées 0 sur un appareil neuf, RENAMED_AT pour les noms remplacés (décision 68)", () => {
-    const start = startingCategories(dataset({}), NOW);
-    expect(start.every((c) => c.deletedAt === null)).toBe(true);
-    expect(start.filter((c) => c.updatedAt !== 0).map((c) => [c.name, c.updatedAt])).toEqual([
-      ["Revenus annexes", RENAMED_AT],
-      ["Activité indépendante", RENAMED_AT],
-      ["Revenus de placements", RENAMED_AT],
-      ["Autres placements", RENAMED_AT],
+describe("budgets, types et catégories par défaut de l'écran d'accueil", () => {
+  it("horodatés DEFAULTS_AT sur un appareil neuf (décisions 71 à 73)", () => {
+    const start = startingDefaults(dataset({}), NOW);
+    const all = [...start.budgets, ...start.types, ...start.categories];
+    expect(all.every((r) => r.deletedAt === null && r.updatedAt === DEFAULTS_AT)).toBe(true);
+    expect(start.budgets.map((b) => [b.name, b.nature])).toEqual([
+      ["Dépenses courantes", "spend"],
+      ["Loisirs", "spend"],
+      ["Épargne", "save"],
     ]);
+    expect(start.types.map((t) => t.name)).toEqual(["Charges fixes", "Quotidien", "Charge ponctuelle", "Épargne de précaution", "Placement", "Projet"]);
+    expect(start.categories).toHaveLength(23);
+    expect(validateDataset(applyChanges(dataset({}), start))).toEqual([]);
   });
 
-  it("décision 68 : le nouveau nom gagne sur l'ancien jamais modifié, pas sur un nom choisi", () => {
-    const renamed = startingCategories(dataset({}), NOW).find((c) => c.name === "Activité indépendante")!;
-    const untouched = { ...renamed, name: "Missions freelance", updatedAt: 0 };
-    const legacy = { ...renamed, name: "Missions freelance", updatedAt: 1 };
-    const chosen = { ...renamed, name: "Mon activité", updatedAt: NOW };
+  it("le nouveau nom gagne sur l'ancien jamais modifié, pas sur un nom choisi", () => {
+    const renamed = startingDefaults(dataset({}), NOW).categories.find((c) => c.name === "Sorties")!;
+    const untouched = { ...renamed, name: "Sorties et loisirs", updatedAt: 0 };
+    const legacy = { ...renamed, name: "Sorties et loisirs", updatedAt: 1 };
+    const chosen = { ...renamed, name: "Mes sorties", updatedAt: NOW };
     const merged = (mine: typeof renamed) =>
       mergeDatasets(dataset({ categories: [mine] }), dataset({ categories: [renamed] })).data.collections.categories[0]!.name;
-    expect(merged(untouched)).toBe("Activité indépendante");
-    expect(merged(legacy)).toBe("Activité indépendante");
-    expect(merged(chosen)).toBe("Mon activité");
+    expect(merged(untouched)).toBe("Sorties");
+    expect(merged(legacy)).toBe("Sorties");
+    expect(merged(chosen)).toBe("Mes sorties");
   });
 
-  it("après une remise à zéro partout, elles reviennent et l'emportent sur la suppression", () => {
+  it("après une remise à zéro partout, ils reviennent et l'emportent sur la suppression", () => {
     const data = sample();
     const { changes, preferences } = eraseEverything(data, NOW);
     const erased = applyChanges({ ...data, preferences }, changes);
-    const restarted = applyChanges(erased, { categories: startingCategories(erased, NOW + 1000) });
+    const restarted = applyChanges(erased, startingDefaults(erased, NOW + 1000));
     expect(restarted.collections.categories.filter((c) => c.deletedAt === null)).toHaveLength(defaultCategories().length);
-    // Fusion avec un appareil qui n'a que l'effacement : les catégories restent vivantes.
+    expect(restarted.collections.budgets.filter((b) => b.deletedAt === null)).toHaveLength(3);
+    // Fusion avec un appareil qui n'a que l'effacement : tout reste vivant.
     const merged = mergeDatasets(restarted, erased).data;
     expect(merged.collections.categories.filter((c) => c.deletedAt === null)).toHaveLength(defaultCategories().length);
+    expect(merged.collections.types.filter((t) => t.deletedAt === null)).toHaveLength(6);
     expect(hasLiveRecords(merged)).toBe(true);
   });
 });

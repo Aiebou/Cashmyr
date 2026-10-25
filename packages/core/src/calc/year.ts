@@ -3,7 +3,7 @@ import { addMonths, lastDayOf, maxMonth, minDay, minMonth, monthOf, monthRange }
 import type { Cents, Dataset, Day, Month } from "../model";
 import { savingsOverview } from "./accounts";
 import { averageOver, firstActivityMonth, type Average } from "./averages";
-import { monthAggregates, type MonthAggregates } from "./month";
+import { budgetOf, monthAggregates, type MonthAggregates } from "./month";
 
 export type YearMonth = MonthAggregates & { future: boolean };
 
@@ -12,7 +12,7 @@ export type YearSummary = {
   /** Les 12 mois ; `future` pour ceux qui ne sont pas encore commencés. */
   months: YearMonth[];
   /** Totaux des mois commencés. */
-  totals: { income: Cents; needs: Cents; wants: Cents; spent: Cents; saved: Cents };
+  totals: { income: Cents; spent: Cents; saved: Cents; byBudget: Record<string, Cents> };
   /**
    * Moyennes sur les mois écoulés de l'année (mois en cours exclu, car incomplet),
    * sans remonter avant la première opération ; un mois vide compte pour 0.
@@ -23,8 +23,8 @@ export type YearSummary = {
   savingsRate: number | null;
   /** Total des comptes épargne et placements à la fin de chaque mois commencé. */
   savingsCurve: { month: Month; total: Cents }[];
-  /** Besoins et envies par catégorie, du plus gros au plus petit. */
-  ranking: { categoryId: string; bucket: "besoin" | "envie"; amount: Cents }[];
+  /** Catégories des budgets de dépense, du plus gros au plus petit (décision 74). */
+  ranking: { categoryId: string; budgetId: string; amount: Cents }[];
   /** Taux d'endettement de l'année (décision 70). */
   debtToIncome: DebtToIncome;
 };
@@ -59,24 +59,23 @@ export function yearSummary(data: Dataset, year: number, today: Day): YearSummar
   }));
   const started = months.filter((m) => !m.future);
 
-  const totals = { income: 0, needs: 0, wants: 0, spent: 0, saved: 0 };
+  const totals = { income: 0, spent: 0, saved: 0, byBudget: {} as Record<string, Cents> };
   for (const m of started) {
     totals.income += m.income;
-    totals.needs += m.needs;
-    totals.wants += m.wants;
     totals.spent += m.spent;
     totals.saved += m.saved;
+    for (const [id, amount] of Object.entries(m.byBudget)) totals.byBudget[id] = (totals.byBudget[id] ?? 0) + amount;
   }
 
   const elapsed = elapsedMonths(data, year, today);
   const ix = indexOf(data);
-  const ranking = new Map<string, { categoryId: string; bucket: "besoin" | "envie"; amount: Cents }>();
+  const ranking = new Map<string, { categoryId: string; budgetId: string; amount: Cents }>();
   for (const m of started) {
     for (const op of ix.opsByMonth.get(m.month) ?? []) {
       if (op.type !== "out" || !op.categoryId) continue;
-      const bucket = ix.categories.get(op.categoryId)?.bucket;
-      if (bucket !== "besoin" && bucket !== "envie") continue;
-      const entry = ranking.get(op.categoryId) ?? { categoryId: op.categoryId, bucket, amount: 0 };
+      const budget = budgetOf(ix, op.categoryId);
+      if (budget?.nature !== "spend") continue;
+      const entry = ranking.get(op.categoryId) ?? { categoryId: op.categoryId, budgetId: budget.id, amount: 0 };
       entry.amount += op.amount;
       ranking.set(op.categoryId, entry);
     }

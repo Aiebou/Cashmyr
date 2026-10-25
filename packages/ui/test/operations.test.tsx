@@ -2,7 +2,7 @@ import { cancelOccurrence, createRecord, type Debt, type Goal, type Operation, t
 import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { defaultCategories } from "../src/lib/data";
+import { testCategories as defaultCategories } from "./helpers";
 import { fold, matchesFilters, NO_FILTERS } from "../src/lib/filters";
 import { accounts, NOW, renderApp } from "./helpers";
 

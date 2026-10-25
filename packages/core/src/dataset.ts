@@ -1,4 +1,5 @@
 import { monthOf } from "./dates";
+import { defaultBudgetId } from "./defaults";
 import {
   COLLECTION_NAMES,
   DASH_BLOCKS,
@@ -6,6 +7,8 @@ import {
   SCHEMA_VERSION,
   type Account,
   type AnyRecord,
+  type Budget,
+  type BudgetType,
   type Category,
   type Changes,
   type CollectionName,
@@ -27,14 +30,13 @@ import { nextStamp } from "./records";
 export function defaultPreferences(): Preferences {
   const updatedAt = Object.fromEntries(PREF_KEYS.map((k) => [k, 0])) as Record<PrefKey, number>;
   return {
-    splits: { besoin: 5000, envie: 3000, invest: 2000 },
+    splits: { [defaultBudgetId("besoin")]: 5000, [defaultBudgetId("envie")]: 3000, [defaultBudgetId("invest")]: 2000 },
     basis: "avg",
     averageWindow: 6,
-    safety: { mode: "months", months: 4, amount: 0, hidden: false, pinned: true },
     dashOrder: [...DASH_BLOCKS],
     theme: "system",
     categoryColors: {},
-    bucketColors: {},
+    budgetColors: {},
     updatedAt,
   };
 }
@@ -50,6 +52,8 @@ export function emptyCollections(): Collections {
     recurrences: [],
     skips: [],
     tags: [],
+    budgets: [],
+    types: [],
   };
 }
 
@@ -136,6 +140,8 @@ export type DatasetIndex = {
   recurrences: Map<string, Recurrence>;
   operations: Map<string, Operation>;
   tags: Map<string, Tag>;
+  budgets: Map<string, Budget>;
+  types: Map<string, BudgetType>;
   /** Opérations vivantes, par mois de leur date. */
   opsByMonth: Map<Month, Operation[]>;
   /** Opérations vivantes, tous mois confondus. */
@@ -166,6 +172,8 @@ export function indexOf(data: Dataset): DatasetIndex {
     recurrences: byId(c.recurrences),
     operations: byId(c.operations),
     tags: byId(c.tags),
+    budgets: byId(c.budgets),
+    types: byId(c.types),
     opsByMonth,
     liveOps,
   };

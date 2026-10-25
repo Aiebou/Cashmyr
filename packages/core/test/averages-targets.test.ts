@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { defaultBudgetId } from "../src";
+
+const [NEEDS, WANTS, SAVED] = (["besoin", "envie", "invest"] as const).map(defaultBudgetId) as [string, string, string];
 import { averageIncome, averageSpending, monthTargets } from "../src";
 import { eur, expense, income, world } from "./fixtures";
 
@@ -73,7 +76,7 @@ describe("cibles 50/30/20", () => {
   it("sur la moyenne quand elle existe", () => {
     const t = monthTargets(build({ operations: ops }, { basis: "avg", averageWindow: 3 }), "2026-09");
     expect(t).toMatchObject({ basis: "avg", fellBack: false, base: eur(3000) });
-    expect(t.targets).toEqual({ besoin: eur(1500), envie: eur(900), invest: eur(600) });
+    expect(t.targets).toEqual({ [NEEDS]: eur(1500), [WANTS]: eur(900), [SAVED]: eur(600) });
   });
 
   it("sur les revenus du mois quand la moyenne manque, et le dit", () => {
@@ -84,16 +87,16 @@ describe("cibles 50/30/20", () => {
   it("sur les revenus du mois si c'est la base choisie", () => {
     const t = monthTargets(build({ operations: ops }, { basis: "month" }), "2026-09");
     expect(t).toMatchObject({ basis: "month", fellBack: false, base: eur(2000) });
-    expect(t.targets.besoin).toBe(eur(1000));
+    expect(t.targets[NEEDS]).toBe(eur(1000));
   });
 
   it("arrondit chaque cible au centime", () => {
     const data = build(
       { operations: [salary("2026-06-28", 3000), salary("2026-08-28", 2000)] },
-      { basis: "avg", averageWindow: 3, splits: { besoin: 5000, envie: 3000, invest: 2000 } },
+      { basis: "avg", averageWindow: 3, splits: { [NEEDS]: 5000, [WANTS]: 3000, [SAVED]: 2000 } },
     );
     const t = monthTargets(data, "2026-09");
     expect(t.base).toBe(166_667);
-    expect(t.targets).toEqual({ besoin: 83_334, envie: 50_000, invest: 33_333 });
+    expect(t.targets).toEqual({ [NEEDS]: 83_334, [WANTS]: 50_000, [SAVED]: 33_333 });
   });
 });

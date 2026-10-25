@@ -1,5 +1,4 @@
 import { indexOf, shownTag, type Cents, type Dataset, type OpType } from "@cashmyr/core";
-import { BUCKET_LABELS } from "./data";
 
 /** Colonnes de l'export de l'ancienne application, colonne Dette comprise, puis le tag (version 0.2.0). */
 export const CSV_HEADER = ["Date", "Type", "Categorie", "Usage", "Compte", "Vers", "Objectif", "Dette", "Libelle", "Montant", "Tag"] as const;
@@ -27,7 +26,7 @@ export function operationsCsv(data: Dataset): string {
       op.date,
       TYPE_LABELS[op.type],
       category?.name ?? "",
-      op.type === "out" && category?.bucket ? BUCKET_LABELS[category.bucket] : "",
+      op.type === "out" && category?.budgetId ? (ix.budgets.get(category.budgetId)?.name ?? "") : "",
       name(ix.accounts, op.type === "tx" ? op.fromAccountId : op.accountId),
       op.type === "tx" ? name(ix.accounts, op.toAccountId) : "",
       name(ix.goals, op.goalId),

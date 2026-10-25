@@ -176,7 +176,7 @@ export function RecurrenceModal({ editId }: { editId?: string }) {
                     </option>
                   ))
                 : expenseGroups(data).map((g) => (
-                    <optgroup key={g.bucket} label={g.label}>
+                    <optgroup key={g.budget.id} label={g.label}>
                       {g.categories.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}

@@ -1,9 +1,9 @@
-import { createRecord, type Account, type Operation } from "@cashmyr/core";
+import { createRecord, PRECAUTION_TYPE_ID, type Account, type Operation } from "@cashmyr/core";
 import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { dayLong } from "../src/lib/format";
-import { defaultCategories } from "../src/lib/data";
+import { testCategories as defaultCategories } from "./helpers";
 import { accounts, bannerSection, renderApp } from "./helpers";
 
 afterEach(cleanup);
@@ -88,7 +88,7 @@ describe("Mes comptes", () => {
   it("filtre par type de compte, propre à l'appareil : les deux listes suivent, pas le bandeau", async () => {
     const user = userEvent.setup();
     const { repository, local } = await openAccounts();
-    const pea = createRecord<Account>("acc-pea", { name: "PEA", role: "invest", opening: 80_000, safety: false, color: 2 }, 1);
+    const pea = createRecord<Account>("acc-pea", { name: "PEA", role: "invest", opening: 80_000, color: 2 }, 1);
     await act(() => repository.apply({ accounts: [pea] }));
     const pending = repository.pending;
     const names = (title: string) => within(within(frame(title)).getByRole("list")).getAllByRole("listitem").map((li) => li.textContent?.match(/^(Compte courant|Livret A|PEA)/)?.[1]);
@@ -146,11 +146,11 @@ describe("Mes comptes", () => {
     await user.clear(declared);
     await user.type(declared, "3 200{Enter}");
     await user.click(within(d).getByLabelText("Épargne de précaution"));
-    expect(repository.data.collections.accounts.find((a) => a.id === livret.id)).toMatchObject({
-      name: "Livret bleu",
-      declaredValue: 320_000,
-      safety: !livret.safety,
-    });
+    // Le livret était l'épargne de précaution : décoché, il n'est plus rattaché à aucun type.
+    const after = repository.data.collections.accounts.find((a) => a.id === livret.id)!;
+    expect(livret.typeIds).toEqual([PRECAUTION_TYPE_ID]);
+    expect(after).toMatchObject({ name: "Livret bleu", declaredValue: 320_000 });
+    expect(after).not.toHaveProperty("typeIds");
     await user.click(within(d).getByRole("button", { name: "Terminé" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(within(frame("Vos comptes")).getByRole("button", { name: "Modifier Livret bleu" })).toBeTruthy();
@@ -162,7 +162,7 @@ describe("Mes comptes", () => {
   it("un compte inutilisé se supprime depuis sa fenêtre, qui se ferme", async () => {
     const user = userEvent.setup();
     const { repository } = await openAccounts();
-    const pea = createRecord<Account>("acc-pea", { name: "PEA", role: "invest", opening: 0, safety: false, color: 2 }, 1);
+    const pea = createRecord<Account>("acc-pea", { name: "PEA", role: "invest", opening: 0, color: 2 }, 1);
     await act(() => repository.apply({ accounts: [pea] }));
     await user.click(within(frame("Vos comptes")).getByRole("button", { name: "Modifier PEA" }));
     const d = await screen.findByRole("dialog", { name: "Modifier le compte" });
@@ -174,7 +174,7 @@ describe("Mes comptes", () => {
 
   it("un compte épargne, placement ou autre sans valeur déclarée le signale", async () => {
     const { repository, store } = await openAccounts();
-    const pea = createRecord<Account>("acc-pea", { name: "PEA", role: "invest", opening: 80_000, safety: false, color: 2 }, 1);
+    const pea = createRecord<Account>("acc-pea", { name: "PEA", role: "invest", opening: 80_000, color: 2 }, 1);
     await act(() => repository.apply({ accounts: [pea] }));
     const list = within(frame("Vos comptes")).getByRole("list");
     expect(plain(row(list, "PEA").textContent)).toBe("PEAPlacement800,00 €valeur non déclaréeDépart 800,00 € · 0,00 € entrés · 0,00 € sortis");

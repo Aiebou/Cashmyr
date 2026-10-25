@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { niceTicks } from "../src/components/charts/scale";
 import { dropBefore, moveAmongVisible } from "../src/components/Reorderable";
-import { defaultCategories } from "../src/lib/data";
+import { testCategories as defaultCategories } from "./helpers";
 import { debtSentence } from "../src/lib/debt-text";
 import { accounts, bannerSection, renderApp, TODAY } from "./helpers";
 

@@ -2,7 +2,7 @@ import { createRecord, type Operation } from "@cashmyr/core";
 import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { defaultCategories } from "../src/lib/data";
+import { testCategories as defaultCategories } from "./helpers";
 import { accounts, renderApp } from "./helpers";
 
 afterEach(cleanup);

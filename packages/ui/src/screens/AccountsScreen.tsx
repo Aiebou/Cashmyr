@@ -5,6 +5,7 @@ import {
   colorFor,
   declaredAsOf,
   formatCents,
+  isPrecautionAccount,
   isFluctuatingRole,
   reorderAccounts,
   type Account,
@@ -121,7 +122,7 @@ function AccountTile({ data, account, asOf, today, figures, ordering, onEdit }: 
   const missing = fluctuating && declared === null;
   const shown = declared ?? f.balance;
   // Le type n'est pas répété quand le nom le dit déjà (« Compte courant »).
-  const role = [account.name === ROLE_LABELS[account.role] ? "" : ROLE_LABELS[account.role], account.safety ? "épargne de précaution" : ""]
+  const role = [account.name === ROLE_LABELS[account.role] ? "" : ROLE_LABELS[account.role], isPrecautionAccount(account) ? "épargne de précaution" : ""]
     .filter(Boolean)
     .join(" · ");
   const draggable = ordering ? drag.container : {};

@@ -9,11 +9,14 @@
 - **Contenu de la 0.5.0** : le lot sans changement de format de la liste du 25/10 (voir §6) : Mes comptes (PR #22),
   « Catégories » et « Haut de page » (PR #23), taux d'endettement (PR #24, décisions 69 et 70), menu latéral du grand
   écran (PR #25).
-- **Tests** : 465 tests TypeScript et 15 tests Rust passent (core 230, storage 97, ui 138). La séquence
+- **Lot 0.6.0 en cours** (format 3) : la PR « format 3 : budgets et types » (branche `format-3-budgets`,
+  décisions 71 à 82) ouvre une pile de PR à fusionner ensemble juste avant le tag, jamais seule : la PWA publiée
+  écrirait sinon un format que les applications de bureau en 0.5 refuseraient.
+- **Tests** : 486 tests TypeScript et 15 tests Rust passent sur la branche du format 3 (core 251, storage 97, ui 138). La séquence
   d'installation du §3 a été vérifiée sur un clone neuf le 23/10/2026.
 
 La référence reste [`architecture.md`](architecture.md) : modèle de données, règles de calcul et de fusion, et les
-70 décisions numérotées du §8. Ce document résume. En cas d'écart, `architecture.md` et le code font foi. Le cahier
+82 décisions numérotées du §8. Ce document résume. En cas d'écart, `architecture.md` et le code font foi. Le cahier
 des charges d'origine est dans [`cahier-des-charges.md`](cahier-des-charges.md).
 
 ## Sommaire
@@ -126,7 +129,10 @@ les calculs reste à définir ; un « profil professionnel » est l'autre piste.
 - **Format 2 depuis la 0.2.0** (décision 50) : collection `tags`, `tagId` sur les opérations et les récurrences,
   `position` sur les comptes. Le format 1 est mis à niveau à la lecture.
 - Une version plus ancienne refuse un format plus récent (« Mets l'application à jour ») sans rien écrire.
-- La 0.3.0 et la 0.4.0 n'ont pas changé le format (décisions 60 et 67).
+- La 0.3.0, la 0.4.0 et la 0.5.0 n'ont pas changé le format (décisions 60 et 67).
+- **Format 3 pour la 0.6.0** (décisions 71 à 82) : budgets et types à la place des usages, comptes et opérations
+  rattachés aux types, précaution devenue l'objectif d'un type ; base IndexedDB en version 3. La mise à niveau
+  est une fonction pure (`packages/core/src/migrate/format3.ts`) : deux appareils obtiennent les mêmes lignes.
 - **Tout nouveau champ synchronisé change le format**, parce que la validation refuse les champs inconnus. Il faut
   alors :
   - une version de schéma et sa migration ;

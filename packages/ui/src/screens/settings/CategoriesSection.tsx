@@ -7,10 +7,11 @@ import {
   indexOf,
   isUsed,
   newId,
-  setBucketColor,
+  nextStamp,
+  setBudgetColor,
   setIncomeColor,
   touch,
-  type Bucket,
+  type Budget,
   type Category,
   type Dataset,
 } from "@cashmyr/core";
@@ -19,12 +20,10 @@ import { ColorField } from "../../components/ColorField";
 import { Button, cx, IconButton, InlineText, Select, TextInput } from "../../components/controls";
 import { TrashIcon } from "../../components/icons";
 import { Card } from "../../components/layout";
-import { BUCKET_LABELS, expenseGroups, liveCategories, nextColor } from "../../lib/data";
+import { budgetName, expenseGroups, liveBudgets, liveCategories, nextColor } from "../../lib/data";
 import { count, money } from "../../lib/format";
 import { useActions, useApp } from "../../store/context";
 import s from "./Settings.module.css";
-
-const BUCKETS: Bucket[] = ["besoin", "envie", "invest"];
 
 /** Montant et nombre des opérations vivantes d'une catégorie : ce qu'un changement d'usage déplacerait. */
 export function categoryWeight(data: Dataset, categoryId: string) {
@@ -55,12 +54,12 @@ function DeleteButton({ category }: { category: Category }) {
   );
 }
 
-function AddCategory({ kind, bucket }: { kind: "in" | "out"; bucket?: Bucket }) {
+function AddCategory({ kind, budget }: { kind: "in" | "out"; budget?: Budget }) {
   const data = useApp((st) => st.data);
   const { apply } = useActions();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const label = kind === "in" ? "Nouvelle source de revenu" : `Nouvelle catégorie · ${BUCKET_LABELS[bucket!]}`;
+  const label = kind === "in" ? "Nouvelle source de revenu" : `Nouvelle catégorie · ${budget!.name}`;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -76,7 +75,7 @@ function AddCategory({ kind, bucket }: { kind: "in" | "out"; bucket?: Bucket }) 
       {
         name: trimmed,
         kind,
-        ...(bucket ? { bucket } : {}),
+        ...(budget ? { budgetId: budget.id } : {}),
         color: kind === "in" ? nextColor(data.collections.categories.filter((c) => c.kind === "in")) : 0,
       },
       Date.now(),
@@ -134,45 +133,47 @@ function ExpenseCategories() {
   const { apply, ask } = useActions();
   const prefs = data.preferences;
 
-  const move = async (c: Category, bucket: Bucket) => {
+  const move = async (c: Category, budgetId: string) => {
     const weight = categoryWeight(data, c.id);
     if (weight.count > 0) {
       const ok = await ask({
-        title: `Passer « ${c.name} » en ${BUCKET_LABELS[bucket]} ?`,
+        title: `Passer « ${c.name} » dans ${budgetName(data, budgetId)} ?`,
         message:
           `Les mois passés changent aussi : ${count(weight.count, "opération", "opérations")}, ${money(weight.amount)} en tout, ` +
-          `passent de ${BUCKET_LABELS[c.bucket!]} à ${BUCKET_LABELS[bucket]}.`,
-        confirmLabel: "Changer l'usage",
+          `passent de ${budgetName(data, c.budgetId)} à ${budgetName(data, budgetId)}.`,
+        confirmLabel: "Changer de budget",
       });
       if (!ok) return;
     }
-    await apply({ categories: [touch(c, { bucket }, Date.now())] }, undefined, "Usage modifié");
+    // Un type appartient à son budget (décision 72) : changer de budget retire le type.
+    const { typeId: _type, ...rest } = c;
+    await apply({ categories: [{ ...rest, budgetId, updatedAt: nextStamp(Date.now(), c) }] }, undefined, "Budget modifié");
   };
 
   return (
-    <Card title="Catégories de dépense" subtitle="Rangées par usage. La couleur d'un usage vaut pour toutes ses catégories.">
+    <Card title="Catégories de dépense" subtitle="Rangées par budget. La couleur d'un budget vaut pour toutes ses catégories.">
       {expenseGroups(data).map((g) => {
-        const target = { kind: "bucket" as const, bucket: g.bucket };
+        const target = { kind: "budget" as const, budget: g.budget };
         return (
-          <div key={g.bucket} className={s.group}>
+          <div key={g.budget.id} className={s.group}>
             <div className={s.groupHead}>
               <h4 className={s.groupTitle}>{g.label}</h4>
               <ColorField
                 label={g.label}
                 value={colorFor(prefs, target)}
                 custom={hasCustomColor(prefs, target)}
-                onPick={(hex) => apply({}, setBucketColor(prefs, g.bucket, hex, Date.now()))}
-                onReset={() => apply({}, setBucketColor(prefs, g.bucket, null, Date.now()))}
+                onPick={(hex) => apply({}, setBudgetColor(prefs, g.budget.id, hex, Date.now()))}
+                onReset={() => apply({}, setBudgetColor(prefs, g.budget.id, null, Date.now()))}
               />
             </div>
             <ul className={cx(s.list, s.categoryList)}>
               {g.categories.map((c) => (
                 <li key={c.id} className={cx(s.categoryRow, s.withBucket)}>
                   <InlineText label={`Nom de « ${c.name} »`} value={c.name} required onCommit={(name) => apply({ categories: [touch(c, { name }, Date.now())] })} />
-                  <Select aria-label={`Usage de « ${c.name} »`} value={c.bucket} onChange={(e) => void move(c, e.target.value as Bucket)}>
-                    {BUCKETS.map((b) => (
-                      <option key={b} value={b}>
-                        {BUCKET_LABELS[b]}
+                  <Select aria-label={`Budget de « ${c.name} »`} value={c.budgetId} onChange={(e) => void move(c, e.target.value)}>
+                    {liveBudgets(data).map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
                       </option>
                     ))}
                   </Select>
@@ -180,7 +181,7 @@ function ExpenseCategories() {
                 </li>
               ))}
             </ul>
-            <AddCategory kind="out" bucket={g.bucket} />
+            <AddCategory kind="out" budget={g.budget} />
           </div>
         );
       })}

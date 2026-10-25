@@ -1,8 +1,8 @@
-import { createRecord, emptyDataset, serializeBackup, type Debt, type Operation, type Recurrence } from "@cashmyr/core";
+import { createRecord, defaultBudgetId, defaultCategories as coreDefaults, emptyDataset, serializeBackup, type Debt, type Operation, type Recurrence } from "@cashmyr/core";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { defaultCategories } from "../src/lib/data";
+import { testCategories as defaultCategories } from "./helpers";
 import { csvAmount, operationsCsv } from "../src/lib/export";
 import { parsePercent, percentText } from "../src/screens/settings/BudgetSection";
 import { accounts, renderApp, TODAY } from "./helpers";
@@ -92,18 +92,18 @@ describe("budget", () => {
     const user = userEvent.setup();
     const { repository } = await openSettings();
     const splits = card("Répartition cible");
-    const needs = within(splits).getByLabelText("Besoins");
+    const needs = within(splits).getByLabelText("Dépenses courantes");
     const save = within(splits).getByRole("button", { name: "Enregistrer la répartition" });
     await user.clear(needs);
     await user.type(needs, "45");
     expect(within(splits).getByRole("alert").textContent).toBe("Total : 95 % · il manque 5 %");
     expect(save.hasAttribute("disabled")).toBe(true);
-    const wants = within(splits).getByLabelText("Envies");
+    const wants = within(splits).getByLabelText("Loisirs");
     await user.clear(wants);
     await user.type(wants, "35");
     expect(within(splits).getByText("Total : 100 %")).toBeTruthy();
     await user.click(save);
-    expect(repository.data.preferences.splits).toEqual({ besoin: 4_500, envie: 3_500, invest: 2_000 });
+    expect(repository.data.preferences.splits).toEqual({ [defaultBudgetId("besoin")]: 4_500, [defaultBudgetId("envie")]: 3_500, [defaultBudgetId("invest")]: 2_000 });
   });
 
   it("base de calcul et fenêtre de moyenne", async () => {
@@ -160,7 +160,7 @@ describe("catégories (décision 31, section 5)", () => {
     const d = dialog();
     expect(within(d).getByText("Utilisée par 2 opérations. Elles passeront dans :")).toBeTruthy();
     await user.selectOptions(within(d).getByLabelText("Catégorie"), "Restaurants et bars");
-    expect(plain(within(d).getByRole("status").textContent)).toBe("Les mois passés changent : 103,50 € de dépenses passent de Besoins à Envies.");
+    expect(plain(within(d).getByRole("status").textContent)).toBe("Les mois passés changent : 103,50 € de dépenses passent de Dépenses courantes à Loisirs.");
     await user.click(within(d).getByRole("button", { name: "Réaffecter et supprimer" }));
     const live = repository.data.collections.operations.filter((o) => o.deletedAt === null);
     expect(live.map((o) => o.categoryId)).toEqual([cat("Restaurants et bars"), cat("Restaurants et bars")]);
@@ -175,19 +175,19 @@ describe("catégories (décision 31, section 5)", () => {
     await user.type(within(dialog()).getByLabelText("Nom de la nouvelle catégorie"), "Alimentation");
     await user.click(within(dialog()).getByRole("button", { name: "Réaffecter et supprimer" }));
     const created = repository.data.collections.categories.find((c) => c.name === "Alimentation")!;
-    expect(created).toMatchObject({ kind: "out", bucket: "besoin", deletedAt: null });
+    expect(created).toMatchObject({ kind: "out", budgetId: defaultBudgetId("besoin"), deletedAt: null });
     expect(repository.data.collections.operations.every((o) => o.categoryId === created.id)).toBe(true);
   });
 
-  it("changer l'usage d'une catégorie utilisée demande confirmation, chiffres à l'appui", async () => {
+  it("changer le budget d'une catégorie utilisée demande confirmation, chiffres à l'appui", async () => {
     const user = userEvent.setup();
     const { repository } = await openSettings();
-    await user.selectOptions(screen.getByLabelText("Usage de « Courses »"), "Envies");
+    await user.selectOptions(screen.getByLabelText("Budget de « Courses »"), "Loisirs");
     expect(plain(within(dialog()).getByText(/Les mois passés changent aussi/).textContent)).toBe(
-      "Les mois passés changent aussi : 2 opérations, 103,50 € en tout, passent de Besoins à Envies.",
+      "Les mois passés changent aussi : 2 opérations, 103,50 € en tout, passent de Dépenses courantes à Loisirs.",
     );
     await user.click(within(dialog()).getByRole("button", { name: "Annuler" }));
-    expect(repository.data.collections.categories.find((c) => c.id === cat("Courses"))!.bucket).toBe("besoin");
+    expect(repository.data.collections.categories.find((c) => c.id === cat("Courses"))!.budgetId).toBe(defaultBudgetId("besoin"));
   });
 
   it("ajouter une source de revenu ; les doublons sont refusés", async () => {
@@ -212,11 +212,11 @@ describe("catégories (décision 31, section 5)", () => {
     await user.click(screen.getByRole("button", { name: "Rendre à Salaire sa couleur d'origine" }));
     expect(repository.data.preferences.categoryColors).toEqual({});
 
-    const needs = screen.getByLabelText("Couleur de Besoins") as HTMLInputElement;
+    const needs = screen.getByLabelText("Couleur de Dépenses courantes") as HTMLInputElement;
     needs.value = "#112233";
     needs.dispatchEvent(new Event("change"));
-    await screen.findByRole("button", { name: "Rendre à Besoins sa couleur d'origine" });
-    expect(repository.data.preferences.bucketColors).toEqual({ besoin: "#112233" });
+    await screen.findByRole("button", { name: "Rendre à Dépenses courantes sa couleur d'origine" });
+    expect(repository.data.preferences.budgetColors).toEqual({ [defaultBudgetId("besoin")]: "#112233" });
   });
 });
 
@@ -299,7 +299,7 @@ describe("sauvegardes (décisions 32 et 33)", () => {
       [`cashmyr-operations-${TODAY}.csv`, "text/csv"],
     ]);
     expect(JSON.parse(saved[0]!.content).collections.operations).toHaveLength(2);
-    expect(saved[1]!.content.split("\r\n")[1]).toBe('"2026-08-09";"Dépense";"Courses";"Besoins";"Compte courant";"";"";"";"";"61,00";""');
+    expect(saved[1]!.content.split("\r\n")[1]).toBe('"2026-08-09";"Dépense";"Courses";"Dépenses courantes";"Compte courant";"";"";"";"";"61,00";""');
   });
 
   it("CSV : colonnes de l'ancienne application, BOM, CRLF, transferts et montants", () => {
@@ -401,6 +401,6 @@ describe("remise à zéro (décision 45)", () => {
 
     await user.click(screen.getByRole("button", { name: "Commencer avec les catégories par défaut" }));
     await screen.findByRole("dialog", { name: "Nouveau compte" });
-    expect(repository.data.collections.categories.filter((c) => c.deletedAt === null)).toHaveLength(defaultCategories().length);
+    expect(repository.data.collections.categories.filter((c) => c.deletedAt === null)).toHaveLength(coreDefaults().length);
   });
 });

@@ -1,4 +1,41 @@
-import { DEFAULT_CATEGORIES } from "../src";
+import type { Bucket } from "../src";
+
+/**
+ * Les catégories par défaut des versions 0.1 à 0.5, aux identifiants de l'ancienne application :
+ * celles qu'un ancien fichier contient. Le format 3 en a gardé une partie (décision 73).
+ */
+export const FORMER_DEFAULTS: readonly { legacy: string; name: string; kind: "in" | "out"; bucket?: Bucket }[] = [
+  { legacy: "r1", name: "Salaire", kind: "in" },
+  { legacy: "r2", name: "Revenus annexes", kind: "in" },
+  { legacy: "r3", name: "Activité indépendante", kind: "in" },
+  { legacy: "r4", name: "Primes", kind: "in" },
+  { legacy: "r5", name: "Revenus de placements", kind: "in" },
+  { legacy: "r6", name: "Aides et remboursements", kind: "in" },
+  { legacy: "r7", name: "Autre revenu", kind: "in" },
+  { legacy: "d8", name: "Loyer et charges", kind: "out", bucket: "besoin" },
+  { legacy: "d9", name: "Énergie et eau", kind: "out", bucket: "besoin" },
+  { legacy: "d10", name: "Internet et téléphone", kind: "out", bucket: "besoin" },
+  { legacy: "d11", name: "Assurances", kind: "out", bucket: "besoin" },
+  { legacy: "d12", name: "Courses", kind: "out", bucket: "besoin" },
+  { legacy: "d13", name: "Transport", kind: "out", bucket: "besoin" },
+  { legacy: "d14", name: "Santé", kind: "out", bucket: "besoin" },
+  { legacy: "d15", name: "Impôts", kind: "out", bucket: "besoin" },
+  { legacy: "d16", name: "Crédit", kind: "out", bucket: "besoin" },
+  { legacy: "d17", name: "Frais bancaires", kind: "out", bucket: "besoin" },
+  { legacy: "d18", name: "Restaurants et bars", kind: "out", bucket: "envie" },
+  { legacy: "d19", name: "Sorties et loisirs", kind: "out", bucket: "envie" },
+  { legacy: "d20", name: "Abonnements", kind: "out", bucket: "envie" },
+  { legacy: "d21", name: "Vêtements", kind: "out", bucket: "envie" },
+  { legacy: "d22", name: "Voyages", kind: "out", bucket: "envie" },
+  { legacy: "d23", name: "Cadeaux", kind: "out", bucket: "envie" },
+  { legacy: "d24", name: "Équipement", kind: "out", bucket: "envie" },
+  { legacy: "d25", name: "Épargne de précaution", kind: "out", bucket: "invest" },
+  { legacy: "d26", name: "PEA et ETF", kind: "out", bucket: "invest" },
+  { legacy: "d27", name: "Assurance-vie", kind: "out", bucket: "invest" },
+  { legacy: "d28", name: "PER", kind: "out", bucket: "invest" },
+  { legacy: "d29", name: "Autres placements", kind: "out", bucket: "invest" },
+  { legacy: "d30", name: "Crypto", kind: "out", bucket: "invest" },
+];
 
 type Item = Record<string, unknown>;
 
@@ -34,7 +71,7 @@ export function legacyExport() {
     settings: {
       v: 2,
       cats: [
-        ...DEFAULT_CATEGORIES.map((c) => ({ id: c.legacy, kind: c.kind, name: c.name, ...(c.bucket ? { bucket: c.bucket } : {}) })),
+        ...FORMER_DEFAULTS.map((c) => ({ id: c.legacy, kind: c.kind, name: c.name, ...(c.bucket ? { bucket: c.bucket } : {}) })),
         { id: "k3x9pw2mzq1a", kind: "out", name: "Animaux", bucket: "besoin" },
       ] as Item[],
       accounts: [

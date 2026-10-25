@@ -1,5 +1,6 @@
 import {
   averageIncome,
+  budgetActual,
   colorFor,
   indexOf,
   latestOperations,
@@ -8,7 +9,6 @@ import {
   monthTargets,
   plannedOccurrences,
   type AverageWindow,
-  type Bucket,
 } from "@cashmyr/core";
 import { useMemo } from "react";
 import chartStyles from "../components/charts/charts.module.css";
@@ -18,7 +18,7 @@ import { Gauge, SegmentedBar, Stat } from "../components/figures";
 import { Card, Empty, Grid, ScreenTitle } from "../components/layout";
 import { OperationList, OperationRow } from "../components/OperationRow";
 import { PlannedList } from "../components/PlannedList";
-import { categoryName, liveAccounts, BUCKET_LABELS } from "../lib/data";
+import { budgetColor, budgetName, categoryName, liveAccounts, splitBudgets } from "../lib/data";
 import { money, monthLong, monthTitle, ofMonth } from "../lib/format";
 import { expenseSlices, incomeSlices } from "../lib/month-charts";
 import { targetCaption } from "../lib/targets-text";
@@ -175,18 +175,18 @@ export function MonthScreen() {
           <>
             <Card title="Répartition" subtitle={basis} tour="month-split">
               <div className={s.gauges}>
-                {(["besoin", "envie", "invest"] as Bucket[]).map((bucket) => {
-                  const value = bucket === "besoin" ? agg.needs : bucket === "envie" ? agg.wants : agg.saved;
-                  const target = targets.targets[bucket];
+                {splitBudgets(data).map((budget) => {
+                  const value = budgetActual(agg, budget);
+                  const target = targets.targets[budget.id] ?? 0;
                   return (
                     <Gauge
-                      key={bucket}
-                      label={bucket === "invest" ? "Épargne" : BUCKET_LABELS[bucket]}
-                      color={colorFor(prefs, { kind: "bucket", bucket })}
+                      key={budget.id}
+                      label={budgetName(data, budget.id)}
+                      color={budgetColor(data, budget.id)}
                       value={value}
                       target={target}
-                      caption={targetCaption(bucket, value, target)}
-                      warnOver={bucket !== "invest"}
+                      caption={targetCaption(budget.nature, value, target)}
+                      warnOver={budget.nature === "spend"}
                     />
                   );
                 })}
@@ -194,7 +194,7 @@ export function MonthScreen() {
             </Card>
 
             <Grid min={180}>
-              <Stat label="Dépensé" value={money(agg.spent)} note="Besoins et envies" />
+              <Stat label="Dépensé" value={money(agg.spent)} note="Budgets de dépense" />
               <Stat label="Mis de côté" value={money(agg.saved)} tone={agg.saved < 0 ? "negative" : "default"} note="Épargne et placements, retraits déduits" />
               <Stat label="Reste sur le courant" value={money(agg.balance)} tone={agg.balance < 0 ? "negative" : "default"} note="Revenus − dépensé − mis de côté" />
             </Grid>

@@ -1,4 +1,4 @@
-import { createRecord, isValidDay, newId, type Account, type Cents, type Goal, type Role } from "@cashmyr/core";
+import { createRecord, isValidDay, newId, precautionType, PRECAUTION_TYPE_ID, type Account, type Cents, type Goal, type Role } from "@cashmyr/core";
 import { useId, useState, type FormEvent } from "react";
 import { AmountInput, Button, Checkbox, Field, Select, submitOnEnter, TextInput } from "../components/controls";
 import { Modal } from "../components/Modal";
@@ -112,7 +112,14 @@ export function CreateAccountModal({ stay = false }: { stay?: boolean }) {
     if (Object.keys(found).length > 0) return;
     const account = createRecord<Account>(
       newId(),
-      { name: name.trim(), role, opening: opening!, safety, color: nextColor(data.collections.accounts) },
+      {
+        name: name.trim(),
+        role,
+        opening: opening!,
+        // Décision 79 : un compte de précaution est rattaché au type « Épargne de précaution ».
+        ...(safety && precautionType(data) ? { typeIds: [PRECAUTION_TYPE_ID] } : {}),
+        color: nextColor(data.collections.accounts),
+      },
       Date.now(),
     );
     if (await apply({ accounts: [account] }, undefined, "Compte créé")) {
@@ -138,7 +145,9 @@ export function CreateAccountModal({ stay = false }: { stay?: boolean }) {
       <Field label="Solde de départ" htmlFor={`${id}-opening`} hint="Le point zéro du suivi ; peut être négatif." error={errors.opening}>
         <AmountInput id={`${id}-opening`} initial={0} allowNegative onAmount={setOpening} />
       </Field>
-      <Checkbox label="Compte d'épargne de précaution" checked={safety} onChange={(e) => setSafety(e.target.checked)} />
+      {precautionType(data) && (
+        <Checkbox label="Compte d'épargne de précaution" checked={safety} onChange={(e) => setSafety(e.target.checked)} />
+      )}
     </FormModal>
   );
 }

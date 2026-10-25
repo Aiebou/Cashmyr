@@ -1,9 +1,9 @@
-import { applyChanges, emptyDataset, type Dataset, type Operation } from "@cashmyr/core";
+import { applyChanges, defaultBudgets, defaultTypes, emptyDataset, type Dataset, type Operation } from "@cashmyr/core";
 import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { startApp } from "../src/boot";
-import { defaultCategories } from "../src/lib/data";
+import { testCategories as defaultCategories } from "./helpers";
 import { stamp } from "../src/lib/format";
 import { accounts, MemoryProfileHost, renderApp } from "./helpers";
 
@@ -16,7 +16,12 @@ afterEach(() => {
 const T1 = Date.UTC(2026, 8, 20, 9);
 const T2 = Date.UTC(2026, 8, 22, 9);
 
-const valid: Dataset = applyChanges(emptyDataset(), { categories: defaultCategories(), accounts: [accounts.courant] });
+const valid: Dataset = applyChanges(emptyDataset(), {
+  budgets: defaultBudgets(),
+  types: defaultTypes(),
+  categories: defaultCategories(),
+  accounts: [accounts.courant],
+});
 
 /** Une opération au montant non entier : refusée par la validation à l'ouverture. */
 function broken(): Dataset {

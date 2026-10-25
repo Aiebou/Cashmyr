@@ -32,6 +32,7 @@ const isNat = (v: unknown): v is number => isInt(v) && v >= 0;
 const isPos = (v: unknown): v is number => isInt(v) && v > 0;
 const isColor = (v: unknown) => isInt(v) && v >= 0 && v < SERIES_COLORS;
 const isHex = (v: unknown) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
+const isIdList = (v: unknown) => Array.isArray(v) && v.every(isId) && new Set(v).size === v.length;
 const oneOf =
   <T extends string | number>(values: readonly T[]) =>
   (v: unknown): v is T =>
@@ -55,7 +56,8 @@ const SHAPES: Record<CollectionName, Shape> = {
     ...META,
     name: req(isStr, "texte"),
     kind: req(oneOf(["in", "out"]), "« in » ou « out »"),
-    bucket: opt(oneOf(["besoin", "envie", "invest"]), "besoin, envie ou invest"),
+    budgetId: opt(isId, "identifiant"),
+    typeId: opt(isId, "identifiant"),
     color: req(isColor, "couleur 0–6"),
   },
   accounts: {
@@ -63,7 +65,7 @@ const SHAPES: Record<CollectionName, Shape> = {
     name: req(isStr, "texte"),
     role: req(oneOf(["courant", "epargne", "invest", "autre"]), "rôle connu"),
     opening: req(isInt, "centimes entiers"),
-    safety: req(isBool, "booléen"),
+    typeIds: opt(isIdList, "liste d'identifiants"),
     declaredValue: opt(isInt, "centimes entiers"),
     declaredAt: opt(isValidDay, "date AAAA-MM-JJ"),
     color: req(isColor, "couleur 0–6"),
@@ -83,6 +85,7 @@ const SHAPES: Record<CollectionName, Shape> = {
     debtId: opt(isId, "identifiant"),
     recurrenceId: opt(isId, "identifiant"),
     tagId: opt(isId, "identifiant"),
+    typeId: opt(isId, "identifiant"),
   },
   goals: {
     ...META,
@@ -143,6 +146,7 @@ const SHAPES: Record<CollectionName, Shape> = {
     goalId: opt(isId, "identifiant"),
     debtId: opt(isId, "identifiant"),
     tagId: opt(isId, "identifiant"),
+    typeId: opt(isId, "identifiant"),
     dayOfMonth: req((v) => isInt(v) && v >= 1 && v <= 31, "jour 1–31"),
     startMonth: req(isValidMonth, "mois AAAA-MM"),
     endMonth: req(nullable(isValidMonth), "null ou mois"),
@@ -157,6 +161,28 @@ const SHAPES: Record<CollectionName, Shape> = {
     ...META,
     name: req((v) => isStr(v) && v.trim() !== "" && v === v.trim(), "texte non vide, sans espace en bord"),
   },
+  budgets: {
+    ...META,
+    name: req(isStr, "texte"),
+    nature: req(oneOf(["spend", "save"]), "spend ou save"),
+    position: req(isInt, "entier"),
+    color: req(isColor, "couleur 0–6"),
+  },
+  types: {
+    ...META,
+    budgetId: req(isId, "identifiant"),
+    name: req(isStr, "texte"),
+    position: req(isInt, "entier"),
+    objective: req(nullable(isObj), "null ou objet"),
+  },
+};
+
+const OBJECTIVE: Shape = {
+  mode: req(oneOf(["months", "amount"]), "months ou amount"),
+  months: req((v) => isInt(v) && v >= 1 && v <= 60, "entier 1–60"),
+  amount: req(isNat, "centimes entiers ≥ 0"),
+  hidden: req(isBool, "booléen"),
+  pinned: req(isBool, "booléen"),
 };
 
 function checkShape(value: unknown, shape: Shape, where: string, issues: string[]): value is Obj {
@@ -189,9 +215,11 @@ function checkShape(value: unknown, shape: Shape, where: string, issues: string[
 /** Cohérence entre champs, indépendante des autres lignes. */
 function checkInvariants(name: CollectionName, r: Obj, where: string, issues: string[]): void {
   if (name === "categories") {
-    if (r.kind === "out" && r.bucket === undefined) issues.push(`${where} : une catégorie de dépense doit avoir une enveloppe`);
-    if (r.kind === "in" && r.bucket !== undefined) issues.push(`${where} : une catégorie de revenu n'a pas d'enveloppe`);
+    if (r.kind === "out" && r.budgetId === undefined) issues.push(`${where} : une catégorie de dépense doit avoir un budget`);
+    if (r.kind === "in" && (r.budgetId !== undefined || r.typeId !== undefined))
+      issues.push(`${where} : une catégorie de revenu n'a ni budget ni type`);
   }
+  if (name === "types" && r.objective !== null) checkShape(r.objective, OBJECTIVE, `${where}.objective`, issues);
   if (name === "operations" || name === "recurrences") {
     if (r.type === "tx") {
       if (r.fromAccountId === undefined || r.toAccountId === undefined)
@@ -240,7 +268,20 @@ function checkReferences(name: CollectionName, r: Obj, where: string, lookup: Lo
     ref("goalId", "goals");
     ref("debtId", "debts");
     ref("tagId", "tags");
+    ref("typeId", "types");
     if (name === "operations") ref("recurrenceId", "recurrences");
+  }
+  if (name === "categories") {
+    ref("budgetId", "budgets");
+    const type = ref("typeId", "types");
+    // Le budget d'un type ne change jamais : une catégorie et son type restent dans le même budget.
+    if (type && type.budgetId !== r.budgetId) issues.push(`${where} : le type n'appartient pas au budget de la catégorie`);
+  }
+  if (name === "types") ref("budgetId", "budgets");
+  if (name === "accounts" && Array.isArray(r.typeIds)) {
+    for (const id of r.typeIds) {
+      if (!lookup.types.has(id as string)) issues.push(`${where}.typeIds : référence introuvable (${String(id)})`);
+    }
   }
   if (name === "debts") {
     const category = r.categoryId === null ? undefined : ref("categoryId", "categories");
@@ -270,41 +311,20 @@ function checkPreferences(value: unknown, issues: string[]): void {
     splits: req(isObj, "objet"),
     basis: req(oneOf(["month", "avg"]), "month ou avg"),
     averageWindow: req(oneOf(AVERAGE_WINDOWS), "3, 6 ou 12"),
-    safety: req(isObj, "objet"),
     dashOrder: req(Array.isArray, "liste"),
     theme: req(oneOf(["system", "light", "dark"]), "system, light ou dark"),
     categoryColors: req((v) => isObj(v) && Object.values(v).every(isHex), "id → #rrggbb"),
-    bucketColors: req(
-      (v) => isObj(v) && Object.entries(v).every(([k, c]) => ["besoin", "envie", "invest"].includes(k) && isHex(c)),
-      "besoin / envie / invest → #rrggbb",
-    ),
+    budgetColors: req((v) => isObj(v) && Object.values(v).every(isHex), "id de budget → #rrggbb"),
     updatedAt: req(isObj, "objet"),
   };
   if (!checkShape(value, shape, where, issues)) return;
-  const splits = value.splits as Obj;
-  if (
-    checkShape(
-      splits,
-      { besoin: req(isNat, "entier ≥ 0"), envie: req(isNat, "entier ≥ 0"), invest: req(isNat, "entier ≥ 0") },
-      `${where}.splits`,
-      issues,
-    ) &&
-    (splits.besoin as number) + (splits.envie as number) + (splits.invest as number) !== SPLITS_TOTAL
-  ) {
+  // Les clés de la répartition peuvent viser un budget supprimé, voire purgé : elles ne sont pas des
+  // références vérifiées (décision 75). Seule compte la somme.
+  const splits = Object.entries(value.splits as Obj);
+  if (!splits.every(([k, v]) => isId(k) && isNat(v))) issues.push(`${where}.splits : id de budget → entier ≥ 0 attendu`);
+  else if (splits.reduce((sum, [, v]) => sum + (v as number), 0) !== SPLITS_TOTAL) {
     issues.push(`${where}.splits : la somme doit valoir ${SPLITS_TOTAL} (100 %)`);
   }
-  checkShape(
-    value.safety,
-    {
-      mode: req(oneOf(["months", "amount"]), "months ou amount"),
-      months: req((v) => isInt(v) && v >= 1 && v <= 60, "entier 1–60"),
-      amount: req(isNat, "centimes entiers ≥ 0"),
-      hidden: req(isBool, "booléen"),
-      pinned: req(isBool, "booléen"),
-    },
-    `${where}.safety`,
-    issues,
-  );
   const order = value.dashOrder as unknown[];
   if (order.length !== DASH_BLOCKS.length || !DASH_BLOCKS.every((b) => order.includes(b))) {
     issues.push(`${where}.dashOrder : doit contenir exactement ${DASH_BLOCKS.join(", ")}`);

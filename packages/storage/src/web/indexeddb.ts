@@ -11,8 +11,11 @@ import {
 import { openDB, type IDBPDatabase } from "idb";
 import type { DeviceState, LocalStore, SetAsideInfo, SnapshotInfo } from "../types";
 
-/** 2 : magasin des tags (format 2 des données, version 0.2.0). */
-const DB_VERSION = 2;
+/**
+ * 2 : magasin des tags (format 2 des données, version 0.2.0).
+ * 3 : magasins des budgets et des types (format 3, version 0.6.0).
+ */
+const DB_VERSION = 3;
 /** Collections de la première version de la base ; celles d'après ont chacune leur étape. */
 const FIRST_STORES: readonly CollectionName[] = ["categories", "accounts", "operations", "goals", "goalSteps", "debts", "recurrences", "skips"];
 const META = "meta";
@@ -46,6 +49,10 @@ export class IndexedDbLocalStore implements LocalStore {
           database.createObjectStore(SNAPSHOTS, { keyPath: "id" });
         }
         if (oldVersion < 2) database.createObjectStore("tags", { keyPath: "id" });
+        if (oldVersion < 3) {
+          database.createObjectStore("budgets", { keyPath: "id" });
+          database.createObjectStore("types", { keyPath: "id" });
+        }
       },
       // Suppression du profil (§9) ou nouvelle version ouverte dans un autre onglet : la connexion
       // se ferme au lieu de bloquer l'autre côté.

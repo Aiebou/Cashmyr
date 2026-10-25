@@ -80,10 +80,11 @@ describe("dépôt local", () => {
     const { open } = setup();
     const repo = await open();
     await repo.apply(seed);
-    expect(repo.pending).toBe(6);
+    // 4 catégories, 2 comptes, et les 3 budgets et 6 types par défaut.
+    expect(repo.pending).toBe(15);
     await repo.apply({}, setPreference(repo.data.preferences, "theme", "dark", 10));
     expect(repo.device.dirty["pref:theme"]).toBe(10);
-    expect(repo.pending).toBe(7);
+    expect(repo.pending).toBe(16);
   });
 
   it("génère les occurrences dues à l'ouverture, puis le jour venu", async () => {
@@ -146,6 +147,7 @@ describe("dépôt local", () => {
     const repo = await open();
     await repo.replaceAll(applyChanges(repo.data, seed));
     expect(repo.isFresh).toBe(false);
-    expect(repo.pending).toBe(6);
+    // 4 catégories, 2 comptes, et les 3 budgets et 6 types par défaut.
+    expect(repo.pending).toBe(15);
   });
 });

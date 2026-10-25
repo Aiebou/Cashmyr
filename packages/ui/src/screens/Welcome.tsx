@@ -1,4 +1,4 @@
-import { startingCategories } from "@cashmyr/core";
+import { startingDefaults } from "@cashmyr/core";
 import { Button } from "../components/controls";
 import { Card, Stack } from "../components/layout";
 import { importFromFile } from "../lib/import";
@@ -14,9 +14,8 @@ export function Welcome() {
   const { apply, openModal, sync: syncActions } = useActions();
 
   const start = async () => {
-    // Après une remise à zéro partout, les catégories effacées reviennent avec un horodatage plus récent.
-    const categories = startingCategories(store.getState().data, Date.now());
-    if (await apply({ categories }, undefined, "Catégories par défaut créées")) {
+    // Après une remise à zéro partout, ce qui a été effacé revient avec un horodatage plus récent.
+    if (await apply(startingDefaults(store.getState().data, Date.now()), undefined, "Catégories par défaut créées")) {
       openModal({ kind: "create-account" });
     }
   };
@@ -35,7 +34,7 @@ export function Welcome() {
       <div className={s.choices}>
         <Card title="Commencer ici">
           <p className={s.text}>
-            Des catégories de revenus et de dépenses toutes prêtes, rangées en besoins, envies et mise de côté. Tu
+            Des catégories de revenus et de dépenses toutes prêtes, rangées en trois budgets : dépenses courantes, loisirs et épargne. Tu
             crées ensuite ton premier compte.
           </p>
           <Button variant="primary" className={s.choice} onClick={start}>
