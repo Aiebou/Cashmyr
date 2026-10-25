@@ -1,9 +1,12 @@
 Cashmyr pour ordinateur. La version web, qui s'installe aussi sur téléphone, est sur https://aiebou.github.io/Cashmyr/.
 
-## Nouveautés de la 0.4.1
+## Nouveautés de la 0.5.0
 
-- **Catégories par défaut** : quatre noms deviennent plus généraux. « Service et pourboires » s'appelle désormais « Revenus annexes », « Missions freelance » « Activité indépendante », « Revenus de trading » « Revenus de placements » et « Compte de trading » « Autres placements ». Tes opérations restent rattachées aux mêmes catégories.
-- **Si tu les as renommées** : ton nom est conservé. Une catégorie que tu n'as jamais modifiée prend le nouveau nom à la prochaine synchronisation ; sur un appareil qui ne se synchronise pas, rien ne change.
+- **Taux d'endettement (DTI)** : l'onglet Dettes le donne en clair, tes échéances mensuelles rapportées à ton revenu moyen (par exemple 350 € pour 2 000 € de revenu : 17,5 %). Les dettes en remboursement libre n'y entrent pas, et l'écran le dit.
+- **Indicateurs de l'année** : une quatrième tuile, le taux d'endettement de l'année, c'est-à-dire ce que tu as vraiment remboursé sur tes dettes, divisé par tes revenus des mêmes mois (mois en cours exclu).
+- **Mes comptes** : « Vos comptes » passe en premier, et un crayon sur chaque compte permet de le modifier sur place (nom, type, solde de départ, valeur déclarée, épargne de précaution), sans passer par Paramètres.
+- **Menu latéral** : sur un grand écran (fenêtre de 980 px de large ou plus), les onglets passent dans une colonne à gauche, avec les sections de Paramètres. Le bouton ☰ la replie ; ton choix est retenu sur cet appareil.
+- **Paramètres** : « Catégories et couleurs » s'appelle désormais « Catégories ». Sur téléphone, un bouton « Haut de page » apparaît quand tu as fait défiler la page.
 
 **Format des données.** Inchangé depuis la 0.2.0. Un appareil encore en 0.1 doit être mis à jour : il affiche « Mets l'application à jour » sans rien modifier.
 
