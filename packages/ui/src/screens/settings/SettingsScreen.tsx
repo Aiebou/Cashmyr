@@ -46,6 +46,9 @@ const SECTIONS: { id: string; title: string; content: ReactNode }[] = [
   { id: "application", title: "Application", content: <AppSection /> },
 ];
 
+/** Le sommaire des Paramètres, repris par le menu latéral du grand écran. */
+export const SETTINGS_TOC: readonly { id: string; title: string }[] = SECTIONS.map(({ id, title }) => ({ id, title }));
+
 /**
  * « Haut de page », sur téléphone seulement (la feuille de style le cache au-delà) : il apparaît une fois
  * qu'on a défilé d'un écran, ramène en haut et rend le focus au sommaire.

@@ -268,8 +268,9 @@ export type DeviceState = {
           lastMergeAt: number | null; lastOfferAt: number | null; lastError: string | null };
   dirty: Record<string, number>;   // "operations:<id>" ou "pref:<clé>" → updatedAt de la version modifiée
   display?: { bannerTotal?: "declared" | "injected" | "injectedOutsideCurrent"; accountRoles?: Role[];
-              hideMonthCharts?: boolean; checkUpdatesOnLaunch?: boolean };
-                                   // choix d'affichage de l'appareil (0.2.0), absents = valeurs par défaut
+              hideMonthCharts?: boolean; checkUpdatesOnLaunch?: boolean; sideNavCollapsed?: boolean };
+                                   // choix d'affichage de l'appareil (0.2.0 ; menu latéral replié : 0.5.0),
+                                   // absents = valeurs par défaut
   tour?: { seen: string[] };       // onglets dont le tutoriel a été vu (0.4.0, décisions 65 à 67) ;
                                    // absent = profil d'avant le tutoriel, qui ne le voit pas
 };
@@ -593,6 +594,17 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 |---|---|---|
 | 69 | Taux d'endettement (DTI), onglet Dettes | Somme des montants d'échéance des dettes « je dois » en cours (mode échéances, ni soldées ni archivées, reste positif), divisée par le revenu moyen des N mois qui précèdent le mois en cours, revenus nets tels que saisis (décision 7). C'est la charge mensuelle déjà affichée, désormais nommée : 250 € + 100 € d'échéances pour 2 000 € de revenu moyen donnent 17,5 %. Les dettes en remboursement libre n'y entrent pas, et l'encart le dit. Affiché au dixième, sans seuil coloré. |
 | 70 | Taux d'endettement de l'année | Ce qui a vraiment été payé : la somme des sorties rattachées à une dette « je dois » (dette supprimée comprise), divisée par la somme des revenus des mêmes mois. Ce sont les mois des moyennes annuelles : mois en cours exclu (décision 19), pas avant la première opération ; une année passée compte jusqu'au 31/12. Ni les versements hors budget (`paidManual`, sans date), ni les transferts, ni les revenus rattachés à une dette n'y entrent. Neuf mois à 300 € pour 18 000 € de revenus donnent 15 %. Sans revenu, « — ». |
+
+Version 0.5.0, choix d'interface validés le 25/10/2026 (liste du 25/10, points 18 à 20) :
+- **Mes comptes** : « Vos comptes » avant « Mouvements de l'année » ; un crayon sur chaque compte ouvre « Modifier le
+  compte », avec les champs de Paramètres → Comptes, qui reste.
+- **Paramètres** : « Catégories et couleurs » devient « Catégories ». Sur téléphone (640 px au plus), « Haut de page »
+  apparaît après un écran de défilement, au-dessus du bouton « Nouvelle dépense », et rend le focus au sommaire.
+- **Menu latéral** : à partir de 980 px de large (la largeur de la fenêtre, jamais la plateforme), les onglets passent
+  dans une colonne à gauche, figée sous l'en-tête ; sous « Paramètres » ouvert, ses dix sections. Le bouton ☰, avant
+  « Cashmyr », la replie ; le choix est propre à l'appareil et au profil (`DeviceState.display.sideNavCollapsed`),
+  jamais synchronisé. La période reste dans l'en-tête. Le tutoriel montre la liste des onglets, ou ☰ quand le menu est
+  replié. En dessous de 980 px, rien ne change.
 
 Reporté le 26/09/2026 : le type de compte « Compte professionnel ». Il changerait le format des données, et sa place
 dans les calculs reste à définir (budget du mois, totaux, virements entre comptes pro et perso) ; un profil

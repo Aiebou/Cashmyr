@@ -86,6 +86,11 @@ export const RestoreIcon = (p: IconProps) => (
     <path d="M4 4v4.5h4.5" />
   </Icon>
 );
+export const MenuIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </Icon>
+);
 export const PencilIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M4 20h4L19 9l-4-4L4 16v4zM13 7l4 4" />

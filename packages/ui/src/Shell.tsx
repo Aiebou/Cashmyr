@@ -1,7 +1,7 @@
 import { addMonths, monthOf, yearOf } from "@cashmyr/core";
-import { useEffect, useLayoutEffect, useRef } from "react";
-import { Button, IconButton } from "./components/controls";
-import { ChevronLeft, ChevronRight, PlusIcon, SyncIcon } from "./components/icons";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Button, cx, IconButton } from "./components/controls";
+import { ChevronLeft, ChevronRight, MenuIcon, PlusIcon, SyncIcon } from "./components/icons";
 import { Toasts } from "./components/layout";
 import { Menu } from "./components/Menu";
 import { Modal } from "./components/Modal";
@@ -19,9 +19,9 @@ import { RecurrenceModal } from "./screens/RecurrenceModal";
 import { EditAccountModal } from "./screens/settings/AccountsSection";
 import { DeleteCategoryModal } from "./screens/settings/DeleteCategoryModal";
 import { CreateProfileModal, DeleteProfileModal } from "./screens/settings/ProfileModals";
-import { SettingsScreen } from "./screens/settings/SettingsScreen";
+import { SETTINGS_TOC, SettingsScreen } from "./screens/settings/SettingsScreen";
 import { Welcome } from "./screens/Welcome";
-import { TABS, type Tab } from "./store/app-store";
+import { displayOf, TABS, type Tab } from "./store/app-store";
 import { Tour } from "./tour/Tour";
 import { useActions, useApp } from "./store/context";
 import s from "./Shell.module.css";
@@ -243,6 +243,53 @@ function ConfirmDialog() {
   );
 }
 
+/** Grand écran (980 px et plus) : la navigation passe dans un menu latéral. La largeur, jamais la plateforme. */
+const WIDE = "(min-width: 980px)";
+
+function useWide(): boolean {
+  const [wide, setWide] = useState(() => typeof window.matchMedia === "function" && window.matchMedia(WIDE).matches);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia(WIDE);
+    const update = () => setWide(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return wide;
+}
+
+/** Les onglets ; sous Paramètres, quand il est ouvert, ses sections. */
+function SideNav() {
+  const tab = useApp((st) => st.tab);
+  const { setTab } = useActions();
+  return (
+    <nav id="menu-lateral" className={s.side} aria-label="Sections">
+      {/* Le tutoriel montre la liste, pas toute la colonne : sa bulle se pose dessous. */}
+      <ul className={s.sideList} data-tour="tabs">
+        {TABS.map((t) => (
+          <li key={t.id}>
+            <button type="button" className={s.sideTab} aria-current={t.id === tab ? "page" : undefined} onClick={() => setTab(t.id)}>
+              {t.label}
+            </button>
+            {t.id === "settings" && tab === "settings" && (
+              <ul className={s.sideSections} aria-label="Sections des paramètres">
+                {SETTINGS_TOC.map((sec) => (
+                  <li key={sec.id}>
+                    <a className={s.sideSection} href={`#reglages-${sec.id}`}>
+                      {sec.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
 function Screen({ tab }: { tab: Tab }) {
   switch (tab) {
     case "dashboard":
@@ -266,7 +313,11 @@ export function Shell() {
   const tab = useApp((st) => st.tab);
   const fresh = useApp((st) => st.fresh);
   const platform = useApp((st) => st.platform);
-  const { setTab, openModal, onFocus } = useActions();
+  const collapsed = displayOf(useApp((st) => st.device)).sideNavCollapsed;
+  const { setTab, openModal, onFocus, setDisplay } = useActions();
+  const wide = useWide();
+  const side = wide && !fresh;
+  const period = TABS.find((t) => t.id === tab)?.period != null;
 
   // Raccourci global : ⌘/Ctrl+N sur le bureau, N dans le navigateur (hors champ de saisie).
   useEffect(() => {
@@ -315,6 +366,18 @@ export function Shell() {
       <header className={s.header} ref={header}>
         <div className={s.brandRow}>
           <div className={s.headerLeft}>
+            {side && (
+              // Menu replié : le bouton tient lieu de sections pour le tutoriel.
+              <IconButton
+                label={collapsed ? "Afficher le menu" : "Masquer le menu"}
+                aria-expanded={!collapsed}
+                aria-controls={collapsed ? undefined : "menu-lateral"}
+                onClick={() => void setDisplay({ sideNavCollapsed: !collapsed })}
+                {...(collapsed ? { "data-tour": "tabs" } : {})}
+              >
+                <MenuIcon />
+              </IconButton>
+            )}
             <h1 className={s.brand}>Cashmyr</h1>
             <SyncBadge />
           </div>
@@ -327,27 +390,33 @@ export function Shell() {
             </div>
           </div>
         </div>
-        {!fresh && (
-          <div className={s.navRow}>
-            <nav className={s.tabs} aria-label="Sections" data-tour="tabs">
-              {TABS.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  className={s.tab}
-                  aria-current={t.id === tab ? "page" : undefined}
-                  onClick={() => setTab(t.id)}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </nav>
-            {TABS.find((t) => t.id === tab)?.period && <PeriodPicker />}
+        {/* Grand écran : les onglets passent dans le menu latéral, la période reste ici. */}
+        {!fresh && (!side || period) && (
+          <div className={cx(s.navRow, side && s.navRowSide)}>
+            {!side && (
+              <nav className={s.tabs} aria-label="Sections" data-tour="tabs">
+                {TABS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={s.tab}
+                    aria-current={t.id === tab ? "page" : undefined}
+                    onClick={() => setTab(t.id)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </nav>
+            )}
+            {period && <PeriodPicker />}
           </div>
         )}
       </header>
       <UpdateBanner />
-      <main className={s.main}>{fresh ? <Welcome /> : <Screen tab={tab} />}</main>
+      <div className={side && !collapsed ? s.withSide : undefined}>
+        {side && !collapsed && <SideNav />}
+        <main className={s.main}>{fresh ? <Welcome /> : <Screen tab={tab} />}</main>
+      </div>
       {!fresh && (
         <button type="button" className={s.fab} onClick={() => openModal({ kind: "operation", type: "out" })} aria-label="Nouvelle dépense">
           <PlusIcon size={24} />

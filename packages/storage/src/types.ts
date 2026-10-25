@@ -9,6 +9,8 @@ export type DisplayPrefs = {
   accountRoles: Role[];
   /** Camemberts de l'écran Mois masqués. */
   hideMonthCharts: boolean;
+  /** Grand écran : menu latéral replié (version 0.5.0). */
+  sideNavCollapsed: boolean;
   /**
    * Bureau : recherche d'une mise à jour au lancement (décision 46). Lu ici tant que l'appareil n'a
    * qu'un profil implicite ; ensuite, c'est le registre des profils qui le porte (décision 59).

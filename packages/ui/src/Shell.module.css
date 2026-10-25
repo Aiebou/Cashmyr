@@ -184,6 +184,75 @@
   cursor: pointer;
 }
 
+/* Grand écran : la période seule sous l'en-tête, à droite, les onglets étant dans le menu latéral. */
+.navRowSide {
+  justify-content: flex-end;
+}
+
+/* Menu latéral (980 px et plus), figé sous l'en-tête ; replié, le contenu reprend toute la largeur. */
+.withSide {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+.side {
+  position: sticky;
+  top: var(--header-h, 0px);
+  align-self: start;
+  box-sizing: border-box;
+  height: calc(100dvh - var(--header-h, 0px));
+  overflow-y: auto;
+  padding: 18px 10px 24px 16px;
+  border-right: 1px solid var(--rule);
+}
+.sideList,
+.sideSections {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sideSections {
+  margin: 2px 0 6px 12px;
+  padding-left: 10px;
+  border-left: 1px solid var(--rule);
+}
+.sideTab,
+.sideSection {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  text-align: left;
+}
+.sideTab {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 560;
+  cursor: pointer;
+}
+.sideSection {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 14px;
+  text-decoration: none;
+}
+.sideTab:hover,
+.sideSection:hover {
+  color: var(--ink);
+  background: var(--track);
+}
+.sideTab[aria-current="page"] {
+  color: var(--ink);
+  background: var(--track);
+  font-weight: 650;
+}
+
 /* Bandeau de mise à jour, sous l'en-tête : il reste jusqu'au choix de l'utilisateur. */
 .update {
   display: flex;
