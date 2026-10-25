@@ -12,8 +12,10 @@ import {
   monthAggregates,
   moveBudget,
   PRECAUTION_TYPE_ID,
+  reservableTypes,
   safetyStatus,
   SAVINGS_BUDGET_ID,
+  setAccountTypes,
   typeHolding,
   typesOf,
   UsageError,
@@ -120,5 +122,26 @@ describe("supprimer un budget (point 13, décisions 86 et 87)", () => {
     expect(() => deleteBudget(base, NEEDS, NEEDS, NOW)).toThrow(UsageError);
     const alone = { ...base, collections: { ...base.collections, budgets: base.collections.budgets.filter((b) => b.id === WANTS) } };
     expect(() => deleteBudget(alone, WANTS, SAVINGS_BUDGET_ID, NOW)).toThrow(/au moins un budget/);
+  });
+});
+
+describe("types d'un compte et parts à réserver (décisions 77 et 78)", () => {
+  const { cats, accs } = world();
+  const base = dataset({ categories: Object.values(cats), accounts: Object.values(accs) });
+
+  it("le premier type est le principal ; une liste vide retire le champ", () => {
+    const lep = setAccountTypes(accs.livret, [PRECAUTION_TYPE_ID, project, project], NOW);
+    expect(lep.typeIds).toEqual([PRECAUTION_TYPE_ID, project]);
+    expect(setAccountTypes(lep, [], NOW + 1)).not.toHaveProperty("typeIds");
+    expect(validateDataset(applyChanges(base, { accounts: [lep] }))).toEqual([]);
+  });
+
+  it("on réserve aux types des comptes touchés, hors principal", () => {
+    const lep = setAccountTypes(accs.livret, [PRECAUTION_TYPE_ID, project], NOW);
+    const pea = setAccountTypes(accs.pea, [defaultTypeId("placement"), project], NOW);
+    const data = applyChanges(base, { accounts: [lep, pea] });
+    expect(reservableTypes(data, [accs.courant.id, lep.id]).map((t) => t.id)).toEqual([project]);
+    expect(reservableTypes(data, [lep.id, pea.id]).map((t) => t.id)).toEqual([project]);
+    expect(reservableTypes(data, [accs.courant.id, undefined])).toEqual([]);
   });
 });

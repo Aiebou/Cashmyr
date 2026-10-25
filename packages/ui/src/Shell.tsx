@@ -11,7 +11,7 @@ import { CreateAccountModal, CreateDebtModal, CreateGoalModal } from "./screens/
 import { DashboardScreen } from "./screens/DashboardScreen";
 import { AccountsScreen } from "./screens/AccountsScreen";
 import { DebtsScreen } from "./screens/DebtsScreen";
-import { GoalsScreen } from "./screens/GoalsScreen";
+import { GoalsScreen, PrecautionAccountsModal } from "./screens/GoalsScreen";
 import { MonthScreen } from "./screens/MonthScreen";
 import { OperationsScreen } from "./screens/OperationsScreen";
 import { OperationModal } from "./screens/OperationModal";
@@ -184,6 +184,8 @@ function Modals() {
       return <EditAccountModal accountId={modal.accountId} />;
     case "create-budget":
       return <CreateBudgetModal />;
+    case "precaution-accounts":
+      return <PrecautionAccountsModal />;
     case "delete-budget":
       return <DeleteBudgetModal budgetId={modal.budgetId} />;
     case "recurrence":

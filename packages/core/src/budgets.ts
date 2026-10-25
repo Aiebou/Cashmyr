@@ -142,3 +142,30 @@ export function deleteBudget(data: Dataset, budgetId: string, targetId: string, 
   if (moved > 0) splits[targetId] = (splits[targetId] ?? 0) + moved;
   return { changes, preferences: setPreference(data.preferences, "splits", splits, now) };
 }
+
+/**
+ * Rattache un compte à des types, dans l'ordre donné : le premier est son type principal
+ * (décision 77). Une liste vide retire le champ.
+ */
+export function setAccountTypes(account: Account, typeIds: readonly string[], now: number): Account {
+  const { typeIds: _old, ...rest } = account;
+  const unique = [...new Set(typeIds)];
+  return { ...rest, ...(unique.length > 0 ? { typeIds: unique } : {}), updatedAt: nextStamp(now, account) };
+}
+
+/**
+ * Types auxquels une opération peut réserver une part (décision 78) : ceux des comptes qu'elle touche,
+ * hors leur type principal, qui prend déjà le reste. Vivants, sans doublon, dans l'ordre des comptes.
+ */
+export function reservableTypes(data: Dataset, accountIds: readonly (string | undefined)[]): BudgetType[] {
+  const ix = indexOf(data);
+  const out = new Map<string, BudgetType>();
+  for (const accountId of accountIds) {
+    const account = accountId ? ix.accounts.get(accountId) : undefined;
+    for (const typeId of account?.typeIds?.slice(1) ?? []) {
+      const type = ix.types.get(typeId);
+      if (type && type.deletedAt === null) out.set(type.id, type);
+    }
+  }
+  return [...out.values()];
+}

@@ -13,8 +13,9 @@
   publiée écrirait sinon un format que les applications de bureau en 0.5 refuseraient.
   - PR #27, `format-3-budgets` : modèle, mise à niveau et calculs (décisions 71 à 82) ;
   - `budgets-interface`, empilée dessus : Paramètres → Budgets, types, menu « Type » (décisions 83 à 87) ;
-  - reste la PR 7 : comptes rattachés aux types, parts réservées, précaution.
-- **Tests** : 501 tests TypeScript et 15 tests Rust passent sur la branche de l'interface des budgets (core 261, storage 97, ui 143). La séquence
+  - `types-comptes`, empilée sur la précédente : types d'un compte, part réservée à la saisie, carte de
+    précaution (point 18).
+- **Tests** : 507 tests TypeScript et 15 tests Rust passent sur la dernière branche de la pile (core 263, storage 97, ui 147). La séquence
   d'installation du §3 a été vérifiée sur un clone neuf le 23/10/2026.
 
 La référence reste [`architecture.md`](architecture.md) : modèle de données, règles de calcul et de fusion, et les

@@ -370,3 +370,39 @@
     margin-left: 12px;
   }
 }
+
+/* Types d'un compte (décision 77). */
+.accountTypes {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+}
+.accountTypes legend {
+  padding: 0 4px;
+  font-weight: 560;
+}
+.accountTypeGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: center;
+}
+.accountTypeGroup > span:first-child {
+  flex-basis: 100%;
+  font-size: 13px;
+}
+.accountType {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.principal {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ink-2);
+}

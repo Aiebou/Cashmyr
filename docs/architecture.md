@@ -645,6 +645,15 @@ Format 3, choix d'interface validés le 25/10/2026 (P6) :
   des mois passés qui change de budget.
 - **Paramètres → Catégories** : chaque dépense a un menu « Type », limité aux types de son budget, plus « Sans
   type » ; changer de budget retire le type. La couleur d'un budget se choisit dans Budgets.
+- **Types d'un compte** (fiche du compte, dans Paramètres → Comptes et par le crayon de Mes comptes) : les types à
+  cocher, groupés par budget, et le choix du principal dès qu'il y en a deux. Ce champ remplace la case « Épargne de
+  précaution » : la précaution est un type comme les autres (décisions 77 et 79).
+- **Réserver une part à la saisie** : le champ « Part réservée à » d'une opération ou d'une récurrence ne paraît que
+  si un compte touché porte un type en plus de son principal ; il propose ces types, et « Aucune (type principal) ».
+  Un rattachement déjà posé reste affiché, même si le compte ne porte plus ce type (décision 78).
+- **Mes comptes** : la tuile d'un compte à plusieurs types montre, sous son solde, la part de chacun.
+- **Carte de précaution** (point 18) : seuls les comptes choisis, avec la part qui revient à la précaution
+  (« 8 800,00 € sur 10 000,00 € ») ; « Choisir les comptes » ouvre la liste à cocher de tous les comptes.
 
 Version 0.5.0, choix d'interface validés le 25/10/2026 (liste du 25/10, points 18 à 20) :
 - **Mes comptes** : « Vos comptes » avant « Mouvements de l'année » ; un crayon sur chaque compte ouvre « Modifier le
