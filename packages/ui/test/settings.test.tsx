@@ -40,7 +40,7 @@ describe("écran Paramètres", () => {
       "Budget",
       "Comptes",
       "Récurrences",
-      "Catégories et couleurs",
+      "Catégories",
       "Tags",
       "Profils",
       "Synchronisation",
@@ -49,6 +49,31 @@ describe("écran Paramètres", () => {
       "Application",
     ]);
     expect(screen.queryByRole("group", { name: /affichée?/ })).toBeNull();
+  });
+
+  it("« Haut de page » apparaît après un écran de défilement, ramène en haut et rend le focus au sommaire", async () => {
+    const user = userEvent.setup();
+    await openSettings();
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    const scroll = (y: number) => {
+      Object.defineProperty(window, "scrollY", { value: y, configurable: true });
+      fireEvent.scroll(window);
+    };
+    try {
+      expect(screen.queryByRole("button", { name: "Haut de page" })).toBeNull();
+      scroll(window.innerHeight / 2);
+      expect(screen.queryByRole("button", { name: "Haut de page" })).toBeNull();
+      scroll(window.innerHeight + 1);
+      await user.click(screen.getByRole("button", { name: "Haut de page" }));
+      expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
+      const toc = screen.getByRole("navigation", { name: "Sections des paramètres" });
+      expect(document.activeElement).toBe(within(toc).getAllByRole("link")[0]);
+      scroll(0);
+      expect(screen.queryByRole("button", { name: "Haut de page" })).toBeNull();
+    } finally {
+      scrollTo.mockRestore();
+      Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+    }
   });
 });
 
@@ -118,7 +143,7 @@ describe("comptes (décision 30)", () => {
   });
 });
 
-describe("catégories et couleurs (décision 31, section 5)", () => {
+describe("catégories (décision 31, section 5)", () => {
   it("une catégorie inutilisée se supprime après confirmation dans l'application", async () => {
     const user = userEvent.setup();
     const { repository } = await openSettings();
