@@ -10,10 +10,13 @@ import {
   monthRange,
   monthTargets,
   normalizeDashOrder,
+  budgetActual,
+  objectiveTypes,
+  precautionType,
   safetyStatus,
+  typeStatus,
   yearOf,
   yearSummary,
-  type Bucket,
   type DashBlock,
   type Dataset,
   type Day,
@@ -28,7 +31,8 @@ import { Gauge, Stat } from "../components/figures";
 import { Card, Empty, Grid } from "../components/layout";
 import { dropBefore, moveAmongVisible, ReorderableBlock } from "../components/Reorderable";
 import { debtSentence } from "../lib/debt-text";
-import { BUCKET_LABELS, categoryName } from "../lib/data";
+import { budgetColor, budgetName, categoryName, liveBudgets, splitBudgets } from "../lib/data";
+import { monthSeries, savingColor } from "../lib/month-series";
 import { count, dayLong, debtRatio, money, ofMonth, oneDecimal, ratio, timeLeft } from "../lib/format";
 import { targetCaption } from "../lib/targets-text";
 import type { Tab } from "../store/app-store";
@@ -51,7 +55,10 @@ function GoalsBlock({ data, asOf, today }: { data: Dataset; asOf: Day; today: Da
   const { setTab } = useActions();
   const prefs = data.preferences;
   const safety = safetyStatus(data, asOf, today);
-  const showSafety = !prefs.safety.hidden && (!safety.reached || prefs.safety.pinned);
+  // Décision 79 : la précaution est l'objectif du type « Épargne de précaution ».
+  const precaution = precautionType(data);
+  const objective = precaution?.objective ?? null;
+  const showSafety = objective !== null && !objective.hidden && (!safety.reached || objective.pinned);
   const goals = dashboardGoals(data);
   const pinned = goals.filter((g) => g.pinned);
   const others = goals.filter((g) => !g.pinned);
@@ -60,7 +67,7 @@ function GoalsBlock({ data, asOf, today }: { data: Dataset; asOf: Day; today: Da
     <div key="safety" className={s.item}>
       <Gauge
         label="Épargne de précaution"
-        color={colorFor(prefs, { kind: "bucket", bucket: "invest" })}
+        color={budgetColor(data, precaution?.budgetId)}
         value={safety.constituted}
         target={safety.objective}
         caption={
@@ -71,7 +78,7 @@ function GoalsBlock({ data, asOf, today }: { data: Dataset; asOf: Day; today: Da
       />
       <p className={s.note}>
         {safety.capacityMonths !== null
-          ? `Capacité actuelle : ${oneDecimal(safety.capacityMonths)} mois de dépenses courantes`
+          ? `Capacité actuelle : ${oneDecimal(safety.capacityMonths)} mois de dépenses`
           : "Capacité : pas encore de dépenses moyennes"}
       </p>
     </div>
@@ -99,10 +106,30 @@ function GoalsBlock({ data, asOf, today }: { data: Dataset; asOf: Day; today: Da
     );
   };
 
+  // Décision 88 : les types d'épargne à objectif, mêmes règles d'affichage que la précaution.
+  const typeItems = objectiveTypes(data)
+    .map((type) => ({ type, status: typeStatus(data, type.id, asOf, today) }))
+    .filter(({ type, status }) => status.objective !== null && !type.objective!.hidden && (!status.reached || type.objective!.pinned));
+  const typeItem = ({ type, status }: (typeof typeItems)[number]) => (
+    <div key={type.id} className={s.item}>
+      <Gauge
+        label={type.name}
+        color={budgetColor(data, type.budgetId)}
+        value={status.constituted}
+        target={status.objective}
+        caption={`${money(status.constituted)} sur ${money(status.objective!)}${status.reached ? " · atteint" : ""}`}
+      />
+    </div>
+  );
+  const pinnedTypes = typeItems.filter(({ type }) => type.objective!.pinned);
+  const otherTypes = typeItems.filter(({ type }) => !type.objective!.pinned);
+
   const items = [
-    ...(prefs.safety.pinned && safetyItem ? [safetyItem] : []),
+    ...(objective?.pinned && safetyItem ? [safetyItem] : []),
+    ...pinnedTypes.map(typeItem),
     ...pinned.map(goalItem),
-    ...(!prefs.safety.pinned && safetyItem ? [safetyItem] : []),
+    ...(!objective?.pinned && safetyItem ? [safetyItem] : []),
+    ...otherTypes.map(typeItem),
     ...others.map(goalItem),
   ];
 
@@ -145,7 +172,7 @@ function StatsBlock({ data, year, today }: { data: Dataset; year: number; today:
     <Grid min={170}>
       <Stat label="Revenu moyen" value={ys.averageIncome.value !== null ? money(ys.averageIncome.value) : "—"} note={over} />
       <Stat label="Taux d'épargne de l'année" value={ys.savingsRate !== null ? ratio(ys.savingsRate) : "—"} note="Mis de côté ÷ revenus" />
-      <Stat label="Dépenses moyennes par mois" value={ys.averageSpending.value !== null ? money(ys.averageSpending.value) : "—"} note={`Besoins et envies, ${over}`} />
+      <Stat label="Dépenses moyennes par mois" value={ys.averageSpending.value !== null ? money(ys.averageSpending.value) : "—"} note={`Budgets de dépense, ${over}`} />
       {/* Décision 70 : ce qui a vraiment été payé sur les dettes, mêmes mois que les moyennes. */}
       <Stat
         label="Taux d'endettement (DTI)"
@@ -158,18 +185,9 @@ function StatsBlock({ data, year, today }: { data: Dataset; year: number; today:
 
 function MonthsBlock({ data, year, today }: { data: Dataset; year: number; today: Day }) {
   const ys = useMemo(() => yearSummary(data, year, today), [data, year, today]);
-  const prefs = data.preferences;
   if (ys.months.every((m) => m.count === 0)) return <p className={s.note}>Aucune opération en {year}.</p>;
-  return (
-    <MonthsChart
-      months={ys.months}
-      colors={{
-        besoin: colorFor(prefs, { kind: "bucket", bucket: "besoin" }),
-        envie: colorFor(prefs, { kind: "bucket", bucket: "envie" }),
-        invest: colorFor(prefs, { kind: "bucket", bucket: "invest" }),
-      }}
-    />
-  );
+  const { series, months } = monthSeries(data, ys.months);
+  return <MonthsChart months={months} series={series} />;
 }
 
 function SavingsBlock({ data, year, today }: { data: Dataset; year: number; today: Day }) {
@@ -180,7 +198,7 @@ function SavingsBlock({ data, year, today }: { data: Dataset; year: number; toda
     <SavingsChart
       months={monthRange(`${y}-01`, `${y}-12`)}
       points={ys.savingsCurve}
-      color={colorFor(data.preferences, { kind: "bucket", bucket: "invest" })}
+      color={savingColor(data)}
       today={today}
     />
   );
@@ -188,15 +206,18 @@ function SavingsBlock({ data, year, today }: { data: Dataset; year: number; toda
 
 function CategoriesBlock({ data, year, today }: { data: Dataset; year: number; today: Day }) {
   const ys = useMemo(() => yearSummary(data, year, today), [data, year, today]);
-  const prefs = data.preferences;
-  if (ys.ranking.length === 0) return <p className={s.note}>Aucune dépense courante en {year}.</p>;
+  if (ys.ranking.length === 0) return <p className={s.note}>Aucune dépense en {year}.</p>;
   return (
     <RankingChart
-      items={ys.ranking.map((r) => ({ key: r.categoryId, label: categoryName(data, r.categoryId), amount: r.amount, bucket: r.bucket }))}
-      colors={{
-        besoin: colorFor(prefs, { kind: "bucket", bucket: "besoin" }),
-        envie: colorFor(prefs, { kind: "bucket", bucket: "envie" }),
-      }}
+      items={ys.ranking.map((r) => ({
+        key: r.categoryId,
+        label: categoryName(data, r.categoryId),
+        amount: r.amount,
+        color: budgetColor(data, r.budgetId),
+      }))}
+      legend={liveBudgets(data)
+        .filter((b) => b.nature === "spend")
+        .map((b) => ({ key: b.id, label: b.name, color: budgetColor(data, b.id) }))}
     />
   );
 }
@@ -210,7 +231,6 @@ function MonthTargetsCard({ data, today }: { data: Dataset; today: Day }) {
   const month = monthOf(today);
   const agg = useMemo(() => monthAggregates(data, month), [data, month]);
   const targets = useMemo(() => monthTargets(data, month), [data, month]);
-  const prefs = data.preferences;
   const open = () => {
     setMonth(month);
     setTab("month");
@@ -230,18 +250,18 @@ function MonthTargetsCard({ data, today }: { data: Dataset; today: Day }) {
         <p className={s.note}>Pas encore de revenus ce mois-ci : les cibles se calculent à partir des revenus.</p>
       ) : (
         <div className={s.items}>
-          {(["besoin", "envie", "invest"] as Bucket[]).map((bucket) => {
-            const value = bucket === "besoin" ? agg.needs : bucket === "envie" ? agg.wants : agg.saved;
-            const target = targets.targets[bucket];
+          {splitBudgets(data).map((budget) => {
+            const value = budgetActual(agg, budget);
+            const target = targets.targets[budget.id] ?? 0;
             return (
               <Gauge
-                key={bucket}
-                label={bucket === "invest" ? "Épargne" : BUCKET_LABELS[bucket]}
-                color={colorFor(prefs, { kind: "bucket", bucket })}
+                key={budget.id}
+                label={budgetName(data, budget.id)}
+                color={budgetColor(data, budget.id)}
                 value={value}
                 target={target}
-                caption={targetCaption(bucket, value, target)}
-                warnOver={bucket !== "invest"}
+                caption={targetCaption(budget.nature, value, target)}
+                warnOver={budget.nature === "spend"}
               />
             );
           })}

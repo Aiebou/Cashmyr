@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  accountFigures,
   applyChanges,
+  defaultBudgetId,
+  defaultBudgets,
   defaultCategories,
+  defaultTypes,
+  DEFAULTS_AT,
   emptyDataset,
   goalProgress,
   goalTarget,
@@ -15,10 +20,13 @@ import {
   monthAggregates,
   occurrenceId,
   parseImport,
+  PRECAUTION_TYPE_ID,
   readLegacyExport,
+  safetyStatus,
   serializeBackup,
   setPreference,
   skipId,
+  startingDefaults,
   tombstone,
   touch,
   validateDataset,
@@ -62,9 +70,13 @@ describe("reprise de l'ancienne application (§7)", () => {
     expect(checked).toEqual({ months: 3, accounts: 4, goals: 2, debts: 3 });
     expect(deadLinks).toBe(0);
 
-    for (const list of Object.values(data.collections)) {
+    // Ce qui vient du fichier porte l'horodatage de reprise ; budgets et types sont ceux de tout appareil (décision 82).
+    const { budgets, types, ...fromFile } = data.collections;
+    for (const list of Object.values(fromFile)) {
       for (const r of list) expect(r).toMatchObject({ updatedAt: LEGACY_STAMP, deletedAt: null });
     }
+    expect(budgets).toEqual(defaultBudgets());
+    expect(types.filter((t) => t.id !== PRECAUTION_TYPE_ID)).toEqual(defaultTypes().filter((t) => t.id !== PRECAUTION_TYPE_ID));
     expect(op(data, "o3")).toMatchObject({
       date: "2026-07-09",
       type: "out",
@@ -79,6 +91,12 @@ describe("reprise de l'ancienne application (§7)", () => {
       ["Livret A", 300000, 310050],
       ["PEA", 0, undefined],
       ["Compte joint", -12010, undefined],
+    ]);
+    // L'ancienne case « précaution » devient le type, solde compris (décision 79).
+    expect(data.collections.accounts.map((a) => a.typeIds)).toEqual([undefined, [PRECAUTION_TYPE_ID], undefined, undefined]);
+    const livret = acc("a2");
+    expect(safetyStatus(data, "2026-09-30", "2026-09-30").accounts).toEqual([
+      { account: expect.objectContaining({ id: livret }), share: accountFigures(data, "2026-09-30").get(livret)!.balance },
     ]);
     expect(clearedDebtCategories).toEqual(["Dépannage"]);
   });
@@ -161,10 +179,14 @@ describe("reprise de l'ancienne application (§7)", () => {
     expect(rescue).toMatchObject({ direction: "lent", categoryId: null, settled: true, settledAt: "2026-08-20", archived: true });
 
     const p = data.preferences;
-    expect(p.splits).toEqual({ besoin: 5000, envie: 3000, invest: 2000 });
-    expect(p.safety).toEqual({ mode: "months", months: 3, amount: 0, hidden: false, pinned: false });
+    // Décision 82 : les trois usages deviennent les trois budgets par défaut.
+    expect(p.splits).toEqual({ [defaultBudgetId("besoin")]: 5000, [defaultBudgetId("envie")]: 3000, [defaultBudgetId("invest")]: 2000 });
+    expect(data.collections.types.find((t) => t.id === PRECAUTION_TYPE_ID)).toMatchObject({
+      objective: { mode: "months", months: 3, amount: 0, hidden: false, pinned: false },
+      updatedAt: DEFAULTS_AT + 1,
+    });
     expect(p.categoryColors).toEqual({ [legacyCategoryId("r1")]: "#336699" });
-    expect(p.bucketColors).toEqual({ envie: "#aa5500" });
+    expect(p.budgetColors).toEqual({ [defaultBudgetId("envie")]: "#aa5500" });
     // Le thème n'existait pas : il ne remplace rien.
     expect(p.updatedAt.theme).toBe(0);
     expect(p.updatedAt.categoryColors).toBe(LEGACY_STAMP);
@@ -173,10 +195,12 @@ describe("reprise de l'ancienne application (§7)", () => {
   it("catégories par défaut et catégories reprises partagent leurs identifiants", () => {
     const { data } = importLegacy(legacyExport());
     const imported = new Map(data.collections.categories.map((c) => [c.id, c]));
-    for (const seed of defaultCategories()) {
-      // Même ligne, seule la version change : la reprise l'emporte sur le jeu de départ jamais modifié.
-      expect(imported.get(seed.id)).toEqual({ ...seed, updatedAt: LEGACY_STAMP });
+    // Une catégorie par défaut gardée au format 3 porte l'identifiant de l'ancienne : la reprise,
+    // horodatée plus anciennement, ne la remplace pas et n'en crée pas une seconde (décision 82).
+    for (const seed of defaultCategories().filter((c) => imported.has(c.id))) {
+      expect(imported.get(seed.id)!.updatedAt).toBeLessThan(seed.updatedAt);
     }
+    expect(defaultCategories().filter((c) => imported.has(c.id))).toHaveLength(17);
     expect(imported.has(legacyCategoryId("k3x9pw2mzq1a"))).toBe(true);
   });
 
@@ -283,10 +307,13 @@ describe("reprise de l'ancienne application (§7)", () => {
   });
 
   it("après « Commencer avec les catégories par défaut », la reprise ne duplique aucune catégorie", () => {
-    const seeded = applyChanges(emptyDataset(), { categories: defaultCategories() });
+    const seeded = applyChanges(emptyDataset(), startingDefaults(emptyDataset(), NOW));
     const result = importBackup(seeded, importLegacy(legacyExport()).data);
     const after = applyChanges({ ...seeded, preferences: result.preferences }, result.changes);
-    expect(after.collections.categories).toHaveLength(31);
+    const ids = new Set([...defaultCategories(), ...importLegacy(legacyExport()).data.collections.categories].map((c) => c.id));
+    expect(after.collections.categories).toHaveLength(ids.size);
+    // Les catégories par défaut gardent leur forme du format 3.
+    for (const seed of defaultCategories()) expect(after.collections.categories.find((c) => c.id === seed.id)).toEqual(seed);
     expect(validateDataset(after)).toEqual([]);
   });
 

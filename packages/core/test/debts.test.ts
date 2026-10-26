@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { defaultBudgetId } from "../src";
 import {
   applyChanges,
   completeSchedule,
@@ -30,6 +31,8 @@ import {
   type Operation,
 } from "../src";
 import { category, dataset, DAY, debt, eur, expense, income, NOW, recurrence, TODAY, transfer, world } from "./fixtures";
+
+const NEEDS = defaultBudgetId("besoin");
 
 const { cats, accs } = world();
 const credit = category("Crédit", "out", "besoin");
@@ -122,7 +125,7 @@ describe("versement ponctuel", () => {
     expect(view.next).toMatchObject({ date: "2026-11-10", amount: eur(75), status: "upcoming" });
     expect(view.payoffDate).toBe("2026-11-10");
     // L'argent a quitté le compte : le budget du mois le reflète.
-    expect(monthAggregates(after, "2026-09").needs).toBe(eur(300 + 525));
+    expect(monthAggregates(after, "2026-09").byBudget[NEEDS]).toBe(eur(300 + 525));
   });
 
   it("hors budget : incrémente paidManual sans créer d'opération", () => {
@@ -131,7 +134,7 @@ describe("versement ponctuel", () => {
     expect(changes.debts).toEqual([expect.objectContaining({ id: d.id, paidManual: eur(525) })]);
     const after = applyChanges(before, changes);
     expect(debtView(after, after.collections.debts[0]!, TODAY, TODAY).remaining).toBe(eur(75));
-    expect(monthAggregates(after, "2026-09").needs).toBe(eur(300));
+    expect(monthAggregates(after, "2026-09").byBudget[NEEDS]).toBe(eur(300));
   });
 
   it("« on me doit » : un remboursement reçu est un revenu", () => {

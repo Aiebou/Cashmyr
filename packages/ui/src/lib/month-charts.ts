@@ -1,5 +1,5 @@
-import { colorFor, indexOf, type Bucket, type Cents, type Dataset } from "@cashmyr/core";
-import { categoryName } from "./data";
+import { budgetOf, colorFor, indexOf, type Cents, type Dataset } from "@cashmyr/core";
+import { categoryName, liveBudgets } from "./data";
 
 /** Part d'un camembert de l'écran Mois. « Autres » n'a pas de couleur : il est hachuré, et détaille ses postes. */
 export type Slice = { key: string; label: string; value: Cents; color: string | null; details?: { key: string; label: string; value: Cents }[] };
@@ -26,7 +26,6 @@ const othersSlice = (folded: readonly { key: string; label: string; value: Cents
   details: [...folded],
 });
 
-const BUCKET_ORDER: readonly (Bucket | undefined)[] = ["besoin", "envie", "invest", undefined];
 /**
  * Nuances d'une couleur d'usage pour les postes d'un même usage, du plus gros au plus petit :
  * la couleur, puis alternativement vers le fond et vers l'encre, pour que deux parts voisines
@@ -48,16 +47,18 @@ export function expenseSlices(data: Dataset, spending: readonly { categoryId: st
     key: s.categoryId,
     label: categoryName(data, s.categoryId),
     value: s.amount,
-    bucket: ix.categories.get(s.categoryId)?.bucket,
+    budget: budgetOf(ix, s.categoryId),
   }));
   const { kept, folded } = foldSlices(items);
   const slices: Slice[] = [];
-  for (const bucket of BUCKET_ORDER) {
+  // Dans l'ordre des budgets, puis les budgets supprimés, puis les dépenses sans budget.
+  const order = [...liveBudgets(data), ...new Set(kept.map((i) => i.budget).filter((b) => b && b.deletedAt !== null)), undefined];
+  for (const budget of order) {
     // Catégorie introuvable : anomalie déjà signalée par l'écran, en gris foncé.
-    const base = bucket ? colorFor(data.preferences, { kind: "bucket", bucket }) : "var(--ink-2)";
+    const base = budget ? colorFor(data.preferences, { kind: "budget", budget }) : "var(--ink-2)";
     kept
-      .filter((i) => i.bucket === bucket)
-      .forEach((i, rank) => slices.push({ key: i.key, label: i.label, value: i.value, color: bucket ? shade(base, rank) : base }));
+      .filter((i) => i.budget?.id === budget?.id)
+      .forEach((i, rank) => slices.push({ key: i.key, label: i.label, value: i.value, color: budget ? shade(base, rank) : base }));
   }
   if (folded.length > 0) slices.push(othersSlice(folded));
   return slices;

@@ -1,8 +1,8 @@
-import { createRecord, emptyDataset, serializeBackup, type Debt, type Operation, type Recurrence } from "@cashmyr/core";
+import { createRecord, defaultBudgetId, defaultTypeId, defaultCategories as coreDefaults, emptyDataset, serializeBackup, type Debt, type Operation, type Recurrence } from "@cashmyr/core";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { defaultCategories } from "../src/lib/data";
+import { testCategories as defaultCategories } from "./helpers";
 import { csvAmount, operationsCsv } from "../src/lib/export";
 import { parsePercent, percentText } from "../src/screens/settings/BudgetSection";
 import { accounts, renderApp, TODAY } from "./helpers";
@@ -37,7 +37,7 @@ describe("écran Paramètres", () => {
     await openSettings();
     const toc = screen.getByRole("navigation", { name: "Sections des paramètres" });
     expect(within(toc).getAllByRole("link").map((a) => a.textContent)).toEqual([
-      "Budget",
+      "Budgets",
       "Comptes",
       "Récurrences",
       "Catégories",
@@ -91,19 +91,86 @@ describe("budget", () => {
   it("la répartition ne s'enregistre qu'à 100 %, et le dit", async () => {
     const user = userEvent.setup();
     const { repository } = await openSettings();
-    const splits = card("Répartition cible");
-    const needs = within(splits).getByLabelText("Besoins");
+    const splits = card("Budgets");
+    const needs = within(splits).getByLabelText("Part de « Dépenses courantes »");
     const save = within(splits).getByRole("button", { name: "Enregistrer la répartition" });
     await user.clear(needs);
     await user.type(needs, "45");
     expect(within(splits).getByRole("alert").textContent).toBe("Total : 95 % · il manque 5 %");
     expect(save.hasAttribute("disabled")).toBe(true);
-    const wants = within(splits).getByLabelText("Envies");
+    const wants = within(splits).getByLabelText("Part de « Loisirs »");
     await user.clear(wants);
     await user.type(wants, "35");
     expect(within(splits).getByText("Total : 100 %")).toBeTruthy();
     await user.click(save);
-    expect(repository.data.preferences.splits).toEqual({ besoin: 4_500, envie: 3_500, invest: 2_000 });
+    expect(repository.data.preferences.splits).toEqual({ [defaultBudgetId("besoin")]: 4_500, [defaultBudgetId("envie")]: 3_500, [defaultBudgetId("invest")]: 2_000 });
+  });
+
+  it("nouveau budget : un nom, une nature, 0 % ; ses types s'ajoutent et se renomment (décisions 71 et 72)", async () => {
+    const user = userEvent.setup();
+    const { repository } = await openSettings();
+    await user.click(within(card("Budgets")).getByRole("button", { name: "Nouveau budget" }));
+    const d = await screen.findByRole("dialog", { name: "Nouveau budget" });
+    await user.type(within(d).getByLabelText("Nom"), "Formation");
+    await user.click(within(d).getByRole("radio", { name: "Épargne" }));
+    await user.click(within(d).getByRole("button", { name: "Créer" }));
+    const formation = repository.data.collections.budgets.find((b) => b.name === "Formation")!;
+    expect(formation).toMatchObject({ nature: "save", position: 4 });
+    expect((within(card("Budgets")).getByLabelText("Part de « Formation »") as HTMLInputElement).value).toBe("0");
+
+    await user.type(within(card("Budgets")).getByLabelText("Nouveau type · Formation"), "Cours{Enter}");
+    const course = repository.data.collections.types.find((t) => t.name === "Cours")!;
+    expect(course.budgetId).toBe(formation.id);
+    const name = within(card("Budgets")).getByLabelText("Nom du type « Cours »");
+    await user.clear(name);
+    await user.type(name, "Cours du soir{Enter}");
+    expect(repository.data.collections.types.find((t) => t.id === course.id)!.name).toBe("Cours du soir");
+  });
+
+  it("changer la nature d'un budget utilisé annonce les mois passés (décision 83) ; « Épargne » garde la sienne", async () => {
+    const user = userEvent.setup();
+    const { repository } = await openSettings();
+    expect((within(card("Budgets")).getByLabelText("Nature de « Épargne »") as HTMLSelectElement).disabled).toBe(true);
+    await user.selectOptions(within(card("Budgets")).getByLabelText("Nature de « Dépenses courantes »"), "Épargne");
+    expect(plain(within(dialog()).getByText(/Les mois passés changent aussi/).textContent)).toBe(
+      "Les mois passés changent aussi : 2 opérations, 103,50 € en tout, passent de « dépensé » à « mis de côté ».",
+    );
+    await user.click(within(dialog()).getByRole("button", { name: "Changer la nature" }));
+    expect(repository.data.collections.budgets.find((b) => b.id === defaultBudgetId("besoin"))!.nature).toBe("save");
+  });
+
+  it("supprimer un type annonce ce qui revient aux autres ; la précaution ne se supprime pas (décisions 84 et 85)", async () => {
+    const user = userEvent.setup();
+    const { repository } = await openSettings();
+    expect(within(card("Budgets")).queryByRole("button", { name: "Supprimer le type « Épargne de précaution »" })).toBeNull();
+    await user.click(within(card("Budgets")).getByRole("button", { name: "Supprimer le type « Placement »" }));
+    await user.click(within(dialog()).getByRole("button", { name: "Supprimer le type" }));
+    expect(repository.data.collections.types.find((t) => t.name === "Placement")!.deletedAt).not.toBeNull();
+  });
+
+  it("supprimer un budget : catégories, part et mois passés vont au budget choisi (point 13, décision 87)", async () => {
+    const user = userEvent.setup();
+    const { repository } = await openSettings();
+    expect(within(card("Budgets")).queryByRole("button", { name: "Supprimer le budget « Épargne »" })).toBeNull();
+    await user.click(within(card("Budgets")).getByRole("button", { name: "Supprimer le budget « Dépenses courantes »" }));
+    const d = await screen.findByRole("dialog", { name: "Supprimer « Dépenses courantes »" });
+    await user.selectOptions(within(d).getByLabelText("Ses catégories passent dans"), "Loisirs");
+    expect(plain(d.textContent)).toContain("Sa part de la répartition, 50 %, s'ajoute à celle de « Loisirs ».");
+    expect(plain(d.textContent)).toContain("Les mois passés changent : 103,50 € de dépenses passent de Dépenses courantes à Loisirs.");
+    await user.click(within(d).getByRole("button", { name: "Supprimer le budget" }));
+    expect(repository.data.collections.categories.find((c) => c.id === cat("Courses"))!.budgetId).toBe(defaultBudgetId("envie"));
+    expect(repository.data.preferences.splits).toEqual({ [defaultBudgetId("envie")]: 8_000, [defaultBudgetId("invest")]: 2_000 });
+  });
+
+  it("une catégorie de dépense prend un type de son budget, ou aucun (point 12)", async () => {
+    const user = userEvent.setup();
+    const { repository } = await openSettings();
+    const select = screen.getByLabelText("Type de « Courses »");
+    expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["Sans type", "Charges fixes", "Quotidien", "Charge ponctuelle"]);
+    await user.selectOptions(select, "Quotidien");
+    expect(repository.data.collections.categories.find((c) => c.id === cat("Courses"))!.typeId).toBe(defaultTypeId("quotidien"));
+    await user.selectOptions(select, "Sans type");
+    expect(repository.data.collections.categories.find((c) => c.id === cat("Courses"))).not.toHaveProperty("typeId");
   });
 
   it("base de calcul et fenêtre de moyenne", async () => {
@@ -160,7 +227,7 @@ describe("catégories (décision 31, section 5)", () => {
     const d = dialog();
     expect(within(d).getByText("Utilisée par 2 opérations. Elles passeront dans :")).toBeTruthy();
     await user.selectOptions(within(d).getByLabelText("Catégorie"), "Restaurants et bars");
-    expect(plain(within(d).getByRole("status").textContent)).toBe("Les mois passés changent : 103,50 € de dépenses passent de Besoins à Envies.");
+    expect(plain(within(d).getByRole("status").textContent)).toBe("Les mois passés changent : 103,50 € de dépenses passent de Dépenses courantes à Loisirs.");
     await user.click(within(d).getByRole("button", { name: "Réaffecter et supprimer" }));
     const live = repository.data.collections.operations.filter((o) => o.deletedAt === null);
     expect(live.map((o) => o.categoryId)).toEqual([cat("Restaurants et bars"), cat("Restaurants et bars")]);
@@ -175,19 +242,19 @@ describe("catégories (décision 31, section 5)", () => {
     await user.type(within(dialog()).getByLabelText("Nom de la nouvelle catégorie"), "Alimentation");
     await user.click(within(dialog()).getByRole("button", { name: "Réaffecter et supprimer" }));
     const created = repository.data.collections.categories.find((c) => c.name === "Alimentation")!;
-    expect(created).toMatchObject({ kind: "out", bucket: "besoin", deletedAt: null });
+    expect(created).toMatchObject({ kind: "out", budgetId: defaultBudgetId("besoin"), deletedAt: null });
     expect(repository.data.collections.operations.every((o) => o.categoryId === created.id)).toBe(true);
   });
 
-  it("changer l'usage d'une catégorie utilisée demande confirmation, chiffres à l'appui", async () => {
+  it("changer le budget d'une catégorie utilisée demande confirmation, chiffres à l'appui", async () => {
     const user = userEvent.setup();
     const { repository } = await openSettings();
-    await user.selectOptions(screen.getByLabelText("Usage de « Courses »"), "Envies");
+    await user.selectOptions(screen.getByLabelText("Budget de « Courses »"), "Loisirs");
     expect(plain(within(dialog()).getByText(/Les mois passés changent aussi/).textContent)).toBe(
-      "Les mois passés changent aussi : 2 opérations, 103,50 € en tout, passent de Besoins à Envies.",
+      "Les mois passés changent aussi : 2 opérations, 103,50 € en tout, passent de Dépenses courantes à Loisirs.",
     );
     await user.click(within(dialog()).getByRole("button", { name: "Annuler" }));
-    expect(repository.data.collections.categories.find((c) => c.id === cat("Courses"))!.bucket).toBe("besoin");
+    expect(repository.data.collections.categories.find((c) => c.id === cat("Courses"))!.budgetId).toBe(defaultBudgetId("besoin"));
   });
 
   it("ajouter une source de revenu ; les doublons sont refusés", async () => {
@@ -212,11 +279,11 @@ describe("catégories (décision 31, section 5)", () => {
     await user.click(screen.getByRole("button", { name: "Rendre à Salaire sa couleur d'origine" }));
     expect(repository.data.preferences.categoryColors).toEqual({});
 
-    const needs = screen.getByLabelText("Couleur de Besoins") as HTMLInputElement;
+    const needs = screen.getByLabelText("Couleur de Dépenses courantes") as HTMLInputElement;
     needs.value = "#112233";
     needs.dispatchEvent(new Event("change"));
-    await screen.findByRole("button", { name: "Rendre à Besoins sa couleur d'origine" });
-    expect(repository.data.preferences.bucketColors).toEqual({ besoin: "#112233" });
+    await screen.findByRole("button", { name: "Rendre à Dépenses courantes sa couleur d'origine" });
+    expect(repository.data.preferences.budgetColors).toEqual({ [defaultBudgetId("besoin")]: "#112233" });
   });
 });
 
@@ -299,7 +366,7 @@ describe("sauvegardes (décisions 32 et 33)", () => {
       [`cashmyr-operations-${TODAY}.csv`, "text/csv"],
     ]);
     expect(JSON.parse(saved[0]!.content).collections.operations).toHaveLength(2);
-    expect(saved[1]!.content.split("\r\n")[1]).toBe('"2026-08-09";"Dépense";"Courses";"Besoins";"Compte courant";"";"";"";"";"61,00";""');
+    expect(saved[1]!.content.split("\r\n")[1]).toBe('"2026-08-09";"Dépense";"Courses";"Dépenses courantes";"Compte courant";"";"";"";"";"61,00";""');
   });
 
   it("CSV : colonnes de l'ancienne application, BOM, CRLF, transferts et montants", () => {
@@ -401,6 +468,6 @@ describe("remise à zéro (décision 45)", () => {
 
     await user.click(screen.getByRole("button", { name: "Commencer avec les catégories par défaut" }));
     await screen.findByRole("dialog", { name: "Nouveau compte" });
-    expect(repository.data.collections.categories.filter((c) => c.deletedAt === null)).toHaveLength(defaultCategories().length);
+    expect(repository.data.collections.categories.filter((c) => c.deletedAt === null)).toHaveLength(coreDefaults().length);
   });
 });

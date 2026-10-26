@@ -1,11 +1,12 @@
 import { SCHEMA_VERSION } from "../model";
+import { upgradeTo3 } from "./format3";
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /**
- * Mises à niveau du format, d'une version à la suivante (décision 50). Elles ne font que la
- * structure : la validation passe après, comme pour des données du format courant.
+ * Mises à niveau du format, d'une version à la suivante (décisions 50 et 81). La validation passe
+ * après, comme pour des données du format courant.
  */
 const STEPS: Record<number, (value: Obj) => Obj> = {
   // 1 → 2 (0.2.0) : collection des tags, vide. Le tag des opérations et des récurrences et
@@ -15,6 +16,9 @@ const STEPS: Record<number, (value: Obj) => Obj> = {
     schemaVersion: 2,
     collections: isObj(v.collections) ? { tags: [], ...v.collections } : v.collections,
   }),
+  // 2 → 3 (0.6.0) : budgets et types (décisions 71 à 81). Cette étape change aussi les catégories par
+  // défaut jamais modifiées : voir `upgradeTo3`.
+  2: upgradeTo3,
 };
 
 /**

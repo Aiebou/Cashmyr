@@ -9,6 +9,7 @@ import {
   mergeChanges,
   mergeDatasets,
   newId,
+  PRECAUTION_TYPE_ID,
   PREF_KEYS,
   SCHEMA_VERSION,
   toLocalDay,
@@ -37,6 +38,18 @@ export type RepositoryOptions = {
 /** Clés des modifications en attente (`DeviceState.dirty`). */
 export const recordKey = (collection: string, id: string) => `${collection}:${id}`;
 export const prefKey = (key: string) => `pref:${key}`;
+
+/**
+ * Format 3 (décision 81) : les modifications en attente suivent les réglages déplacés. La couleur des
+ * usages devient celle des budgets ; la précaution devient l'objectif de son type.
+ */
+function upgradeDirtyKeys(dirty: Record<string, number>): Record<string, number> {
+  const moved: Record<string, string> = {
+    [prefKey("bucketColors")]: prefKey("budgetColors"),
+    [prefKey("safety")]: recordKey("types", PRECAUTION_TYPE_ID),
+  };
+  return Object.fromEntries(Object.entries(dirty).map(([key, stamp]) => [moved[key] ?? key, stamp]));
+}
 
 /**
  * Données locales refusées à l'ouverture : illisibles (JSON abîmé) ou invalides (refusées par
@@ -105,6 +118,7 @@ export class Repository {
       if (e instanceof Error && e.name === "LocalFileCorruptedError") throw new LocalDataError("illisible", e.message);
       throw e;
     }
+    let upgraded = false;
     if (loaded) {
       // Données d'une version plus récente : elles ne sont pas abîmées, l'application est en retard.
       // Pas d'écran de secours, qui les mettrait de côté.
@@ -116,6 +130,7 @@ export class Repository {
       }
       // Données d'une version plus ancienne : mises au format courant, validées, puis réécrites (décision 50).
       const older = isOlderSchema(loaded);
+      upgraded = older;
       if (older) loaded = upgradeSchema(loaded);
       try {
         assertValidDataset(loaded);
@@ -129,6 +144,9 @@ export class Repository {
     let device = await options.local.getDevice();
     if (!device) {
       device = newDevice(options.deviceLabel);
+      await options.local.setDevice(device);
+    } else if (upgraded) {
+      device = { ...device, dirty: upgradeDirtyKeys(device.dirty) };
       await options.local.setDevice(device);
     }
     const repo = new Repository(options.local, loaded ?? emptyDataset(), device, loaded === null, now, today);

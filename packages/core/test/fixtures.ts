@@ -1,5 +1,9 @@
 import {
+  defaultBudgetId,
+  defaultBudgets,
+  defaultTypes,
   emptyDataset,
+  PRECAUTION_TYPE_ID,
   type Account,
   type Bucket,
   type Category,
@@ -26,13 +30,17 @@ let counter = 0;
 const id = (prefix: string) => `${prefix}-${++counter}`;
 const meta = (prefix: string, updatedAt = 1) => ({ id: id(prefix), updatedAt, deletedAt: null });
 
+/** Catégorie ; une dépense va dans le budget par défaut qui remplace l'usage donné. */
 export function category(name: string, kind: "in" | "out", bucket?: Bucket): Category {
-  return { ...meta("cat"), name, kind, ...(bucket ? { bucket } : {}), color: 0 };
+  return { ...meta("cat"), name, kind, ...(bucket ? { budgetId: defaultBudgetId(bucket) } : {}), color: 0 };
 }
 
 export function account(name: string, role: Role, extra: Partial<Account> = {}): Account {
-  return { ...meta("acc"), name, role, opening: 0, safety: false, color: 0, ...extra };
+  return { ...meta("acc"), name, role, opening: 0, color: 0, ...extra };
 }
+
+/** Rattaché à l'épargne de précaution, en type principal. */
+export const precaution = { typeIds: [PRECAUTION_TYPE_ID] };
 
 export function income(date: string, amount: number, categoryId: string, accountId: string, extra: Partial<Operation> = {}): Operation {
   return { ...meta("op"), date, amount, type: "in", note: "", categoryId, accountId, ...extra };
@@ -101,11 +109,20 @@ export function recurrence(extra: Partial<Recurrence> & Pick<Recurrence, "type" 
   return { ...meta("rec"), label: "Récurrence", endMonth: null, active: true, ...extra };
 }
 
+/**
+ * Jeu de données de test. Dès qu'il a des catégories ou des comptes, il reçoit les budgets et les
+ * types par défaut, comme tout profil non vide au format 3, sauf s'ils sont fournis.
+ */
 export function dataset(parts: Partial<Collections>, prefs: Partial<Preferences> = {}): Dataset {
   const base = emptyDataset();
+  const defaults = (parts.categories?.length ?? 0) > 0 || (parts.accounts?.length ?? 0) > 0;
   return {
     ...base,
-    collections: { ...base.collections, ...parts },
+    collections: {
+      ...base.collections,
+      ...(defaults ? { budgets: defaultBudgets(), types: defaultTypes() } : {}),
+      ...parts,
+    },
     preferences: { ...base.preferences, ...prefs },
   };
 }
@@ -123,7 +140,7 @@ export function world() {
   };
   const accs = {
     courant: account("Compte courant", "courant"),
-    livret: account("Livret A", "epargne", { safety: true }),
+    livret: account("Livret A", "epargne", precaution),
     pea: account("PEA", "invest"),
     especes: account("Espèces", "autre"),
   };

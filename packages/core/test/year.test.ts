@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { defaultBudgetId } from "../src";
+
+const [NEEDS, WANTS, SAVED] = (["besoin", "envie", "invest"] as const).map(defaultBudgetId) as [string, string, string];
 import { elapsedMonths, yearSummary } from "../src";
 import { tombstone } from "../src";
 import { debt, eur, expense, income, TODAY, transfer, world } from "./fixtures";
@@ -34,10 +37,9 @@ describe("synthèse annuelle", () => {
   it("totaux et taux d'épargne sur les mois commencés, mois en cours compris", () => {
     expect(y.totals).toEqual({
       income: eur(16_000),
-      needs: eur(1600),
-      wants: eur(300),
       spent: eur(1900),
       saved: eur(200 + 500 - 100),
+      byBudget: { [NEEDS]: eur(1600), [WANTS]: eur(300), [SAVED]: eur(200) },
     });
     expect(y.savingsRate).toBeCloseTo(600 / 16_000, 10);
   });
@@ -54,10 +56,10 @@ describe("synthèse annuelle", () => {
     expect(y.savingsCurve.find((p) => p.month === "2026-09")?.total).toBe(eur(400));
   });
 
-  it("classement des postes : besoins et envies seulement", () => {
+  it("classement des postes : budgets de dépense seulement (décision 74)", () => {
     expect(y.ranking).toEqual([
-      { categoryId: cats.loyer.id, bucket: "besoin", amount: eur(1600) },
-      { categoryId: cats.resto.id, bucket: "envie", amount: eur(300) },
+      { categoryId: cats.loyer.id, budgetId: NEEDS, amount: eur(1600) },
+      { categoryId: cats.resto.id, budgetId: WANTS, amount: eur(300) },
     ]);
   });
 

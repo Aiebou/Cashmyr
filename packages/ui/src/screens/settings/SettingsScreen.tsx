@@ -34,7 +34,7 @@ function Appearance() {
 }
 
 const SECTIONS: { id: string; title: string; content: ReactNode }[] = [
-  { id: "budget", title: "Budget", content: <BudgetSection /> },
+  { id: "budget", title: "Budgets", content: <BudgetSection /> },
   { id: "comptes", title: "Comptes", content: <AccountsSection /> },
   { id: "recurrences", title: "Récurrences", content: <RecurrencesSection /> },
   { id: "categories", title: "Catégories", content: <CategoriesSection /> },

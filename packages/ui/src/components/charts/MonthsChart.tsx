@@ -1,5 +1,5 @@
 import type { Cents, Month } from "@cashmyr/core";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { money, monthName } from "../../lib/format";
 import { axisLabel, niceTicks, useWidth } from "./scale";
 import s from "./charts.module.css";
@@ -7,16 +7,18 @@ import s from "./charts.module.css";
 export type MonthBar = {
   month: Month;
   income: Cents;
-  needs: Cents;
-  wants: Cents;
-  saved: Cents;
   balance: Cents;
   future: boolean;
+  /** Montant de chaque série, par clé. */
+  values: Record<string, Cents>;
 };
+
+/** Une série empilée : un budget de dépense, ou la mise de côté. */
+export type MonthSeries = { key: string; label: string; color: string };
 
 type Props = {
   months: MonthBar[];
-  colors: { besoin: string; envie: string; invest: string };
+  series: MonthSeries[];
 };
 
 const HEIGHT = 232;
@@ -36,11 +38,10 @@ const shortMonth = (m: Month, narrow: boolean) => {
 };
 
 /**
- * Douze mois : pour chaque mois, besoins, envies et mise de côté empilés, et un
- * trait horizontal au niveau des revenus. L'écart entre le haut de la pile et le
- * trait, c'est le reste.
+ * Douze mois : pour chaque mois, les dépenses de chaque budget et la mise de côté empilées, et un
+ * trait horizontal au niveau des revenus. L'écart entre le haut de la pile et le trait, c'est le reste.
  */
-export function MonthsChart({ months, colors }: Props) {
+export function MonthsChart({ months, series }: Props) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [active, setActive] = useState<number | null>(null);
   const plotW = Math.max(120, width - M.left - M.right);
@@ -51,7 +52,8 @@ export function MonthsChart({ months, colors }: Props) {
   // Le trait des revenus déborde un peu de la barre, sans jamais toucher le mois voisin.
   const overhang = Math.max(0, Math.min(5, (band - barW) / 2 - 3));
 
-  const stackTop = (m: MonthBar) => m.needs + m.wants + Math.max(0, m.saved);
+  const valueOf = (m: MonthBar, key: string) => m.values[key] ?? 0;
+  const stackTop = (m: MonthBar) => series.reduce((sum, se) => sum + Math.max(0, valueOf(m, se.key)), 0);
   const max = Math.max(1, ...months.map((m) => Math.max(stackTop(m), m.income)));
   const ticks = niceTicks(0, max);
   const top = ticks[ticks.length - 1]!;
@@ -63,25 +65,19 @@ export function MonthsChart({ months, colors }: Props) {
   return (
     <div className={s.chart} ref={ref}>
       <ul className={s.legend}>
-        <li>
-          <span className={s.swatch} style={{ background: colors.besoin }} />
-          Besoins
-        </li>
-        <li>
-          <span className={s.swatch} style={{ background: colors.envie }} />
-          Envies
-        </li>
-        <li>
-          <span className={s.swatch} style={{ background: colors.invest }} />
-          Mise de côté
-        </li>
+        {series.map((se) => (
+          <li key={se.key}>
+            <span className={s.swatch} style={{ background: se.color }} />
+            {se.label}
+          </li>
+        ))}
         <li>
           <span className={s.tickKey} />
           Revenus
         </li>
       </ul>
       <div className={s.plot}>
-        <svg width={width} height={HEIGHT} role="img" aria-label="Revenus et usages, mois par mois">
+        <svg width={width} height={HEIGHT} role="img" aria-label="Revenus et budgets, mois par mois">
           {ticks.map((t) => (
             <g key={t}>
               <line x1={M.left} x2={M.left + plotW} y1={y(t)} y2={y(t)} className={t === 0 ? s.baseline : s.grid} />
@@ -93,11 +89,7 @@ export function MonthsChart({ months, colors }: Props) {
           {months.map((m, i) => {
             const cx = M.left + band * i + band / 2;
             const x = cx - barW / 2;
-            const parts = [
-              { v: m.needs, c: colors.besoin },
-              { v: m.wants, c: colors.envie },
-              { v: Math.max(0, m.saved), c: colors.invest },
-            ].filter((p) => p.v > 0);
+            const parts = series.map((se) => ({ v: Math.max(0, valueOf(m, se.key)), c: se.color })).filter((p) => p.v > 0);
             let base = M.top + plotH;
             return (
               <g key={m.month} className={active !== null && active !== i ? s.dim : undefined}>
@@ -127,7 +119,7 @@ export function MonthsChart({ months, colors }: Props) {
                   height={plotH}
                   className={s.hit}
                   tabIndex={0}
-                  aria-label={`${monthName(m.month)} : revenus ${money(m.income)}, besoins ${money(m.needs)}, envies ${money(m.wants)}, mis de côté ${money(m.saved)}`}
+                  aria-label={`${monthName(m.month)} : revenus ${money(m.income)}, ${series.map((se) => `${se.label.toLocaleLowerCase("fr-FR")} ${money(valueOf(m, se.key))}`).join(", ")}`}
                   onMouseEnter={() => setActive(i)}
                   onMouseLeave={() => setActive(null)}
                   onFocus={() => setActive(i)}
@@ -147,12 +139,12 @@ export function MonthsChart({ months, colors }: Props) {
             <dl>
               <dt>Revenus</dt>
               <dd>{money(current.income)}</dd>
-              <dt>Besoins</dt>
-              <dd>{money(current.needs)}</dd>
-              <dt>Envies</dt>
-              <dd>{money(current.wants)}</dd>
-              <dt>Mis de côté</dt>
-              <dd>{money(current.saved)}</dd>
+              {series.map((se) => (
+                <Fragment key={se.key}>
+                  <dt>{se.label}</dt>
+                  <dd>{money(valueOf(current, se.key))}</dd>
+                </Fragment>
+              ))}
               <dt>Reste</dt>
               <dd>{money(current.balance)}</dd>
             </dl>
@@ -166,9 +158,11 @@ export function MonthsChart({ months, colors }: Props) {
             <tr>
               <th scope="col">Mois</th>
               <th scope="col">Revenus</th>
-              <th scope="col">Besoins</th>
-              <th scope="col">Envies</th>
-              <th scope="col">Mis de côté</th>
+              {series.map((se) => (
+                <th key={se.key} scope="col">
+                  {se.label}
+                </th>
+              ))}
               <th scope="col">Reste</th>
             </tr>
           </thead>
@@ -179,9 +173,9 @@ export function MonthsChart({ months, colors }: Props) {
                 <tr key={m.month}>
                   <th scope="row">{monthName(m.month)}</th>
                   <td>{money(m.income)}</td>
-                  <td>{money(m.needs)}</td>
-                  <td>{money(m.wants)}</td>
-                  <td>{money(m.saved)}</td>
+                  {series.map((se) => (
+                    <td key={se.key}>{money(valueOf(m, se.key))}</td>
+                  ))}
                   <td>{money(m.balance)}</td>
                 </tr>
               ))}

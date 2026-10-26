@@ -142,21 +142,36 @@ export type SeriesColor = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export type Meta = { id: string; updatedAt: number; deletedAt: number | null };
 
-export type Bucket = "besoin" | "envie" | "invest";
+export type Bucket = "besoin" | "envie" | "invest";   // format 2 ; ne sert plus qu'à la reprise et à la mise à niveau
+export type BudgetNature = "spend" | "save";            // format 3 (décision 74)
 export type Role = "courant" | "epargne" | "invest" | "autre";
 export type OpType = "in" | "out" | "tx";
+
+export type Budget = Meta & {                // format 3 (décision 71)
+  name: string; nature: BudgetNature; position: number;
+  color: SeriesColor;                        // budget ajouté ; les trois par défaut suivent le thème (décision 76)
+};
+
+export type TypeObjective = { mode: "months" | "amount"; months: number; amount: Cents; hidden: boolean; pinned: boolean };
+
+export type BudgetType = Meta & {            // format 3 (décision 72) ; collection `types`
+  budgetId: string;                          // jamais modifié après la création
+  name: string; position: number;
+  objective: TypeObjective | null;           // décision 79 : la précaution est l'objectif d'un type
+};
 
 export type Category = Meta & {
   name: string;
   kind: "in" | "out";
-  bucket?: Bucket;            // ÉCART : obligatoire si kind = "out", interdit si kind = "in"
+  budgetId?: string;          // format 3 : obligatoire si kind = "out", interdit si kind = "in"
+  typeId?: string;            // format 3 : facultatif, un type du même budget
   color: SeriesColor;         // ÉCART : couleur de série, figée à la création
 };
 
 export type Account = Meta & {
   name: string; role: Role;
   opening: Cents;             // peut être négatif
-  safety: boolean;
+  typeIds?: string[];         // format 3 : types du compte, le premier est le principal (décision 77)
   declaredValue?: Cents; declaredAt?: Day;   // épargne, placement, autre : entre dans le total (décisions 42 à 44)
   color: SeriesColor;         // ÉCART
   position?: number;          // format 2 : ordre choisi, synchronisé ; absent = après les autres (décision 49)
@@ -170,6 +185,7 @@ export type Operation = Meta & {
   debtId?: string;                              // comme goalId ; peut coexister avec lui
   recurrenceId?: string;
   tagId?: string;                               // format 2 : un tag au plus (décisions 47 et 48)
+  typeId?: string;                              // format 3 : part réservée à un type (décision 78)
 };
 
 export type GoalStep = Meta & {
@@ -191,6 +207,7 @@ export type Recurrence = Meta & {
   goalId?: string;
   debtId?: string;            // propagé aux occurrences ; la génération suit alors l'échéancier (§4.9)
   tagId?: string;             // format 2 : propagé aux occurrences
+  typeId?: string;            // format 3 : propagé aux occurrences
   dayOfMonth: number; startMonth: Month; endMonth: Month | null; active: boolean;
 };
 
@@ -220,14 +237,13 @@ export type DashBlock = "goals" | "debts" | "stats" | "months" | "savings" | "ca
 // Un ordre enregistré reçoit en fin de liste les blocs qui lui manquent ; les clés inconnues sont retirées.
 
 export type Preferences = {
-  splits: { besoin: number; envie: number; invest: number }; // ÉCART : points de base entiers, somme = 10 000
+  splits: Record<string, number>; // format 3 : id de budget → points de base, somme = 10 000 (décision 75)
   basis: "month" | "avg";
   averageWindow: 3 | 6 | 12;
-  safety: { mode: "months" | "amount"; months: number; amount: Cents; hidden: boolean; pinned: boolean };
   dashOrder: DashBlock[];
   theme: "system" | "light" | "dark";
   categoryColors: Record<string, string>;         // id de source de revenu → "#rrggbb"
-  bucketColors: Partial<Record<Bucket, string>>;  // ÉCART : Partial ; clé absente = variable CSS du thème
+  budgetColors: Record<string, string>;  // format 3 : id de budget → "#rrggbb" ; absente = couleur par défaut
   updatedAt: Record<PrefKey, number>;
 };
 export type PrefKey = Exclude<keyof Preferences, "updatedAt">;  // ÉCART : updatedAt ne s'horodate pas lui-même
@@ -236,10 +252,12 @@ export type Collections = {
   categories: Category[]; accounts: Account[]; operations: Operation[];
   goals: Goal[]; goalSteps: GoalStep[]; debts: Debt[]; recurrences: Recurrence[]; skips: Skip[];
   tags: Tag[];                // format 2
+  budgets: Budget[]; types: BudgetType[];   // format 3
 };
 
-export type Dataset = { schemaVersion: 2; collections: Collections; preferences: Preferences };
-// 1 : versions 0.1.x. 2 : version 0.2.0 (tags, ordre des comptes). Mise à niveau à la lecture (décision 50).
+export type Dataset = { schemaVersion: 3; collections: Collections; preferences: Preferences };
+// 1 : versions 0.1.x. 2 : version 0.2.0 (tags, ordre des comptes). 3 : version 0.6.0 (budgets et types,
+// décisions 71 à 82). Mise à niveau à la lecture (décisions 50 et 81).
 ```
 
 **Invariants vérifiés** à chaque écriture, à l'import et à chaque lecture du fichier de synchronisation.
@@ -288,7 +306,7 @@ peut pas savoir si l'original a été remplacé.
 ```ts
 export type SyncDocument = {
   format: "finances-sync";
-  schemaVersion: 2;             // plus récent que l'app → refus : « Mets l'application à jour » ;
+  schemaVersion: 3;             // plus récent que l'app → refus : « Mets l'application à jour » ;
                                 // plus ancien → mis à niveau à la lecture, réécrit au format courant
   fileId: string;               // créé à la naissance du fichier
   revision: number;             // +1 à chaque écriture
@@ -594,6 +612,52 @@ fichier »), qui reconnaissent seuls une sauvegarde Cashmyr, un `finances-sync.j
 |---|---|---|
 | 69 | Taux d'endettement (DTI), onglet Dettes | Somme des montants d'échéance des dettes « je dois » en cours (mode échéances, ni soldées ni archivées, reste positif), divisée par le revenu moyen des N mois qui précèdent le mois en cours, revenus nets tels que saisis (décision 7). C'est la charge mensuelle déjà affichée, désormais nommée : 250 € + 100 € d'échéances pour 2 000 € de revenu moyen donnent 17,5 %. Les dettes en remboursement libre n'y entrent pas, et l'encart le dit. Affiché au dixième, sans seuil coloré. |
 | 70 | Taux d'endettement de l'année | Ce qui a vraiment été payé : la somme des sorties rattachées à une dette « je dois » (dette supprimée comprise), divisée par la somme des revenus des mêmes mois. Ce sont les mois des moyennes annuelles : mois en cours exclu (décision 19), pas avant la première opération ; une année passée compte jusqu'au 31/12. Ni les versements hors budget (`paidManual`, sans date), ni les transferts, ni les revenus rattachés à une dette n'y entrent. Neuf mois à 300 € pour 18 000 € de revenus donnent 15 %. Sans revenu, « — ». |
+
+### Validées le 25/10/2026 (format 3, version 0.6.0)
+
+| # | Sujet | Décision |
+|---|---|---|
+| 71 | Budgets | Les trois usages deviennent des budgets, une collection synchronisée : nom, nature, position, couleur. Les trois par défaut, « Dépenses courantes », « Loisirs » et « Épargne », ont un identifiant déduit de l'usage qu'ils remplacent et l'horodatage `DEFAULTS_AT` (3) : deux appareils qui les créent produisent les mêmes lignes ; un nom choisi par l'utilisateur gagne toujours. On peut en ajouter (version 0.6.0, interface à venir). |
+| 72 | Types | Collection `types` : nom, budget, position, objectif facultatif. Le budget d'un type ne change jamais après sa création, pour qu'une fusion ne sépare pas une catégorie de son type. Types par défaut, horodatés 3 : Charges fixes, Quotidien, Charge ponctuelle (Dépenses courantes) ; Épargne de précaution, Placement, Projet (Épargne). Loisirs n'a pas de type. |
+| 73 | Catégories par défaut, profils existants compris | Liste du 25/10/2026 (23 catégories). Une catégorie par défaut jamais modifiée (horodatée 2 ou moins, ancien fichier compris) prend sa forme du format 3 : nom (« Assurances » → « Assurance », « Impôts » → « Impôt », « Sorties et loisirs » → « Sorties », « Vêtements » → « Vêtement », « Abonnements » → « Abonnement »), budget et type, horodatée 3. Celles qui ne sont plus dans la liste deviennent des suppressions horodatées 3 : leurs opérations, récurrences et dettes les gardent et comptent toujours dans leur budget (exception à la décision 31). Une catégorie créée ou modifiée par l'utilisateur garde tout, sauf son usage qui devient le budget correspondant, sans type. Un profil qui avait des catégories par défaut reçoit les nouvelles (Aides, Remboursement et créance, Alimentaire, Remboursement de dettes, Placement, Consommable), sauf un nom qu'il porte déjà. |
+| 74 | Nature d'un budget et calculs | « dépense » ou « épargne ». Dépensé = les dépenses des budgets de dépense ; mis de côté = celles des budgets d'épargne, plus les virements nets vers un compte épargne ou placement (décision 13 inchangée) ; reste = revenus − dépensé − mis de côté. Le classement de l'année porte sur les budgets de dépense ; les dépenses moyennes (précaution, décision 8) aussi : 1 500 € de Dépenses courantes et 500 € de Loisirs font 2 000 €. Une catégorie dont le budget a été supprimé compte toujours dans ce budget. Avec les trois budgets par défaut, tous les chiffres restent ceux du format 2. |
+| 75 | Répartition par budget | Un pourcentage par budget, en points de base, somme exactement 10 000 ; un budget absent compte pour 0. La répartition reste une seule clé de préférences, fusionnée d'un bloc. Une clé peut viser un budget supprimé ailleurs, voire purgé : sa part reste comptée et s'affiche « (supprimé) » jusqu'au prochain enregistrement, qui la retire. |
+| 76 | Couleurs des budgets | Les trois budgets par défaut gardent la couleur du thème de leur usage ; un budget ajouté prend sa couleur de série. Une couleur choisie se garde par budget (`budgetColors`, qui remplace `bucketColors`). |
+| 77 | Comptes rattachés aux types | Un compte porte une liste ordonnée de types (`typeIds`), le premier étant son type principal. Un type peut englober plusieurs comptes. |
+| 78 | Parts réservées | Une opération ou une récurrence peut porter un type (`typeId`). La part d'un type non principal dans un compte = ce qu'y apportent les opérations rattachées à ce type, moins ce qu'elles en retirent ; le type principal prend le reste, solde de départ compris. LEP à 10 000 €, 12 × 100 € rattachés à Projet : Projet 1 200 €, Précaution 8 800 €. Une opération rattachée à un type que le compte ne porte pas revient au principal. En capital injecté, comme la décision 44. |
+| 79 | Précaution, objectif d'un type | L'épargne de précaution est l'objectif du type « Épargne de précaution » : en mois de dépenses (décision 74) ou en montant, masquée, épinglée. Le montant constitué est la somme des parts du type dans ses comptes. Au passage au format 3, le réglage `safety` devient cet objectif, avec l'horodatage du réglage s'il dépasse 3, et un compte coché « précaution » est rattaché au type en principal : le montant constitué ne change pas. Cocher la case d'un compte en fait son type principal ; la décocher l'en retire. |
+| 80 | Virements et budgets d'épargne | Un virement vers un compte épargne ou placement compte dans la jauge du budget du type principal de ce compte ; un virement qui en sort s'en retire. Sans type, ou si ce type appartient à un budget de dépense, il compte dans le budget « Épargne » par défaut. Exemple : 300 € vers un LEP de type principal « Cours » (budget Formation) et 200 € vers un livret sans type : Formation 300 €, Épargne 200 €. La mise de côté du mois reste la somme de tous ces virements nets (décision 74). Validée le 25/10/2026. |
+| 81 | Format 3 | Collections `budgets` et `types` ; `budgetId` et `typeId` sur les catégories, `typeIds` sur les comptes, `typeId` sur les opérations et les récurrences ; `splits` par budget, `budgetColors` ; `safety` (compte et réglage) et `bucketColors` disparaissent. Mise à niveau à la lecture, fonction pure des données : deux appareils obtiennent les mêmes lignes. Un profil vide ne reçoit ni budget ni type. Base IndexedDB en version 3 (deux magasins). Les modifications en attente suivent les réglages déplacés. Une version 0.5 refuse le format 3 (« Mets l'application à jour ») sans rien perdre : chaque appareil doit passer en 0.6.0. |
+| 82 | Reprise de l'ancien fichier | Les trois usages vont dans les trois budgets par défaut, sans type ; la vérification croisée compare besoins, envies et mise de côté à Dépenses courantes, Loisirs et Épargne. Le réglage de précaution devient l'objectif de son type, horodaté 4 : il l'emporte sur un objectif jamais modifié, jamais sur une modification. Ses catégories restent horodatées 1 et cèdent donc aux catégories par défaut du format 3. |
+| 83 | Changer la nature d'un budget | Permis, après une confirmation qui annonce l'effet sur les mois passés, chiffres à l'appui : « 2 opérations, 103,50 € en tout, passent de « dépensé » à « mis de côté » ». Les jauges et le taux d'épargne changent en conséquence. |
+| 84 | Supprimer un type | Ses catégories restent dans leur budget, sans type ; les comptes le perdent, et s'il était leur type principal, le suivant le devient. Les opérations et les récurrences gardent leur rattachement, dont le montant revient au type principal du compte (décision 78). La confirmation annonce ce que le type réservait : LEP [Précaution, Projet] avec 1 200 € réservés à Projet, Projet supprimé, la précaution passe de 8 800 € à 10 000 €. |
+| 85 | Le type « Épargne de précaution » | Il se renomme, il ne se supprime pas : il porte l'objectif de précaution (décision 79). |
+| 86 | Le budget « Épargne » par défaut | Il se renomme ; il ne se supprime pas et reste de nature « épargne » : il contient le type de précaution et reçoit les virements vers un compte sans type (décision 80). |
+| 87 | Supprimer un autre budget (point 13) | Ses catégories passent dans le budget choisi, sans type ; ses types sont supprimés, avec les effets de la décision 84 ; sa part de la répartition s'ajoute à celle du budget choisi (Formation 10 % vers Épargne 20 % : Épargne 30 %). La confirmation annonce le changement des mois passés. Le dernier budget ne se supprime pas. |
+| 88 | Objectif d'un type d'épargne (point 7) | Un type d'un budget d'épargne, autre que la précaution, peut avoir un objectif en montant : sa carte s'affiche dans Objectifs, après la précaution et avant les objectifs classiques, dans l'ordre budget puis type. Le montant constitué suit la décision 79 : la somme des parts du type dans ses comptes (LEP [Précaution, Projet] avec 1 200 € réservés au Projet et un PEA [Projet] de 5 000 € : 6 200 €). Masquée et épinglée comme la précaution : visible au tableau de bord tant que l'objectif n'est pas atteint, ou s'il est épinglé. Au-delà de l'objectif, la barre reste pleine et le pourcentage dépasse 100 % ; une part négative s'affiche telle quelle, barre vide. Retirer l'objectif fait disparaître la carte sans toucher aux parts ; supprimer le type supprime son objectif (décision 84). Un budget passé en dépense garde l'objectif de ses types, sans carte. Les objectifs classiques restent, sans conversion. Aucun changement de format : le champ `objective` existe depuis la décision 79. |
+
+Format 3, choix d'interface validés le 25/10/2026 (P6) :
+- **Paramètres → Budgets** (anciennement « Budget ») : une carte « Budgets », une ligne par budget avec sa couleur, son
+  nom modifiable sur place, sa nature, sa part, deux flèches pour l'ordre et la corbeille (ni pour « Épargne », ni pour
+  le dernier budget). Ses types dessous : renommer sur place, supprimer après confirmation (pas la précaution), ajouter.
+  « Nouveau budget » demande un nom et une nature ; il arrive à 0 %. La répartition s'enregistre toujours d'un bouton,
+  à 100 %. Sur téléphone, le nom prend la largeur, nature et part dessous.
+- **Supprimer un budget** ouvre une fenêtre : le budget qui reçoit ses catégories, la part qui s'y ajoute, le montant
+  des mois passés qui change de budget.
+- **Paramètres → Catégories** : chaque dépense a un menu « Type », limité aux types de son budget, plus « Sans
+  type » ; changer de budget retire le type. La couleur d'un budget se choisit dans Budgets.
+- **Types d'un compte** (fiche du compte, dans Paramètres → Comptes et par le crayon de Mes comptes) : les types à
+  cocher, groupés par budget, et le choix du principal dès qu'il y en a deux. Ce champ remplace la case « Épargne de
+  précaution » : la précaution est un type comme les autres (décisions 77 et 79).
+- **Réserver une part à la saisie** : le champ « Part réservée à » d'une opération ou d'une récurrence ne paraît que
+  si un compte touché porte un type en plus de son principal ; il propose ces types, et « Aucune (type principal) ».
+  Un rattachement déjà posé reste affiché, même si le compte ne porte plus ce type (décision 78).
+- **Mes comptes** : la tuile d'un compte à plusieurs types montre, sous son solde, la part de chacun.
+- **Carte de précaution** (point 18) : seuls les comptes choisis, avec la part qui revient à la précaution
+  (« 8 800,00 € sur 10 000,00 € ») ; « Choisir les comptes » ouvre la liste à cocher de tous les comptes.
+- **Objectif d'un type d'épargne** (point 7, décision 88) : un bouton « Objectif » sur la ligne du type, dans
+  Paramètres → Budgets, ouvre une fenêtre avec le montant visé ; la carte du type dans Objectifs montre « 1 200,00 € sur
+  3 000,00 € · 40 % », ses comptes avec leur part, l'œil, l'épingle et « Modifier », qui permet aussi de le retirer.
 
 Version 0.5.0, choix d'interface validés le 25/10/2026 (liste du 25/10, points 18 à 20) :
 - **Mes comptes** : « Vos comptes » avant « Mouvements de l'année » ; un crayon sur chaque compte ouvre « Modifier le

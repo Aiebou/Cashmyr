@@ -170,3 +170,28 @@
 .alignStart {
   justify-self: start;
 }
+
+/* Point 18 : comptes choisis de la précaution, et la liste à cocher de la fenêtre. */
+.chosenHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.chosenTitle {
+  font-size: 15px;
+  font-weight: 600;
+}
+.chosen {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.checklist {
+  display: grid;
+  gap: 6px;
+  max-height: 50vh;
+  overflow-y: auto;
+}

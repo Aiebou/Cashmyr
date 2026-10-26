@@ -4,7 +4,7 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { startApp } from "../src/boot";
-import { defaultCategories } from "../src/lib/data";
+import { testCategories as defaultCategories } from "./helpers";
 import { accounts, MemoryProfileHost, NOW, renderApp } from "./helpers";
 
 afterEach(() => {

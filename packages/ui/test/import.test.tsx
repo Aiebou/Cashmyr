@@ -1,8 +1,7 @@
-import { DEFAULT_CATEGORIES } from "@cashmyr/core";
 import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { renderApp } from "./helpers";
+import { renderApp, TEST_CATEGORIES } from "./helpers";
 
 afterEach(cleanup);
 
@@ -13,7 +12,7 @@ function legacyFile() {
   return {
     settings: {
       v: 2,
-      cats: DEFAULT_CATEGORIES.map((c) => ({ id: c.legacy, kind: c.kind, name: c.name, ...(c.bucket ? { bucket: c.bucket } : {}) })),
+      cats: TEST_CATEGORIES.map((c) => ({ id: c.legacy, kind: c.kind, name: c.name, ...(c.bucket ? { bucket: c.bucket } : {}) })),
       accounts: [{ id: "a1", name: "Compte courant", opening: 100, role: "courant", safety: false }],
       splits: { besoin: 0.5, envie: 0.3, invest: 0.2 },
       basis: "avg",

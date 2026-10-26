@@ -7,12 +7,13 @@ import {
   declaredAsOf,
   netWorth,
   savingsOverview,
+  PRECAUTION_TYPE_ID,
   safetyStatus,
   setPreference,
   tombstone,
   worthOverview,
 } from "../src";
-import { account, dataset, debt, eur, expense, income, TODAY, transfer, world } from "./fixtures";
+import { account, dataset, debt, eur, expense, income, precaution, TODAY, transfer, world } from "./fixtures";
 
 describe("soldes de comptes", () => {
   const { cats, accs, build } = world();
@@ -153,7 +154,9 @@ describe("épargne de précaution", () => {
   });
 
   it("mode montant fixe", () => {
-    const d = { ...base, preferences: setPreference(base.preferences, "safety", { ...base.preferences.safety, mode: "amount", amount: eur(5000) }, 1) };
+    // Décision 79 : l'objectif de précaution est celui du type « Épargne de précaution ».
+    const types = base.collections.types.map((t) => (t.id === PRECAUTION_TYPE_ID ? { ...t, objective: { ...t.objective!, mode: "amount" as const, amount: eur(5000) } } : t));
+    const d = { ...base, collections: { ...base.collections, types } };
     const s = safetyStatus(d, TODAY, TODAY);
     expect(s.objective).toBe(eur(5000));
     expect(s.reached).toBe(false);
@@ -170,7 +173,7 @@ describe("épargne de précaution", () => {
     const pea = { ...accs.pea, opening: eur(10_000) };
     const d = { ...base, collections: { ...base.collections, accounts: [accs.courant, livret, pea] } };
     expect(safetyStatus(d, TODAY, TODAY).constituted).toBe(eur(3000));
-    const checked = { ...d, collections: { ...d.collections, accounts: [accs.courant, livret, { ...pea, safety: true }] } };
+    const checked = { ...d, collections: { ...d.collections, accounts: [accs.courant, livret, { ...pea, ...precaution }] } };
     expect(safetyStatus(checked, TODAY, TODAY)).toMatchObject({ constituted: eur(13_000), accountIds: [livret.id, pea.id] });
   });
 
@@ -203,7 +206,7 @@ describe("épargne de précaution", () => {
   });
 
   it("les comptes de précaution d'un autre rôle comptent aussi", () => {
-    const cash = account("Espèces", "autre", { safety: true, opening: eur(100) });
+    const cash = account("Espèces", "autre", { ...precaution, opening: eur(100) });
     const d = { ...base, collections: { ...base.collections, accounts: [...base.collections.accounts, cash] } };
     expect(safetyStatus(d, TODAY, TODAY).constituted).toBe(eur(3100));
   });

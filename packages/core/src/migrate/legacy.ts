@@ -1,6 +1,6 @@
 import { defaultPreferences, emptyCollections, normalizeDashOrder } from "../dataset";
 import { isValidDay, isValidMonth, monthOf } from "../dates";
-import { categoryColors, legacyCategoryId } from "../defaults";
+import { categoryColors, DEFAULTS_AT, defaultBudgetId, defaultBudgets, defaultTypes, legacyCategoryId, PRECAUTION_TYPE_ID } from "../defaults";
 import { legacyId, occurrenceId, skipId } from "../ids";
 import {
   AVERAGE_WINDOWS,
@@ -655,7 +655,7 @@ export function convertLegacyExport(file: LegacyExport): LegacyConverted {
       deletedAt: null,
       name: c.name,
       kind: c.kind,
-      ...(c.bucket ? { bucket: c.bucket } : {}),
+      ...(c.bucket ? { budgetId: defaultBudgetId(c.bucket) } : {}),
       color: colors[i]!,
     }),
   );
@@ -665,7 +665,8 @@ export function convertLegacyExport(file: LegacyExport): LegacyConverted {
       name: a.name,
       role: a.role,
       opening: eurosToCents(a.opening),
-      safety: a.safety,
+      // Décision 79 : un compte de précaution est rattaché au type « Épargne de précaution ».
+      ...(a.safety ? { typeIds: [PRECAUTION_TYPE_ID] } : {}),
       // L'ancienne application ne datait pas la valeur déclarée.
       ...(a.mv !== undefined ? { declaredValue: eurosToCents(a.mv) } : {}),
       color: series(i),
@@ -769,16 +770,23 @@ export function convertLegacyExport(file: LegacyExport): LegacyConverted {
     };
   });
 
+  // Décision 82 : les trois usages deviennent les trois budgets par défaut, identiques à ceux de tout
+  // appareil. Le réglage de précaution devient l'objectif de son type, horodaté juste au-dessus des
+  // types par défaut : il l'emporte sur un objectif jamais modifié, jamais sur une modification.
+  const objective = { ...file.safety, amount: eurosToCents(file.safety.amount) };
+  collections.budgets = defaultBudgets();
+  collections.types = defaultTypes(objective).map((t) => (t.id === PRECAUTION_TYPE_ID ? { ...t, updatedAt: DEFAULTS_AT + 1 } : t));
+
   const preferences = defaultPreferences();
-  preferences.splits = basisPoints(r, file.splits);
+  const points = basisPoints(r, file.splits);
+  preferences.splits = Object.fromEntries(BUCKETS.map((b) => [defaultBudgetId(b), points[b]]));
   preferences.basis = file.basis;
   preferences.averageWindow = file.window;
-  preferences.safety = { ...file.safety, amount: eurosToCents(file.safety.amount) };
   preferences.dashOrder = normalizeDashOrder(file.dashOrder);
   preferences.categoryColors = Object.fromEntries(Object.entries(file.catColors).map(([id, hex]) => [legacyCategoryId(id), hex]));
-  preferences.bucketColors = { ...file.bucketColors };
+  preferences.budgetColors = Object.fromEntries(Object.entries(file.bucketColors).map(([b, hex]) => [defaultBudgetId(b as Bucket), hex]));
   // Le thème n'existait pas : il garde son horodatage 0 et ne remplace rien.
-  const fromFile: PrefKey[] = ["splits", "basis", "averageWindow", "safety", "dashOrder", "categoryColors", "bucketColors"];
+  const fromFile: PrefKey[] = ["splits", "basis", "averageWindow", "dashOrder", "categoryColors", "budgetColors"];
   for (const key of fromFile) preferences.updatedAt[key] = LEGACY_STAMP;
 
   if (r.issues.length > 0) throw new LegacyImportError(r.issues);

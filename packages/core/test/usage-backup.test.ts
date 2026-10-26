@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { defaultBudgetId, type Dataset } from "../src";
 import {
   SCHEMA_VERSION,
   accountUsage,
@@ -22,6 +23,8 @@ import {
   type Category,
 } from "../src";
 import { category, debt, eur, expense, goal, income, NOW, recurrence, transfer, world } from "./fixtures";
+
+const NEEDS = defaultBudgetId("besoin");
 
 describe("suppression d'un compte (décision 30)", () => {
   const { cats, accs, build } = world();
@@ -70,8 +73,8 @@ describe("suppression d'une catégorie (décision 31)", () => {
     expect(after.collections.recurrences[0]?.categoryId).toBe(cats.resto.id);
     expect(after.collections.debts[0]?.categoryId).toBe(cats.resto.id);
     // Besoins → Envies : le mois passé change, comme l'écran l'annonce.
-    expect(monthAggregates(data, "2026-09")).toMatchObject({ needs: eur(80), wants: 0 });
-    expect(monthAggregates(after, "2026-09")).toMatchObject({ needs: 0, wants: eur(80) });
+    expect(monthAggregates(data, "2026-09").byBudget).toEqual({ [NEEDS]: eur(80) });
+    expect(monthAggregates(after, "2026-09").byBudget).toEqual({ [defaultBudgetId("envie")]: eur(80) });
   });
 
   it("ou vers une catégorie créée pour l'occasion, écrite dans le même lot", () => {
@@ -81,7 +84,7 @@ describe("suppression d'une catégorie (décision 31)", () => {
     const after = applyChanges(data, changes);
     expect(validateDataset(after)).toEqual([]);
     expect(after.collections.operations[0]?.categoryId).toBe(fresh.id);
-    expect(monthAggregates(after, "2026-09").needs).toBe(eur(80));
+    expect(monthAggregates(after, "2026-09").byBudget[NEEDS]).toBe(eur(80));
   });
 });
 
@@ -132,7 +135,12 @@ describe("export et import JSON (décision 32)", () => {
     expect(result.rows).toBe(2);
     expect(result.preferencesChanged).toEqual(["averageWindow"]);
     const after = applyChanges({ ...base, preferences: result.preferences }, result.changes);
-    expect(after).toEqual(mergeDatasets(base, incoming).data);
+    // La fusion range chaque collection par identifiant : on compare les mêmes lignes, dans le même ordre.
+    const sorted = (d: Dataset) => ({
+      ...d,
+      collections: Object.fromEntries(Object.entries(d.collections).map(([n, l]) => [n, [...l].sort((a, b) => a.id.localeCompare(b.id))])),
+    });
+    expect(sorted(after)).toEqual(sorted(mergeDatasets(base, incoming).data));
   });
 });
 

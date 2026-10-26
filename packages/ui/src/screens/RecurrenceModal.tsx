@@ -16,6 +16,7 @@ import {
 import { useId, useMemo, useState, type FormEvent } from "react";
 import { AmountInput, Button, Field, FieldRow, Segmented, Select, submitOnEnter, TextInput } from "../components/controls";
 import { Modal } from "../components/Modal";
+import { ReserveField } from "../components/ReserveField";
 import { TagField } from "../components/TagField";
 import { expenseGroups, liveAccounts, liveCategories, liveDebts, liveGoals } from "../lib/data";
 import { count, dayLong, monthLong, ofMonth } from "../lib/format";
@@ -62,6 +63,7 @@ export function RecurrenceModal({ editId }: { editId?: string }) {
   const [goalId, setGoalId] = useState(existing?.goalId ?? "");
   const [debtId, setDebtId] = useState(existing?.debtId ?? "");
   const [tag, setTag] = useState(() => tagText(data, existing?.tagId));
+  const [typeId, setTypeId] = useState(existing?.typeId ?? "");
   const [day, setDay] = useState(existing?.dayOfMonth ?? 1);
   const [startMonth, setStartMonth] = useState<Month>(existing?.startMonth ?? addMonths(current, 1));
   const [endMonth, setEndMonth] = useState<Month | "">(existing?.endMonth ?? "");
@@ -89,6 +91,7 @@ export function RecurrenceModal({ editId }: { editId?: string }) {
       ...(goalId ? { goalId } : {}),
       ...(debtId ? { debtId } : {}),
       ...(tagged.tagId ? { tagId: tagged.tagId } : {}),
+      ...(typeId ? { typeId } : {}),
       dayOfMonth: day,
       startMonth,
       endMonth: endMonth === "" ? null : endMonth,
@@ -176,7 +179,7 @@ export function RecurrenceModal({ editId }: { editId?: string }) {
                     </option>
                   ))
                 : expenseGroups(data).map((g) => (
-                    <optgroup key={g.bucket} label={g.label}>
+                    <optgroup key={g.budget.id} label={g.label}>
                       {g.categories.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
@@ -275,6 +278,14 @@ export function RecurrenceModal({ editId }: { editId?: string }) {
         )}
 
         <TagField id={`${id}-tag`} data={data} value={tag} onChange={setTag} />
+
+        <ReserveField
+          id={`${id}-reserve`}
+          data={data}
+          accountIds={isTransfer ? [toId, fromId] : [accountId]}
+          value={typeId}
+          onChange={setTypeId}
+        />
 
         {existing && <p className={s.notice}>Les opérations déjà créées ne changent pas : seules les prochaines suivent ces réglages.</p>}
         {first && last && (
