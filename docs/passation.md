@@ -12,9 +12,10 @@
   - PR #28, `budgets-interface` : Paramètres → Budgets, types, menu « Type » (décisions 83 à 87) ;
   - PR #29, `types-comptes` : types d'un compte, part réservée à la saisie, carte de précaution (point 18) ;
   - PR #30, `objectifs-types` : objectif d'un type d'épargne (point 7, décision 88), numéros de version et notes.
-- **En cours pour la 0.6.1** (sans changement de format) : la correction des graduations de `SavingsChart` (PR #32)
-  et le repérage « À reclasser » des points 17a et 17c (décision 89), oublié dans la 0.6.0.
-- **Tests** : 513 tests TypeScript et 15 tests Rust passent sur `main` (core 268, storage 97, ui 148). La séquence
+- **0.6.1 en préparation** (sans changement de format), PR `release-0.6.1` : la correction des graduations de
+  `SavingsChart` (PR #32) et le repérage « À reclasser » des points 17a et 17c (PR #33, décision 89), oublié dans
+  la 0.6.0.
+- **Tests** : 519 tests TypeScript et 15 tests Rust passent sur `main` (core 271, storage 97, ui 151). La séquence
   d'installation du §3 a été vérifiée sur un clone neuf le 23/10/2026.
 
 La référence reste [`architecture.md`](architecture.md) : modèle de données, règles de calcul et de fusion, et les
@@ -60,6 +61,7 @@ Versions publiées depuis :
 | 0.4.1 | 25/10/2026 | #16 à #21 | Passation et `CLAUDE.md`, cahier des charges, documentation à jour, jeux d'essai neutralisés, catégories par défaut aux noms génériques. Décision 68 |
 | 0.5.0 | 25/10/2026 | #22 à #26 | « Vos comptes » avant « Mouvements de l'année », modification d'un compte depuis Mes comptes ; « Catégories », « Haut de page » sur téléphone ; taux d'endettement dans Dettes et dans les indicateurs de l'année ; menu latéral repliable sur grand écran. Décisions 69 et 70 |
 | 0.6.0 | 26/10/2026 | #27 à #30 | Format 3 : budgets et types modulables, comptes rattachés aux types avec parts réservées, précaution devenue un type, objectif d'un type d'épargne, nouvelles catégories par défaut appliquées aux profils existants. Décisions 71 à 88 |
+| 0.6.1 | 26/10/2026 | #31 à #34 | Passation à jour ; « À reclasser » : bandeau, filtre et carte « Anciennes catégories » (points 17a et 17c) ; graduations du graphique de l'épargne. Décision 89 |
 
 Dates de publication des Releases, heure de Paris : la 0.1.2, la 0.2.0 et la 0.3.0 sont sorties peu après minuit, la 0.4.0 le matin, la 0.4.1 vers 1 h 30, la 0.5.0 le même jour, la 0.6.0 le 26/10 vers 14 h. GitHub, en UTC, date de la veille celles d'après minuit.
 
