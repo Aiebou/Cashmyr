@@ -1,4 +1,4 @@
-import { defaultTypeId, PRECAUTION_TYPE_ID } from "@cashmyr/core";
+import { createRecord, defaultTypeId, PRECAUTION_TYPE_ID, type Operation } from "@cashmyr/core";
 import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
@@ -74,5 +74,44 @@ describe("carte de l'épargne de précaution (point 18)", () => {
     expect(account(repository, courant.id).typeIds).toEqual([PRECAUTION_TYPE_ID]);
     await user.click(within(d).getByRole("button", { name: "Terminé" }));
     expect(within(within(card).getByRole("list")).getAllByRole("listitem")).toHaveLength(2);
+  });
+});
+
+describe("objectif d'un type d'épargne (point 7, décision 88)", () => {
+  it("se fixe dans Paramètres, s'affiche dans Objectifs et au tableau de bord, puis se retire", async () => {
+    const user = userEvent.setup();
+    const { repository, store } = await renderApp();
+    // Livret A [Précaution, Projet] : 3 000 € de départ, 1 200 € versés et réservés au projet.
+    await act(() =>
+      repository.apply({
+        accounts: [{ ...livret, typeIds: [PRECAUTION_TYPE_ID, PROJECT], updatedAt: 5 }],
+        operations: [
+          createRecord<Operation>("op-projet", { date: "2026-01-05", amount: 120_000, type: "tx", note: "", fromAccountId: courant.id, toAccountId: livret.id, typeId: PROJECT }, 5),
+        ],
+      }),
+    );
+
+    act(() => store.getState().actions.setTab("settings"));
+    expect(screen.queryByRole("button", { name: "Objectif de « Épargne de précaution »" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Objectif de « Projet »" }));
+    const d = await screen.findByRole("dialog", { name: "Objectif · Projet" });
+    await user.type(within(d).getByLabelText("Montant visé"), "3000");
+    await user.click(within(d).getByRole("button", { name: "Enregistrer" }));
+    expect(repository.data.collections.types.find((t) => t.id === PROJECT)!.objective).toMatchObject({ mode: "amount", amount: 300_000 });
+    expect(plain(screen.getByRole("button", { name: "Objectif de « Projet »" }).textContent)).toBe("Objectif : 3 000,00 €");
+
+    act(() => store.getState().actions.setTab("goals"));
+    const card = screen.getByRole("heading", { name: "Projet", level: 3 }).closest("section")!;
+    expect(plain(card.textContent)).toContain("1 200,00 € sur 3 000,00 € · 40 %");
+    expect(within(within(card).getByRole("list")).getAllByRole("listitem").map((li) => plain(li.textContent))).toEqual(["Livret A1 200,00 € sur 4 200,00 €"]);
+
+    act(() => store.getState().actions.setTab("dashboard"));
+    expect(screen.getByRole("img", { name: (n) => plain(n).startsWith("Projet : 1 200,00 € sur une cible de 3 000,00 €") })).toBeTruthy();
+
+    act(() => store.getState().actions.setTab("goals"));
+    await user.click(within(screen.getByRole("heading", { name: "Projet", level: 3 }).closest("section")!).getByRole("button", { name: "Modifier" }));
+    await user.click(within(await screen.findByRole("dialog", { name: "Objectif · Projet" })).getByRole("button", { name: "Retirer l'objectif" }));
+    expect(repository.data.collections.types.find((t) => t.id === PROJECT)!.objective).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Projet", level: 3 })).toBeNull();
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyChanges,
   budgetWeight,
+  canHoldObjective,
   createBudget,
   createType,
   defaultBudgetId,
@@ -11,13 +12,16 @@ import {
   liveBudgetsOf,
   monthAggregates,
   moveBudget,
+  objectiveTypes,
   PRECAUTION_TYPE_ID,
   reservableTypes,
   safetyStatus,
   SAVINGS_BUDGET_ID,
   setAccountTypes,
+  setTypeObjective,
   typeHolding,
   typesOf,
+  typeStatus,
   UsageError,
   validateDataset,
   type Dataset,
@@ -143,5 +147,57 @@ describe("types d'un compte et parts à réserver (décisions 77 et 78)", () => 
     expect(reservableTypes(data, [accs.courant.id, lep.id]).map((t) => t.id)).toEqual([project]);
     expect(reservableTypes(data, [lep.id, pea.id]).map((t) => t.id)).toEqual([project]);
     expect(reservableTypes(data, [accs.courant.id, undefined])).toEqual([]);
+  });
+});
+
+describe("objectif d'un type d'épargne (point 7, décision 88)", () => {
+  const { cats, accs } = world();
+  // LEP [Précaution, Projet] à 10 000 € dont 12 × 100 € rattachés au Projet ; PEA [Projet] à 5 000 €.
+  const lep = account("LEP", "epargne", { opening: eur(8800), typeIds: [PRECAUTION_TYPE_ID, project] });
+  const pea = account("PEA", "invest", { opening: eur(5000), typeIds: [project] });
+  const monthly = Array.from({ length: 12 }, (_, i) =>
+    transfer(`2025-${String(i + 1).padStart(2, "0")}-05`, eur(100), accs.courant.id, lep.id, { typeId: project }),
+  );
+  const base = dataset({
+    categories: Object.values(cats),
+    accounts: [accs.courant, accs.livret, lep, pea],
+    // Rattaché au Projet, vers un livret qui ne le porte pas : revient à la précaution, son principal.
+    operations: [...monthly, transfer("2026-01-10", eur(400), accs.courant.id, accs.livret.id, { typeId: project })],
+  });
+  const withGoal = applyChanges(base, setTypeObjective(base, project, eur(3000), NOW));
+
+  it("Projet : 1 200 € dans le LEP + 5 000 € du PEA = 6 200 € sur 3 000 €, atteint", () => {
+    expect(withGoal.collections.types.find((t) => t.id === project)!.objective).toEqual({ mode: "amount", months: 1, amount: eur(3000), hidden: false, pinned: false });
+    const status = typeStatus(withGoal, project, TODAY, TODAY);
+    expect(status.accounts.map((a) => [a.account.id, a.share])).toEqual([[lep.id, eur(1200)], [pea.id, eur(5000)]]);
+    expect(status).toMatchObject({ constituted: eur(6200), objective: eur(3000), reached: true });
+    expect(objectiveTypes(withGoal).map((t) => t.id)).toEqual([project]);
+    expect(validateDataset(withGoal)).toEqual([]);
+  });
+
+  it("modifier garde « masquée » et « épinglée » ; retirer l'objectif ne touche pas aux parts", () => {
+    const type = withGoal.collections.types.find((t) => t.id === project)!;
+    const pinned = applyChanges(withGoal, { types: [{ ...type, objective: { ...type.objective!, pinned: true }, updatedAt: NOW + 1 }] });
+    const edited = applyChanges(pinned, setTypeObjective(pinned, project, eur(8000), NOW + 2));
+    expect(edited.collections.types.find((t) => t.id === project)!.objective).toMatchObject({ amount: eur(8000), pinned: true });
+    const removed = applyChanges(edited, setTypeObjective(edited, project, null, NOW + 3));
+    expect(removed.collections.types.find((t) => t.id === project)!.objective).toBeNull();
+    expect(objectiveTypes(removed)).toEqual([]);
+    expect(typeStatus(removed, project, TODAY, TODAY).constituted).toBe(eur(6200));
+  });
+
+  it("ni la précaution, ni un type d'un budget de dépense, ni un montant nul", () => {
+    const housing = base.collections.types.find((t) => t.budgetId === NEEDS)!;
+    expect(canHoldObjective(base, housing)).toBe(false);
+    expect(() => setTypeObjective(base, housing.id, eur(100), NOW)).toThrow(UsageError);
+    expect(() => setTypeObjective(base, PRECAUTION_TYPE_ID, eur(100), NOW)).toThrow(UsageError);
+    expect(() => setTypeObjective(base, project, 0, NOW)).toThrow(/supérieur à zéro/);
+  });
+
+  it("un budget passé en dépense garde l'objectif de ses types, sans carte", () => {
+    const savings = withGoal.collections.budgets.find((b) => b.id === SAVINGS_BUDGET_ID)!;
+    const spent = applyChanges(withGoal, { budgets: [{ ...savings, nature: "spend", updatedAt: NOW + 1 }] });
+    expect(objectiveTypes(spent)).toEqual([]);
+    expect(spent.collections.types.find((t) => t.id === project)!.objective).not.toBeNull();
   });
 });

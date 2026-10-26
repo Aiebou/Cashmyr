@@ -11,8 +11,10 @@ import {
   monthTargets,
   normalizeDashOrder,
   budgetActual,
+  objectiveTypes,
   precautionType,
   safetyStatus,
+  typeStatus,
   yearOf,
   yearSummary,
   type DashBlock,
@@ -104,10 +106,30 @@ function GoalsBlock({ data, asOf, today }: { data: Dataset; asOf: Day; today: Da
     );
   };
 
+  // Décision 88 : les types d'épargne à objectif, mêmes règles d'affichage que la précaution.
+  const typeItems = objectiveTypes(data)
+    .map((type) => ({ type, status: typeStatus(data, type.id, asOf, today) }))
+    .filter(({ type, status }) => status.objective !== null && !type.objective!.hidden && (!status.reached || type.objective!.pinned));
+  const typeItem = ({ type, status }: (typeof typeItems)[number]) => (
+    <div key={type.id} className={s.item}>
+      <Gauge
+        label={type.name}
+        color={budgetColor(data, type.budgetId)}
+        value={status.constituted}
+        target={status.objective}
+        caption={`${money(status.constituted)} sur ${money(status.objective!)}${status.reached ? " · atteint" : ""}`}
+      />
+    </div>
+  );
+  const pinnedTypes = typeItems.filter(({ type }) => type.objective!.pinned);
+  const otherTypes = typeItems.filter(({ type }) => !type.objective!.pinned);
+
   const items = [
     ...(objective?.pinned && safetyItem ? [safetyItem] : []),
+    ...pinnedTypes.map(typeItem),
     ...pinned.map(goalItem),
     ...(!objective?.pinned && safetyItem ? [safetyItem] : []),
+    ...otherTypes.map(typeItem),
     ...others.map(goalItem),
   ];
 
