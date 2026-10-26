@@ -15,7 +15,8 @@
   - `budgets-interface`, empilée dessus : Paramètres → Budgets, types, menu « Type » (décisions 83 à 87) ;
   - `types-comptes`, empilée sur la précédente : types d'un compte, part réservée à la saisie, carte de
     précaution (point 18) ;
-  - `objectifs-types`, empilée sur la précédente : objectif d'un type d'épargne (point 7, décision 88).
+  - `objectifs-types`, empilée sur la précédente : objectif d'un type d'épargne (point 7, décision 88), puis
+    les numéros de version 0.6.0 et les notes de version.
 - **Tests** : 513 tests TypeScript et 15 tests Rust passent sur la dernière branche de la pile (core 268, storage 97, ui 148). La séquence
   d'installation du §3 a été vérifiée sur un clone neuf le 23/10/2026.
 

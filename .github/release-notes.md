@@ -1,14 +1,21 @@
 Cashmyr pour ordinateur. La version web, qui s'installe aussi sur téléphone, est sur https://aiebou.github.io/Cashmyr/.
 
-## Nouveautés de la 0.5.0
+## Nouveautés de la 0.6.0
 
-- **Taux d'endettement (DTI)** : l'onglet Dettes le donne en clair, tes échéances mensuelles rapportées à ton revenu moyen (par exemple 350 € pour 2 000 € de revenu : 17,5 %). Les dettes en remboursement libre n'y entrent pas, et l'écran le dit.
-- **Indicateurs de l'année** : une quatrième tuile, le taux d'endettement de l'année, c'est-à-dire ce que tu as vraiment remboursé sur tes dettes, divisé par tes revenus des mêmes mois (mois en cours exclu).
-- **Mes comptes** : « Vos comptes » passe en premier, et un crayon sur chaque compte permet de le modifier sur place (nom, type, solde de départ, valeur déclarée, épargne de précaution), sans passer par Paramètres.
-- **Menu latéral** : sur un grand écran (fenêtre de 980 px de large ou plus), les onglets passent dans une colonne à gauche, avec les sections de Paramètres. Le bouton ☰ la replie ; ton choix est retenu sur cet appareil.
-- **Paramètres** : « Catégories et couleurs » s'appelle désormais « Catégories ». Sur téléphone, un bouton « Haut de page » apparaît quand tu as fait défiler la page.
+- **Budgets** : les trois usages deviennent trois budgets, « Dépenses courantes », « Loisirs » et « Épargne », que tu règles dans Paramètres → Budgets. Pour chaque budget, tu choisis le nom, la nature (dépense ou épargne), la couleur, l'ordre et le pourcentage de tes revenus ; le total doit faire 100 %. Tu peux créer un budget, qui arrive à 0 %, ou en supprimer un : ses catégories et sa part passent dans le budget que tu choisis.
+- **Types** : un budget se divise en types, par exemple Charges fixes, Quotidien et Charge ponctuelle pour les Dépenses courantes, ou Épargne de précaution, Placement et Projet pour l'Épargne. Chaque catégorie de dépense peut recevoir un type.
+- **Comptes et types** : un compte se rattache à un ou plusieurs types, et le premier est son type principal. À la saisie d'une opération, « Part réservée à » met une somme de côté pour un autre type du compte. Par exemple, un LEP de 10 000 € avec 1 200 € réservés au Projet donne 8 800 € à la précaution et 1 200 € au Projet. Mes comptes affiche la part de chacun.
+- **Virements vers l'épargne** : ils comptent dans le budget du type principal du compte qui les reçoit ; sans type, ils comptent dans « Épargne ».
+- **Épargne de précaution** : elle devient un type comme les autres. Sa carte ne montre plus que les comptes choisis, avec la part qui lui revient ; « Choisir les comptes » ouvre la liste à cocher.
+- **Objectif d'un type d'épargne** : un type comme « Projet » peut recevoir un objectif, par exemple 3 000 €, depuis Paramètres → Budgets. Sa carte apparaît dans Objectifs, avec sa progression : « 1 200,00 € sur 3 000,00 € · 40 % ».
+- **Catégories par défaut** : la liste est renouvelée. Quelques noms changent (« Assurance », « Impôt », « Sorties », « Vêtement », « Abonnement »), et six catégories arrivent : Aides, Remboursement et créance, Alimentaire, Remboursement de dettes, Placement et Consommable. Les anciennes catégories par défaut que tu n'avais jamais modifiées et qui ne sont plus dans la liste (par exemple Restaurants et bars, Crédit, PEA et ETF) disparaissent des choix. Tes opérations les gardent et elles comptent toujours dans leur budget ; reclasse-les si tu le souhaites. Les catégories que tu as créées ou modifiées ne changent pas.
 
-**Format des données.** Inchangé depuis la 0.2.0. Un appareil encore en 0.1 doit être mis à jour : il affiche « Mets l'application à jour » sans rien modifier.
+**Format des données.** Il passe au format 3. À la première ouverture, tes données sont mises à niveau sans qu'aucun chiffre ne change :
+- les usages deviennent les budgets, avec leur répartition ;
+- l'objectif de précaution devient celui du type « Épargne de précaution » ;
+- un compte coché « Épargne de précaution » est rattaché à ce type.
+
+Chaque appareil doit passer en 0.6.0. Une version 0.5 qui reçoit un fichier au format 3 affiche « Mets l'application à jour » sans rien modifier. La version web propose d'elle-même la nouvelle version.
 
 ## Télécharger
 
