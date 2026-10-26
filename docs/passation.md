@@ -1,23 +1,18 @@
 # Passation de Cashmyr
 
-État au 25/10/2026, pour reprendre le développement sur un autre Mac à partir d'un clone neuf du dépôt.
+État au 26/10/2026, pour reprendre le développement sur un autre Mac à partir d'un clone neuf du dépôt.
 
-- **Version publiée** : 0.5.0, le 25/10/2026, tag `v0.5.0` sur la fusion de la PR de version (`release-0.5.0`).
-  - [Release](https://github.com/Aiebou/Cashmyr/releases/tag/v0.5.0), avec `latest.json` contrôlé par
-    `check-latest.mjs` (clé `EFBCA89EB0CD97C`).
-  - PWA en ligne sur <https://aiebou.github.io/Cashmyr/>.
-- **Contenu de la 0.5.0** : le lot sans changement de format de la liste du 25/10 (voir §6) : Mes comptes (PR #22),
-  « Catégories » et « Haut de page » (PR #23), taux d'endettement (PR #24, décisions 69 et 70), menu latéral du grand
-  écran (PR #25).
-- **Lot 0.6.0 en cours** (format 3), une pile de PR à fusionner ensemble juste avant le tag, jamais une seule : la PWA
-  publiée écrirait sinon un format que les applications de bureau en 0.5 refuseraient.
+- **Version publiée** : 0.6.0, le 26/10/2026, tag `v0.6.0` sur la fusion de la PR #27 (`cb00036`).
+  - [Release](https://github.com/Aiebou/Cashmyr/releases/tag/v0.6.0), avec `latest.json` contrôlé par
+    `check-latest.mjs` (13 entrées, clé `EFBCA89EB0CD97C`).
+  - PWA en ligne sur <https://aiebou.github.io/Cashmyr/>, au format 3.
+- **Contenu de la 0.6.0** : la partie de la liste du 25/10 qui change le format des données (format 3, voir §2),
+  livrée en une pile de quatre PR fusionnées ensemble :
   - PR #27, `format-3-budgets` : modèle, mise à niveau et calculs (décisions 71 à 82) ;
-  - `budgets-interface`, empilée dessus : Paramètres → Budgets, types, menu « Type » (décisions 83 à 87) ;
-  - `types-comptes`, empilée sur la précédente : types d'un compte, part réservée à la saisie, carte de
-    précaution (point 18) ;
-  - `objectifs-types`, empilée sur la précédente : objectif d'un type d'épargne (point 7, décision 88), puis
-    les numéros de version 0.6.0 et les notes de version.
-- **Tests** : 513 tests TypeScript et 15 tests Rust passent sur la dernière branche de la pile (core 268, storage 97, ui 148). La séquence
+  - PR #28, `budgets-interface` : Paramètres → Budgets, types, menu « Type » (décisions 83 à 87) ;
+  - PR #29, `types-comptes` : types d'un compte, part réservée à la saisie, carte de précaution (point 18) ;
+  - PR #30, `objectifs-types` : objectif d'un type d'épargne (point 7, décision 88), numéros de version et notes.
+- **Tests** : 513 tests TypeScript et 15 tests Rust passent sur `main` (core 268, storage 97, ui 148). La séquence
   d'installation du §3 a été vérifiée sur un clone neuf le 23/10/2026.
 
 La référence reste [`architecture.md`](architecture.md) : modèle de données, règles de calcul et de fusion, et les
@@ -62,16 +57,17 @@ Versions publiées depuis :
 | 0.4.0 | 26/09/2026 | #14, #15 | En-tête (synchro à gauche, menu du profil), total choisi dans le titre du bandeau, tuile « + Profil », tutoriel. Décisions 62 à 67 |
 | 0.4.1 | 25/10/2026 | #16 à #21 | Passation et `CLAUDE.md`, cahier des charges, documentation à jour, jeux d'essai neutralisés, catégories par défaut aux noms génériques. Décision 68 |
 | 0.5.0 | 25/10/2026 | #22 à #26 | « Vos comptes » avant « Mouvements de l'année », modification d'un compte depuis Mes comptes ; « Catégories », « Haut de page » sur téléphone ; taux d'endettement dans Dettes et dans les indicateurs de l'année ; menu latéral repliable sur grand écran. Décisions 69 et 70 |
+| 0.6.0 | 26/10/2026 | #27 à #30 | Format 3 : budgets et types modulables, comptes rattachés aux types avec parts réservées, précaution devenue un type, objectif d'un type d'épargne, nouvelles catégories par défaut appliquées aux profils existants. Décisions 71 à 88 |
 
-Dates de publication des Releases, heure de Paris : la 0.1.2, la 0.2.0 et la 0.3.0 sont sorties peu après minuit, la 0.4.0 le matin, la 0.4.1 vers 1 h 30, la 0.5.0 le même jour. GitHub, en UTC, les date de la veille.
+Dates de publication des Releases, heure de Paris : la 0.1.2, la 0.2.0 et la 0.3.0 sont sorties peu après minuit, la 0.4.0 le matin, la 0.4.1 vers 1 h 30, la 0.5.0 le même jour, la 0.6.0 le 26/10 vers 14 h. GitHub, en UTC, date de la veille celles d'après minuit.
 
 Demandes reçues après le cahier des charges, toutes livrées sauf une :
 - 23/09 : dettes et 7e onglet, menu « Ajouter », couleurs personnalisables ;
 - 25/09 : liste « Modifications à apporter (v0.1.2) », devenue la 0.2.0 et, pour les profils, la 0.3.0 ;
 - 26/09 : liste « Maj de la v0.3.0 », devenue la 0.4.0 ;
 - 24/10 : jeux d'essai publics et catégories par défaut sans éléments personnels (décision 68), livrés en 0.4.1 ;
-- 25/10 : liste « DTI, budgets, ergonomie » : la partie sans changement de format livrée en 0.5.0, le reste en
-  cours (§6).
+- 25/10 : liste « DTI, budgets, ergonomie » : la partie sans changement de format livrée en 0.5.0, le reste
+  (format 3) en 0.6.0.
 
 **Reporté** : le type de compte « Compte professionnel ». Il changerait le format des données, et sa place dans
 les calculs reste à définir ; un « profil professionnel » est l'autre piste. Rien n'est commencé
@@ -135,7 +131,7 @@ les calculs reste à définir ; un « profil professionnel » est l'autre piste.
   `position` sur les comptes. Le format 1 est mis à niveau à la lecture.
 - Une version plus ancienne refuse un format plus récent (« Mets l'application à jour ») sans rien écrire.
 - La 0.3.0, la 0.4.0 et la 0.5.0 n'ont pas changé le format (décisions 60 et 67).
-- **Format 3 pour la 0.6.0** (décisions 71 à 82) : budgets et types à la place des usages, comptes et opérations
+- **Format 3 depuis la 0.6.0** (décisions 71 à 82) : budgets et types à la place des usages, comptes et opérations
   rattachés aux types, précaution devenue l'objectif d'un type ; base IndexedDB en version 3. La mise à niveau
   est une fonction pure (`packages/core/src/migrate/format3.ts`) : deux appareils obtiennent les mêmes lignes.
 - **Tout nouveau champ synchronisé change le format**, parce que la validation refuse les champs inconnus. Il faut
@@ -417,6 +413,11 @@ Procédure suivie pour chaque version :
 Une PR qui change le format des données se fusionne **juste avant le tag**. Sinon la PWA, publiée à la fusion,
 écrirait un fichier que les applications de bureau restées à la version précédente refuseraient.
 
+Pour une pile de PR (la 0.6.0), fusionner du haut vers le bas : chaque PR dans la branche de la précédente, ce qui
+ne touche pas `main`, puis la première dans `main` une fois sa CI repassée au vert. Vérifier avant que son arbre est
+celui que la CI a testé sur la dernière PR (`git rev-parse <branche>^{tree}`). Une seule fusion sur `main`, donc une
+seule mise en ligne, et toutes les PR apparaissent fusionnées.
+
 ## 5. Fichiers présents uniquement sur l'ancien Mac
 
 Inventaire du 23/10/2026. Il relève des noms, des tailles et des dates. Seul le début de la transcription a été
@@ -476,7 +477,7 @@ export Cashmyr dans `~/Documents`, `~/Downloads` ou iCloud Drive, aucun hook Git
 2. Remettre l'identité Git, reconnecter `gh` (`gh auth login --scopes workflow`, `gh auth setup-git`) et recréer
    `.claude/launch.json`.
 3. Si tu as copié la mémoire de Claude Code, la placer sous le nouveau chemin.
-4. Installer Cashmyr 0.5.0 depuis la Release. Au premier lancement, l'application non signée s'ouvre par Réglages
+4. Installer Cashmyr 0.6.0 depuis la Release. Au premier lancement, l'application non signée s'ouvre par Réglages
    Système → Confidentialité et sécurité → « Ouvrir quand même » (voir le README). Ensuite, rejoindre le fichier de
    synchronisation depuis le dossier cloud.
 
@@ -484,20 +485,15 @@ export Cashmyr dans `~/Documents`, `~/Downloads` ou iCloud Drive, aucun hook Git
 
 Restent, du plus pressé au moins pressé :
 
-1. **La liste du 25/10/2026**, dont toutes les règles ont été validées ce jour-là (décisions à inscrire au §8 à
-   partir de la 69, chacune dans la PR qui l'applique). Découpage convenu :
-   - 0.5.0, sans changement de format, publiée : Mes comptes, « Catégories » et bouton « Haut de page » sur
-     téléphone, le DTI (onglet Dettes et indicateurs de l'année), le menu latéral du grand écran ;
-   - 0.6.0, format 3, PR empilées et fusionnées juste avant le tag : budgets et types modulables (modèle, calculs,
-     migration, nouvelles catégories par défaut appliquées aussi aux profils existants), leur interface, puis les
-     comptes rattachés aux types, avec les parts réservées et la précaution.
-2. **Essayer dans une vraie fenêtre de bureau ce qui n'a été vérifié que par les tests** : le parcours des profils
+1. **Essayer dans une vraie fenêtre de bureau ce qui n'a été vérifié que par les tests** : le parcours des profils
    (créer, changer, supprimer, rejoindre un fichier depuis un profil), puis l'écran de secours, vu seulement dans la
    PWA. Faire ces essais avec la recette d'essai isolé du §7, jamais sur les vraies données.
-3. **Vérifier sur un vrai iPhone** ce que fait « Enregistrer dans Fichiers » face à un fichier de même nom. C'est
+2. **Vérifier sur un vrai iPhone** ce que fait « Enregistrer dans Fichiers » face à un fichier de même nom. C'est
    encore au futur dans `architecture.md` (§6, iOS) ; le README n'en donne qu'une mise en garde générale.
-4. **« Compte professionnel » ou « profil professionnel »** : reporté le 26/09/2026, à rediscuter. Toute piste qui
+3. **« Compte professionnel » ou « profil professionnel »** : reporté le 26/09/2026, à rediscuter. Toute piste qui
    touche aux calculs ou au format passe d'abord par des questions chiffrées.
+4. **Avertissement React dans `SavingsChart`** : deux éléments reçoivent la même clé quand toute l'épargne de
+   l'année vaut 0. Sans effet visible relevé ; à corriger dans une petite PR à part.
 
 ## 7. Pièges rencontrés
 
