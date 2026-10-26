@@ -1,4 +1,5 @@
 import {
+  isRetiredCategory,
   asOfForYear,
   centsToInput,
   colorFor,
@@ -48,6 +49,7 @@ import { dayLong, debtRatio, money, monthLong, monthShort, ofMonth, ratio } from
 import { computedHint, editSchedule, type ScheduleState } from "../lib/schedule-fields";
 import { useActions, useApp } from "../store/context";
 import { DebtCategoryOptions, DIRECTION_LABELS, useDebtForm, type Direction } from "./DebtForm";
+import { RetiredOption, RECLASS_HINT } from "../components/RetiredOption";
 import s from "./DebtsScreen.module.css";
 
 const hasLinkedOperations = (data: Dataset, debtId: string) => indexOf(data).liveOps.some((op) => op.debtId === debtId);
@@ -634,9 +636,14 @@ function DebtSettings({ debt }: { debt: Debt }) {
         </div>
 
         <FieldRow>
-          <Field label="Catégorie" htmlFor={`${id}-cat`} hint="Pour les versements et le prélèvement">
+          <Field
+            label="Catégorie"
+            htmlFor={`${id}-cat`}
+            hint={isRetiredCategory(data, draft.categoryId || undefined) ? RECLASS_HINT : "Pour les versements et le prélèvement"}
+          >
             <Select id={`${id}-cat`} value={draft.categoryId} onChange={(e) => set("categoryId", e.target.value)}>
               <option value="">Aucune</option>
+              <RetiredOption data={data} categoryId={draft.categoryId} />
               <DebtCategoryOptions data={data} direction={draft.direction} />
             </Select>
           </Field>
@@ -703,7 +710,15 @@ function DebtCard({ debt, asOf, tour }: { debt: Debt; asOf: string; tour?: strin
       as="article"
       tour={tour}
       title={debt.name}
-      subtitle={subtitle}
+      subtitle={
+        isRetiredCategory(data, debt.categoryId ?? undefined) ? (
+          <>
+            {subtitle} <span className={s.badge}>À reclasser</span>
+          </>
+        ) : (
+          subtitle
+        )
+      }
       actions={
         <>
           <IconButton label={debt.hidden ? "Afficher au tableau de bord" : "Masquer du tableau de bord"} aria-pressed={debt.hidden} onClick={() => save({ hidden: !debt.hidden })}>

@@ -72,6 +72,7 @@ export type Modal =
   | { kind: "delete-budget"; budgetId: string }
   | { kind: "recurrence"; editId?: string }
   | { kind: "delete-category"; categoryId: string }
+  | { kind: "reclass-category"; categoryId: string }
   | { kind: "create-profile" }
   | { kind: "delete-profile"; profileId: string; check: ProfileCheck }
   | null;

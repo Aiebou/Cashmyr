@@ -1,5 +1,6 @@
 import {
   indexOf,
+  isRetiredCategory,
   pauseRecurrence,
   removeDebtRecurrence,
   resumeRecurrence,
@@ -69,6 +70,7 @@ function RecurrenceItem({ rec }: { rec: Recurrence }) {
       <span className={s.recurrenceTitle}>
         {rec.label}
         {!rec.active && <span className={s.badge}>En pause</span>}
+        {isRetiredCategory(data, rec.categoryId) && <span className={s.badge}>À reclasser</span>}
         {debt && debt.deletedAt === null && <span className={s.badge}>Dette « {debt.name} »</span>}
       </span>
       <span className={s.recurrenceTools}>

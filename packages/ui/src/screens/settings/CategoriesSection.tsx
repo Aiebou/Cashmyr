@@ -8,6 +8,7 @@ import {
   isUsed,
   newId,
   nextStamp,
+  retiredCategories,
   setIncomeColor,
   touch,
   typesOf,
@@ -20,9 +21,10 @@ import { ColorField } from "../../components/ColorField";
 import { Button, cx, IconButton, InlineText, Select, TextInput } from "../../components/controls";
 import { TrashIcon } from "../../components/icons";
 import { Card } from "../../components/layout";
-import { budgetName, expenseGroups, liveBudgets, liveCategories, nextColor } from "../../lib/data";
+import { budgetName, expenseGroups, liveBudgets, liveCategories, nextColor, retiredName } from "../../lib/data";
 import { count, money } from "../../lib/format";
 import { useActions, useApp } from "../../store/context";
+import { usageText } from "./AccountsSection";
 import s from "./Settings.module.css";
 
 /** Montant et nombre des opérations vivantes d'une catégorie : ce qu'un changement d'usage déplacerait. */
@@ -200,9 +202,42 @@ function ExpenseCategories() {
   );
 }
 
+/**
+ * Décision 89 (points 17a et 17c) : les anciennes catégories encore utilisées, à reclasser d'un
+ * coup. La carte disparaît quand il n'en reste aucune.
+ */
+function RetiredCategories() {
+  const data = useApp((st) => st.data);
+  const { openModal } = useActions();
+  const list = retiredCategories(data);
+  if (list.length === 0) return null;
+  return (
+    <Card title="Anciennes catégories" subtitle="Elles ne sont plus proposées, mais des opérations, récurrences ou dettes les portent encore.">
+      <ul className={s.list}>
+        {list.map(({ category, usage, amount }) => (
+          <li key={category.id} className={s.retiredRow}>
+            <span>
+              {retiredName(category.name)}
+              <span className={s.muted}>
+                {" "}
+                · {usageText(usage)}
+                {amount > 0 ? ` · ${money(amount)}` : ""}
+              </span>
+            </span>
+            <Button size="small" onClick={() => openModal({ kind: "reclass-category", categoryId: category.id })} aria-label={`Reclasser « ${category.name} »`}>
+              Reclasser
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 export function CategoriesSection() {
   return (
     <>
+      <RetiredCategories />
       <IncomeSources />
       <ExpenseCategories />
     </>

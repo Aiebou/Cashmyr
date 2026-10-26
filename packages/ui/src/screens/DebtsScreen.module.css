@@ -230,3 +230,15 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Décision 89 : la dette porte une ancienne catégorie. */
+.badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 560;
+}

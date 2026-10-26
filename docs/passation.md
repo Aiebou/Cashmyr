@@ -12,11 +12,13 @@
   - PR #28, `budgets-interface` : Paramètres → Budgets, types, menu « Type » (décisions 83 à 87) ;
   - PR #29, `types-comptes` : types d'un compte, part réservée à la saisie, carte de précaution (point 18) ;
   - PR #30, `objectifs-types` : objectif d'un type d'épargne (point 7, décision 88), numéros de version et notes.
+- **En cours pour la 0.6.1** (sans changement de format) : la correction des graduations de `SavingsChart` (PR #32)
+  et le repérage « À reclasser » des points 17a et 17c (décision 89), oublié dans la 0.6.0.
 - **Tests** : 513 tests TypeScript et 15 tests Rust passent sur `main` (core 268, storage 97, ui 148). La séquence
   d'installation du §3 a été vérifiée sur un clone neuf le 23/10/2026.
 
 La référence reste [`architecture.md`](architecture.md) : modèle de données, règles de calcul et de fusion, et les
-88 décisions numérotées du §8. Ce document résume. En cas d'écart, `architecture.md` et le code font foi. Le cahier
+89 décisions numérotées du §8. Ce document résume. En cas d'écart, `architecture.md` et le code font foi. Le cahier
 des charges d'origine est dans [`cahier-des-charges.md`](cahier-des-charges.md).
 
 ## Sommaire
