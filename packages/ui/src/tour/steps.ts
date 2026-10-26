@@ -153,7 +153,7 @@ export const TOUR: Record<Tab, TourStep[]> = {
     {
       target: at("settings-toc"),
       title: "Les réglages",
-      text: "Un clic mène à chaque section : budget, comptes, catégories, profils, synchronisation, sauvegardes…",
+      text: "Un clic mène à chaque section : budgets, comptes, catégories, profils, synchronisation, sauvegardes…",
     },
     {
       target: "#reglages-budget",

@@ -8,9 +8,9 @@ import {
   isUsed,
   newId,
   nextStamp,
-  setBudgetColor,
   setIncomeColor,
   touch,
+  typesOf,
   type Budget,
   type Category,
   type Dataset,
@@ -131,7 +131,6 @@ function IncomeSources() {
 function ExpenseCategories() {
   const data = useApp((st) => st.data);
   const { apply, ask } = useActions();
-  const prefs = data.preferences;
 
   const move = async (c: Category, budgetId: string) => {
     const weight = categoryWeight(data, c.id);
@@ -150,21 +149,20 @@ function ExpenseCategories() {
     await apply({ categories: [{ ...rest, budgetId, updatedAt: nextStamp(Date.now(), c) }] }, undefined, "Budget modifié");
   };
 
+  // Point 12 : le type est facultatif ; il appartient toujours au budget de la catégorie (décision 72).
+  const setType = (c: Category, typeId: string) => {
+    const { typeId: _old, ...rest } = c;
+    return apply({ categories: [{ ...rest, ...(typeId ? { typeId } : {}), updatedAt: nextStamp(Date.now(), c) }] }, undefined, "Type modifié");
+  };
+
   return (
-    <Card title="Catégories de dépense" subtitle="Rangées par budget. La couleur d'un budget vaut pour toutes ses catégories.">
+    <Card title="Catégories de dépense" subtitle="Rangées par budget, avec un type si tu veux. Budgets, types et couleurs se règlent dans Budgets.">
       {expenseGroups(data).map((g) => {
-        const target = { kind: "budget" as const, budget: g.budget };
+        const types = typesOf(data, g.budget.id);
         return (
           <div key={g.budget.id} className={s.group}>
             <div className={s.groupHead}>
               <h4 className={s.groupTitle}>{g.label}</h4>
-              <ColorField
-                label={g.label}
-                value={colorFor(prefs, target)}
-                custom={hasCustomColor(prefs, target)}
-                onPick={(hex) => apply({}, setBudgetColor(prefs, g.budget.id, hex, Date.now()))}
-                onReset={() => apply({}, setBudgetColor(prefs, g.budget.id, null, Date.now()))}
-              />
             </div>
             <ul className={cx(s.list, s.categoryList)}>
               {g.categories.map((c) => (
@@ -176,6 +174,19 @@ function ExpenseCategories() {
                         {b.name}
                       </option>
                     ))}
+                  </Select>
+                  <Select
+                    aria-label={`Type de « ${c.name} »`}
+                    value={c.typeId ?? ""}
+                    onChange={(e) => void setType(c, e.target.value)}
+                  >
+                    <option value="">Sans type</option>
+                    {types.map((type) => (
+                      <option key={type.id} value={type.id}>
+                        {type.name}
+                      </option>
+                    ))}
+                    {c.typeId && !types.some((type) => type.id === c.typeId) && <option value={c.typeId}>Type supprimé</option>}
                   </Select>
                   <DeleteButton category={c} />
                 </li>

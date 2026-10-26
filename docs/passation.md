@@ -9,14 +9,19 @@
 - **Contenu de la 0.5.0** : le lot sans changement de format de la liste du 25/10 (voir §6) : Mes comptes (PR #22),
   « Catégories » et « Haut de page » (PR #23), taux d'endettement (PR #24, décisions 69 et 70), menu latéral du grand
   écran (PR #25).
-- **Lot 0.6.0 en cours** (format 3) : la PR « format 3 : budgets et types » (branche `format-3-budgets`,
-  décisions 71 à 82) ouvre une pile de PR à fusionner ensemble juste avant le tag, jamais seule : la PWA publiée
-  écrirait sinon un format que les applications de bureau en 0.5 refuseraient.
-- **Tests** : 489 tests TypeScript et 15 tests Rust passent sur la branche du format 3 (core 254, storage 97, ui 138). La séquence
+- **Lot 0.6.0 en cours** (format 3), une pile de PR à fusionner ensemble juste avant le tag, jamais une seule : la PWA
+  publiée écrirait sinon un format que les applications de bureau en 0.5 refuseraient.
+  - PR #27, `format-3-budgets` : modèle, mise à niveau et calculs (décisions 71 à 82) ;
+  - `budgets-interface`, empilée dessus : Paramètres → Budgets, types, menu « Type » (décisions 83 à 87) ;
+  - `types-comptes`, empilée sur la précédente : types d'un compte, part réservée à la saisie, carte de
+    précaution (point 18) ;
+  - `objectifs-types`, empilée sur la précédente : objectif d'un type d'épargne (point 7, décision 88), puis
+    les numéros de version 0.6.0 et les notes de version.
+- **Tests** : 513 tests TypeScript et 15 tests Rust passent sur la dernière branche de la pile (core 268, storage 97, ui 148). La séquence
   d'installation du §3 a été vérifiée sur un clone neuf le 23/10/2026.
 
 La référence reste [`architecture.md`](architecture.md) : modèle de données, règles de calcul et de fusion, et les
-82 décisions numérotées du §8. Ce document résume. En cas d'écart, `architecture.md` et le code font foi. Le cahier
+88 décisions numérotées du §8. Ce document résume. En cas d'écart, `architecture.md` et le code font foi. Le cahier
 des charges d'origine est dans [`cahier-des-charges.md`](cahier-des-charges.md).
 
 ## Sommaire

@@ -24,5 +24,6 @@ export * from "./defaults";
 export * from "./reset";
 export * from "./names";
 export * from "./tags";
+export * from "./budgets";
 export * from "./migrate/schema";
 export * from "./migrate/legacy";
