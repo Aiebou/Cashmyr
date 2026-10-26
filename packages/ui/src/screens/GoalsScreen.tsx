@@ -10,15 +10,19 @@ import {
   isPrecautionAccount,
   isValidDay,
   newId,
+  objectiveTypes,
   precautionType,
   safetyStatus,
   setPrecautionAccount,
   tombstone,
   touch,
+  typeStatus,
+  type BudgetType,
   type Cents,
   type Goal,
   type GoalStep,
   type TypeObjective,
+  type TypeStatus,
 } from "@cashmyr/core";
 import { useId, useMemo, useState, type FormEvent } from "react";
 import {
@@ -85,6 +89,28 @@ export function PrecautionAccountsModal() {
   );
 }
 
+/** Les comptes d'un type, avec la part qui lui revient sur leur solde (décision 78). */
+function TypeAccounts({ status, asOf }: { status: TypeStatus; asOf: string }) {
+  const data = useApp((st) => st.data);
+  const figures = useMemo(() => accountFigures(data, asOf), [data, asOf]);
+  return (
+    <ul className={s.chosen}>
+      {status.accounts.map(({ account, share }) => {
+        const balance = figures.get(account.id)?.balance ?? 0;
+        return (
+          <li key={account.id} className={s.accountLabel}>
+            {account.name}
+            <span className={s.muted}>
+              {money(share)}
+              {share !== balance ? ` sur ${money(balance)}` : ""}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function SafetyCard({ asOf }: { asOf: string }) {
   const data = useApp((st) => st.data);
   const today = useApp((st) => st.today);
@@ -94,7 +120,6 @@ function SafetyCard({ asOf }: { asOf: string }) {
   const type = precautionType(data);
   const safety = type?.objective ?? defaultPrecautionObjective();
   const status = useMemo(() => safetyStatus(data, asOf, today), [data, asOf, today]);
-  const figures = useMemo(() => accountFigures(data, asOf), [data, asOf]);
   const accounts = liveAccounts(data);
   const id = useId();
   if (!type) return null;
@@ -159,20 +184,7 @@ function SafetyCard({ asOf }: { asOf: string }) {
         {status.accounts.length === 0 ? (
           <p className={s.muted}>{accounts.length === 0 ? "Aucun compte pour l'instant." : "Aucun compte choisi."}</p>
         ) : (
-          <ul className={s.chosen}>
-            {status.accounts.map(({ account, share }) => {
-              const balance = figures.get(account.id)?.balance ?? 0;
-              return (
-                <li key={account.id} className={s.accountLabel}>
-                  {account.name}
-                  <span className={s.muted}>
-                    {money(share)}
-                    {share !== balance ? ` sur ${money(balance)}` : ""}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+          <TypeAccounts status={status} asOf={asOf} />
         )}
       </div>
 
@@ -201,6 +213,61 @@ function SafetyCard({ asOf }: { asOf: string }) {
           <InlineAmount label="Montant de l'objectif" value={safety.amount} onCommit={(amount) => setSafety({ amount })} />
         </Field>
       </FieldRow>
+    </Card>
+  );
+}
+
+// ── Objectif d'un type d'épargne ───────────────────────────────────────────
+
+/**
+ * Point 7, décision 88 : un type d'épargne qui a un objectif en montant. Le montant constitué est
+ * la somme de ses parts dans ses comptes ; au-delà de l'objectif, la barre reste pleine.
+ */
+function TypeGoalCard({ type, asOf }: { type: BudgetType; asOf: string }) {
+  const data = useApp((st) => st.data);
+  const today = useApp((st) => st.today);
+  const { apply, openModal } = useActions();
+  const status = useMemo(() => typeStatus(data, type.id, asOf, today), [data, type.id, asOf, today]);
+  const goal = type.objective;
+  if (goal === null || status.objective === null) return null;
+  const set = (patch: Partial<TypeObjective>) => apply({ types: [touch(type, { objective: { ...goal, ...patch } }, Date.now())] });
+  const share = ratio(Math.max(0, status.constituted) / status.objective);
+
+  return (
+    <Card
+      title={type.name}
+      subtitle={status.reached ? "Objectif atteint" : undefined}
+      actions={
+        <>
+          <IconButton label={goal.hidden ? "Afficher au tableau de bord" : "Masquer du tableau de bord"} aria-pressed={goal.hidden} onClick={() => set({ hidden: !goal.hidden })}>
+            {goal.hidden ? <EyeOffIcon /> : <EyeIcon />}
+          </IconButton>
+          <IconButton label={goal.pinned ? "Désépingler" : "Épingler en tête"} aria-pressed={goal.pinned} onClick={() => set({ pinned: !goal.pinned })}>
+            <PinIcon filled={goal.pinned} />
+          </IconButton>
+        </>
+      }
+    >
+      <Gauge
+        label="Constitué"
+        color={budgetColor(data, type.budgetId)}
+        value={status.constituted}
+        target={status.objective}
+        caption={`${money(status.constituted)} sur ${money(status.objective)} · ${share}`}
+      />
+      <div className={s.fieldset}>
+        <div className={s.chosenHead}>
+          <h4 className={s.chosenTitle}>Comptes qui le composent</h4>
+          <Button size="small" variant="ghost" onClick={() => openModal({ kind: "type-objective", typeId: type.id })}>
+            Modifier
+          </Button>
+        </div>
+        {status.accounts.length === 0 ? (
+          <p className={s.muted}>Aucun compte ne porte ce type : rattache-le à un compte depuis sa fiche.</p>
+        ) : (
+          <TypeAccounts status={status} asOf={asOf} />
+        )}
+      </div>
     </Card>
   );
 }
@@ -555,6 +622,9 @@ export function GoalsScreen() {
         {asOf !== today && <p className={s.muted}>Situation au {dayLong(asOf)}</p>}
       </ScreenTitle>
       <SafetyCard asOf={asOf} />
+      {objectiveTypes(data).map((t) => (
+        <TypeGoalCard key={t.id} type={t} asOf={asOf} />
+      ))}
       {active.map((g, i) => (
         <GoalCard key={g.id} goal={g} asOf={asOf} {...(i === 0 ? { tour: "goal" } : {})} />
       ))}

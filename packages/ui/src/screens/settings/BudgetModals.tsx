@@ -1,6 +1,6 @@
-import { budgetWeight, createBudget, deleteBudget, indexOf, type BudgetNature } from "@cashmyr/core";
+import { budgetWeight, canHoldObjective, createBudget, deleteBudget, indexOf, setTypeObjective, type BudgetNature, type Cents } from "@cashmyr/core";
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { Button, Field, Segmented, Select, submitOnEnter, TextInput } from "../../components/controls";
+import { AmountInput, Button, Field, Segmented, Select, submitOnEnter, TextInput } from "../../components/controls";
 import { Modal } from "../../components/Modal";
 import { budgetName, liveBudgets } from "../../lib/data";
 import { money } from "../../lib/format";
@@ -134,6 +134,69 @@ export function DeleteBudgetModal({ budgetId }: { budgetId: string }) {
             Les mois passés changent : {money(weight.amount)} de dépenses passent de {budgetName(data, budget.id)} à {target.name}.
           </p>
         )}
+      </form>
+    </Modal>
+  );
+}
+
+/**
+ * Objectif d'un type d'épargne (point 7, décision 88) : un montant. Sa carte s'affiche dans
+ * Objectifs ; retirer l'objectif la fait disparaître, sans toucher aux parts du type.
+ */
+export function TypeObjectiveModal({ typeId }: { typeId: string }) {
+  const data = useApp((st) => st.data);
+  const { apply, closeModal } = useActions();
+  const id = useId();
+  const type = indexOf(data).types.get(typeId);
+  const [amount, setAmount] = useState<Cents | null>(type?.objective?.amount ?? null);
+  const [error, setError] = useState<string | null>(null);
+  const usable = type !== undefined && canHoldObjective(data, type);
+
+  // Supprimé ou passé dans un budget de dépense entre-temps : la fenêtre n'a plus d'objet.
+  useEffect(() => {
+    if (!usable) closeModal();
+  }, [usable, closeModal]);
+  if (!type || !usable) return null;
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (amount === null || amount <= 0) return setError("Indique un montant supérieur à zéro.");
+    if (await apply(setTypeObjective(data, type.id, amount, Date.now()), undefined, "Objectif enregistré")) closeModal();
+  };
+  const remove = async () => {
+    if (await apply(setTypeObjective(data, type.id, null, Date.now()), undefined, "Objectif retiré")) closeModal();
+  };
+
+  return (
+    <Modal
+      title={`Objectif · ${type.name}`}
+      width="narrow"
+      onClose={closeModal}
+      footer={
+        <>
+          {type.objective !== null ? (
+            <Button variant="ghost" onClick={() => void remove()}>
+              Retirer l'objectif
+            </Button>
+          ) : (
+            <Button variant="ghost" onClick={closeModal}>
+              Fermer
+            </Button>
+          )}
+          <Button variant="primary" type="submit" form={`${id}-f`}>
+            Enregistrer
+          </Button>
+        </>
+      }
+    >
+      <form id={`${id}-f`} className={s.modalForm} onSubmit={submit} onKeyDown={submitOnEnter} noValidate>
+        <Field label="Montant visé" htmlFor={`${id}-amount`} error={error ?? undefined}>
+          <AmountInput id={`${id}-amount`} data-autofocus initial={amount} placeholder="0,00" onAmount={(v) => {
+              setAmount(v);
+              setError(null);
+            }} />
+        </Field>
+        <p className={s.muted}>Sa carte, dans Objectifs, compte ce que ce type a de côté dans ses comptes.</p>
       </form>
     </Modal>
   );

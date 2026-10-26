@@ -14,12 +14,13 @@
   - PR #27, `format-3-budgets` : modèle, mise à niveau et calculs (décisions 71 à 82) ;
   - `budgets-interface`, empilée dessus : Paramètres → Budgets, types, menu « Type » (décisions 83 à 87) ;
   - `types-comptes`, empilée sur la précédente : types d'un compte, part réservée à la saisie, carte de
-    précaution (point 18).
-- **Tests** : 507 tests TypeScript et 15 tests Rust passent sur la dernière branche de la pile (core 263, storage 97, ui 147). La séquence
+    précaution (point 18) ;
+  - `objectifs-types`, empilée sur la précédente : objectif d'un type d'épargne (point 7, décision 88).
+- **Tests** : 513 tests TypeScript et 15 tests Rust passent sur la dernière branche de la pile (core 268, storage 97, ui 148). La séquence
   d'installation du §3 a été vérifiée sur un clone neuf le 23/10/2026.
 
 La référence reste [`architecture.md`](architecture.md) : modèle de données, règles de calcul et de fusion, et les
-87 décisions numérotées du §8. Ce document résume. En cas d'écart, `architecture.md` et le code font foi. Le cahier
+88 décisions numérotées du §8. Ce document résume. En cas d'écart, `architecture.md` et le code font foi. Le cahier
 des charges d'origine est dans [`cahier-des-charges.md`](cahier-des-charges.md).
 
 ## Sommaire
