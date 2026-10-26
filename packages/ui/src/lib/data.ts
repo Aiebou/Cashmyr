@@ -79,8 +79,12 @@ export function categoryName(data: Dataset, id: string | undefined): string {
   if (!id) return "Sans catégorie";
   const c = indexOf(data).categories.get(id);
   if (!c) return "Catégorie inconnue";
-  return c.deletedAt === null ? c.name : deleted(c.name);
+  // Décision 89 : une catégorie supprimée qui sert encore est « à reclasser ».
+  return c.deletedAt === null ? c.name : retiredName(c.name);
 }
+
+/** « Restaurants et bars (ancienne catégorie) » (décision 89). */
+export const retiredName = (name: string) => `${name} (ancienne catégorie)`;
 
 export function accountName(data: Dataset, id: string | undefined): string {
   if (!id) return "—";

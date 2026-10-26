@@ -1,4 +1,5 @@
 import {
+  isRetiredCategory,
   addMonths,
   applyChanges,
   createRecord,
@@ -22,6 +23,7 @@ import { expenseGroups, liveAccounts, liveCategories, liveDebts, liveGoals } fro
 import { count, dayLong, monthLong, ofMonth } from "../lib/format";
 import { tagChoice, tagText } from "../lib/tags";
 import { useActions, useApp } from "../store/context";
+import { RetiredOption, RECLASS_HINT } from "../components/RetiredOption";
 import s from "./OperationModal.module.css";
 
 const TYPE_OPTIONS: { value: OpType; label: string }[] = [
@@ -167,11 +169,18 @@ export function RecurrenceModal({ editId }: { editId?: string }) {
         </Field>
 
         <FieldRow>
-          <Field label="Catégorie" htmlFor={`${id}-category`} error={errors.category} hidden={isTransfer}>
+          <Field
+            label="Catégorie"
+            htmlFor={`${id}-category`}
+            error={errors.category}
+            hidden={isTransfer}
+            hint={categoryOk && isRetiredCategory(data, categoryId) ? RECLASS_HINT : undefined}
+          >
             <Select id={`${id}-category`} value={categoryOk ? categoryId : ""} onChange={(e) => setCategoryId(e.target.value)}>
               <option value="" disabled>
                 Choisir une catégorie
               </option>
+              {categoryOk && <RetiredOption data={data} categoryId={categoryId} />}
               {type === "in"
                 ? liveCategories(data, "in").map((c) => (
                     <option key={c.id} value={c.id}>

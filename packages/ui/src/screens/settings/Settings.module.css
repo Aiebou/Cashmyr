@@ -436,3 +436,12 @@
   font-size: 13px;
   color: var(--ink-2);
 }
+
+/* Décision 89 : une ancienne catégorie et son bouton « Reclasser ». */
+.retiredRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}

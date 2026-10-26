@@ -8,11 +8,14 @@ import {
   deleteAccount,
   deleteCategory,
   importBackup,
+  isRetiredCategory,
   mergeDatasets,
   monthAggregates,
   newSyncDocument,
   parseBackup,
+  reclassCategory,
   restoreEverywhere,
+  retiredCategories,
   serializeBackup,
   serializeSyncDocument,
   setPreference,
@@ -85,6 +88,48 @@ describe("suppression d'une catégorie (décision 31)", () => {
     expect(validateDataset(after)).toEqual([]);
     expect(after.collections.operations[0]?.categoryId).toBe(fresh.id);
     expect(monthAggregates(after, "2026-09").byBudget[NEEDS]).toBe(eur(80));
+  });
+});
+
+describe("anciennes catégories à reclasser (décision 89, points 17a et 17c)", () => {
+  const { cats, accs, build } = world();
+  // « Restaurants et bars » retirée (comme au passage au format 3) : 2 opérations, 1 récurrence, 1 dette.
+  const ops = [
+    expense("2026-08-12", eur(45.5), cats.resto.id, accs.courant.id),
+    expense("2026-09-03", eur(30), cats.resto.id, accs.courant.id),
+    expense("2026-09-04", eur(80), cats.courses.id, accs.courant.id),
+  ];
+  const rec = recurrence({ type: "out", amount: eur(12), dayOfMonth: 5, startMonth: "2026-09", categoryId: cats.resto.id, accountId: accs.courant.id });
+  const loan = debt({ categoryId: cats.resto.id, accountId: accs.courant.id });
+  const base = build({ operations: ops, recurrences: [rec], debts: [loan] });
+  const data = applyChanges(base, { categories: [tombstone(cats.resto, NOW), tombstone(cats.voyage, NOW)] });
+
+  it("liste les anciennes catégories encore utilisées, avec leur usage et leur total", () => {
+    expect(isRetiredCategory(data, cats.resto.id)).toBe(true);
+    expect(isRetiredCategory(data, cats.courses.id)).toBe(false);
+    expect(isRetiredCategory(data, undefined)).toBe(false);
+    // « Voyages », supprimée sans usage, n'y figure pas.
+    expect(retiredCategories(data).map((r) => [r.category.name, r.usage, r.amount])).toEqual([
+      ["Restaurants et bars", { operations: 2, recurrences: 1, debts: 1 }, eur(75.5)],
+    ]);
+  });
+
+  it("reclasser fait tout passer dans une catégorie actuelle ; les mois passés changent de budget", () => {
+    const after = applyChanges(data, reclassCategory(data, cats.resto.id, cats.courses.id, NOW + 1));
+    expect(validateDataset(after)).toEqual([]);
+    expect(after.collections.operations.filter((o) => o.categoryId === cats.courses.id)).toHaveLength(3);
+    expect(after.collections.recurrences[0]?.categoryId).toBe(cats.courses.id);
+    expect(after.collections.debts[0]?.categoryId).toBe(cats.courses.id);
+    expect(retiredCategories(after)).toEqual([]);
+    // 30 € de septembre : de Loisirs à Dépenses courantes.
+    expect(monthAggregates(data, "2026-09").byBudget).toEqual({ [NEEDS]: eur(80), [defaultBudgetId("envie")]: eur(30) });
+    expect(monthAggregates(after, "2026-09").byBudget).toEqual({ [NEEDS]: eur(110) });
+  });
+
+  it("refuse une catégorie actuelle comme source, une cible supprimée ou d'autre nature", () => {
+    expect(() => reclassCategory(data, cats.courses.id, cats.loyer.id, NOW)).toThrow(UsageError);
+    expect(() => reclassCategory(data, cats.resto.id, cats.voyage.id, NOW)).toThrow(/actuelle/);
+    expect(() => reclassCategory(data, cats.resto.id, cats.salaire.id, NOW)).toThrow(/même nature/);
   });
 });
 

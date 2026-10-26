@@ -1,8 +1,8 @@
-import { categoryUsage, createRecord, deleteCategory, indexOf, newId, type Category } from "@cashmyr/core";
+import { categoryUsage, createRecord, deleteCategory, indexOf, newId, reclassCategory, retiredCategories, type Category } from "@cashmyr/core";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { Button, Field, Segmented, Select, submitOnEnter, TextInput } from "../../components/controls";
 import { Modal } from "../../components/Modal";
-import { budgetName, expenseGroups, liveBudgets, liveCategories, nextColor } from "../../lib/data";
+import { budgetName, expenseGroups, liveBudgets, liveCategories, nextColor, retiredName } from "../../lib/data";
 import { money } from "../../lib/format";
 import { useActions, useApp } from "../../store/context";
 import { usageText } from "./AccountsSection";
@@ -138,6 +138,98 @@ export function DeleteCategoryModal({ categoryId }: { categoryId: string }) {
           <p className={s.warning} role="status">
             Les mois passés changent : {money(weight.amount)} de dépenses passent de {budgetName(data, category.budgetId)} à{" "}
             {budgetName(data, targetBudget)}.
+          </p>
+        )}
+        {error && (
+          <p className={s.error} role="alert">
+            {error}
+          </p>
+        )}
+      </form>
+    </Modal>
+  );
+}
+
+/**
+ * Décision 89 : reclasser d'un coup ce que porte une ancienne catégorie, vers une catégorie actuelle
+ * de même nature. Comme la décision 31, le changement de budget des mois passés est annoncé.
+ */
+export function ReclassCategoryModal({ categoryId }: { categoryId: string }) {
+  const data = useApp((st) => st.data);
+  const { apply, closeModal } = useActions();
+  const id = useId();
+  const retired = retiredCategories(data).find((r) => r.category.id === categoryId);
+  const category = retired?.category;
+  const others = category ? liveCategories(data, category.kind) : [];
+  const [targetId, setTargetId] = useState(others.find((c) => c.budgetId === category?.budgetId)?.id ?? others[0]?.id ?? "");
+  const [error, setError] = useState<string | null>(null);
+
+  // Plus rien à reclasser (fait sur un autre appareil) : la fenêtre n'a plus d'objet.
+  useEffect(() => {
+    if (!retired) closeModal();
+  }, [retired, closeModal]);
+  if (!retired || !category) return null;
+
+  const target = others.find((c) => c.id === targetId);
+  const shifts = category.kind === "out" && target !== undefined && target.budgetId !== category.budgetId && retired.amount > 0;
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!target) return setError("Choisis une catégorie actuelle.");
+    try {
+      const changes = reclassCategory(data, category.id, target.id, Date.now());
+      if (await apply(changes, undefined, `« ${category.name} » reclassée dans « ${target.name} »`)) closeModal();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  return (
+    <Modal
+      title={`Reclasser « ${category.name} »`}
+      width="narrow"
+      onClose={closeModal}
+      footer={
+        <>
+          <Button variant="ghost" onClick={closeModal}>
+            Annuler
+          </Button>
+          <Button variant="primary" type="submit" form={`${id}-form`} disabled={others.length === 0}>
+            Reclasser
+          </Button>
+        </>
+      }
+    >
+      <form id={`${id}-form`} className={s.modalForm} onSubmit={submit} onKeyDown={submitOnEnter} noValidate>
+        <p>
+          {retiredName(category.name)} : {usageText(retired.usage)}. Tout passera dans :
+        </p>
+        {others.length === 0 ? (
+          <p className={s.muted}>Aucune catégorie actuelle de même nature : crée-en une d'abord.</p>
+        ) : (
+          <Field label="Catégorie" htmlFor={`${id}-target`}>
+            <Select id={`${id}-target`} value={targetId} onChange={(e) => setTargetId(e.target.value)}>
+              {category.kind === "in"
+                ? others.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))
+                : expenseGroups(data).map((g) => (
+                    <optgroup key={g.budget.id} label={g.label}>
+                      {g.categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+            </Select>
+          </Field>
+        )}
+        {shifts && (
+          <p className={s.warning} role="status">
+            Les mois passés changent : {money(retired.amount)} passent de {budgetName(data, category.budgetId)} à {budgetName(data, target.budgetId)}.
           </p>
         )}
         {error && (

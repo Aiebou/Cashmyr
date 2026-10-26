@@ -1,6 +1,7 @@
 import {
   compareOpsDesc,
   indexOf,
+  isRetiredCategory,
   liveTags,
   monthOf,
   occurrenceAmount,
@@ -23,7 +24,7 @@ import { Card, Empty, ScreenTitle, Stack } from "../components/layout";
 import { OperationList, OperationRow } from "../components/OperationRow";
 import { PlannedList } from "../components/PlannedList";
 import { expenseGroups, liveAccounts, liveCategories } from "../lib/data";
-import { hasFilters, matchesFilters, NO_FILTERS, type OperationFilters } from "../lib/filters";
+import { hasFilters, matchesFilters, NO_FILTERS, RETIRED, type OperationFilters } from "../lib/filters";
 import { count, dayHeading, dayShort, monthLong, money, moneySigned, ofMonth } from "../lib/format";
 import { useActions, useApp } from "../store/context";
 import s from "./OperationsScreen.module.css";
@@ -46,6 +47,44 @@ const linkOptions = <T extends { id: string; name: string; deletedAt: number | n
     .sort(byName)
     .map((i) => ({ id: i.id, label: i.archived ? `${i.name} (archivé)` : i.name }));
 
+// ── À reclasser (décision 89) ──────────────────────────────────────────────
+
+/**
+ * Bandeau tant qu'une opération, quel que soit son mois, porte une ancienne catégorie :
+ * « 14 opérations à reclasser, dont 3 en octobre 2026 · la plus ancienne en mars 2026 ».
+ */
+function ReclassBanner({ data, month, active, onShow }: { data: Dataset; month: Month; active: boolean; onShow(month: Month): void }) {
+  const ops = useMemo(() => indexOf(data).liveOps.filter((op) => isRetiredCategory(data, op.categoryId)), [data]);
+  if (ops.length === 0) return null;
+  const here = ops.filter((op) => monthOf(op.date) === month).length;
+  const oldest = ops.reduce((m, op) => (monthOf(op.date) < m ? monthOf(op.date) : m), monthOf(ops[0]!.date));
+  // Une seule : « 1 opération à reclasser, en août 2026 ».
+  const text =
+    ops.length === 1
+      ? `1 opération à reclasser, en ${monthLong(oldest)}`
+      : [
+          `${count(ops.length, "opération", "opérations")} à reclasser${here > 0 ? `, dont ${here} en ${monthLong(month)}` : ""}`,
+          `la plus ancienne en ${monthLong(oldest)}`,
+        ].join(" · ");
+  return (
+    <div className={s.reclass} role="status">
+      <p>{text}</p>
+      <div className={s.reclassTools}>
+        {here > 0 && !active && (
+          <Button size="small" variant="ghost" onClick={() => onShow(month)}>
+            Afficher celles du mois
+          </Button>
+        )}
+        {oldest !== month && (
+          <Button size="small" variant="ghost" onClick={() => onShow(oldest)}>
+            {ops.length === 1 ? "Y aller" : "Aller au plus ancien"}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Filtres ────────────────────────────────────────────────────────────────
 
 function Filters({ data, value, onChange }: { data: Dataset; value: OperationFilters; onChange(f: OperationFilters): void }) {
@@ -59,7 +98,7 @@ function Filters({ data, value, onChange }: { data: Dataset; value: OperationFil
   const setType = (type: OperationFilters["type"]) => {
     // Une catégorie de l'autre nature ne peut plus rien trouver.
     const category = value.categoryId ? indexOf(data).categories.get(value.categoryId) : undefined;
-    const keep = category !== undefined && (type === "all" || category.kind === type);
+    const keep = value.categoryId === RETIRED ? type !== "tx" : category !== undefined && (type === "all" || category.kind === type);
     set({ type, categoryId: keep ? value.categoryId : "" });
   };
 
@@ -79,6 +118,7 @@ function Filters({ data, value, onChange }: { data: Dataset; value: OperationFil
       <div className={s.selects}>
         <Select aria-label="Catégorie" value={value.categoryId} disabled={value.type === "tx"} onChange={(e) => set({ categoryId: e.target.value })}>
           <option value="">Catégories</option>
+          <option value={RETIRED}>À reclasser</option>
           {value.type !== "out" && (
             <optgroup label="Revenus">
               {incomes.map((c) => (
@@ -182,8 +222,12 @@ export function OperationsScreen() {
   const data = useApp((st) => st.data);
   const month = useApp((st) => st.month);
   const today = useApp((st) => st.today);
-  const { openModal } = useActions();
+  const { openModal, setMonth } = useActions();
   const [filters, setFilters] = useState<OperationFilters>(NO_FILTERS);
+  const showRetired = (target: Month) => {
+    if (target !== month) setMonth(target);
+    setFilters({ ...NO_FILTERS, categoryId: RETIRED });
+  };
 
   const all = useMemo(() => [...(indexOf(data).opsByMonth.get(month) ?? [])].sort(compareOpsDesc), [data, month]);
   const shown = useMemo(() => all.filter((op) => matchesFilters(data, op, filters)), [all, data, filters]);
@@ -259,6 +303,7 @@ export function OperationsScreen() {
   return (
     <Stack gap={18}>
       <ScreenTitle title={`Opérations ${ofMonth(month)}`} />
+      <ReclassBanner data={data} month={month} active={filters.categoryId === RETIRED} onShow={showRetired} />
       {all.length > 0 && <Filters data={data} value={filters} onChange={setFilters} />}
       {all.length > 0 ? (
         <Card tour="ops-list">

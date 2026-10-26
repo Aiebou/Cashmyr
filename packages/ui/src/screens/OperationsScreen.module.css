@@ -92,3 +92,25 @@
     display: none;
   }
 }
+
+/* Décision 89 : opérations à reclasser, tous mois confondus. */
+.reclass {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.reclass p {
+  margin: 0;
+}
+.reclassTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}

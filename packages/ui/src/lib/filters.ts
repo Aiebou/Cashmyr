@@ -1,4 +1,4 @@
-import type { Dataset, Operation, OpType } from "@cashmyr/core";
+import { isRetiredCategory, type Dataset, type Operation, type OpType } from "@cashmyr/core";
 import { operationLabel } from "./data";
 
 export type OperationFilters = {
@@ -10,6 +10,9 @@ export type OperationFilters = {
   debtId: string;
   tagId: string;
 };
+
+/** Valeur du filtre de catégorie qui garde les opérations à reclasser (décision 89). */
+export const RETIRED = "a-reclasser";
 
 export const NO_FILTERS: OperationFilters = { query: "", type: "all", categoryId: "", accountId: "", goalId: "", debtId: "", tagId: "" };
 
@@ -32,7 +35,9 @@ export const fold = (text: string): string => text.normalize("NFD").replace(/\p{
  */
 export function matchesFilters(data: Dataset, op: Operation, f: OperationFilters): boolean {
   if (f.type !== "all" && op.type !== f.type) return false;
-  if (f.categoryId && op.categoryId !== f.categoryId) return false;
+  if (f.categoryId === RETIRED) {
+    if (!isRetiredCategory(data, op.categoryId)) return false;
+  } else if (f.categoryId && op.categoryId !== f.categoryId) return false;
   if (f.accountId && op.accountId !== f.accountId && op.fromAccountId !== f.accountId && op.toAccountId !== f.accountId) {
     return false;
   }

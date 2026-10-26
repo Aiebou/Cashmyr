@@ -18,7 +18,7 @@ import { OperationModal } from "./screens/OperationModal";
 import { RecurrenceModal } from "./screens/RecurrenceModal";
 import { EditAccountModal } from "./screens/settings/AccountsSection";
 import { CreateBudgetModal, DeleteBudgetModal, TypeObjectiveModal } from "./screens/settings/BudgetModals";
-import { DeleteCategoryModal } from "./screens/settings/DeleteCategoryModal";
+import { DeleteCategoryModal, ReclassCategoryModal } from "./screens/settings/DeleteCategoryModal";
 import { CreateProfileModal, DeleteProfileModal } from "./screens/settings/ProfileModals";
 import { SETTINGS_TOC, SettingsScreen } from "./screens/settings/SettingsScreen";
 import { Welcome } from "./screens/Welcome";
@@ -194,6 +194,8 @@ function Modals() {
       return <RecurrenceModal key={modal.editId ?? "new"} {...(modal.editId ? { editId: modal.editId } : {})} />;
     case "delete-category":
       return <DeleteCategoryModal categoryId={modal.categoryId} />;
+    case "reclass-category":
+      return <ReclassCategoryModal categoryId={modal.categoryId} />;
     case "create-profile":
       return <CreateProfileModal />;
     case "delete-profile":
