@@ -19,6 +19,7 @@ import {
 import { useId, useMemo, useState, type FormEvent } from "react";
 import { AmountInput, Button, Checkbox, Field, FieldRow, Segmented, Select, submitOnEnter, TextInput } from "../components/controls";
 import { Modal } from "../components/Modal";
+import { ReserveField } from "../components/ReserveField";
 import { TagField } from "../components/TagField";
 import { accountName, expenseGroups, liveAccounts, liveCategories, liveDebts, liveGoals } from "../lib/data";
 import { tagChoice, tagText } from "../lib/tags";
@@ -63,6 +64,7 @@ export function OperationModal({ type: initialType, editId }: Props) {
   const [date, setDate] = useState<Day>(existing?.date ?? defaultDate);
   const [note, setNote] = useState(existing?.note ?? "");
   const [tag, setTag] = useState(() => tagText(data, existing?.tagId));
+  const [typeId, setTypeId] = useState(existing?.typeId ?? "");
   const [repeat, setRepeat] = useState(false);
   const [repeatDay, setRepeatDay] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -113,6 +115,7 @@ export function OperationModal({ type: initialType, editId }: Props) {
       ...(debtId ? { debtId } : {}),
       ...(existing?.recurrenceId ? { recurrenceId: existing.recurrenceId } : {}),
       ...(tagged.tagId ? { tagId: tagged.tagId } : {}),
+      ...(typeId ? { typeId } : {}),
     };
     const op: Operation = existing
       ? { id: existing.id, updatedAt: nextStamp(now, existing), deletedAt: null, ...fields }
@@ -129,6 +132,7 @@ export function OperationModal({ type: initialType, editId }: Props) {
           ...(goalId ? { goalId } : {}),
           ...(debtId ? { debtId } : {}),
           ...(tagged.tagId ? { tagId: tagged.tagId } : {}),
+          ...(typeId ? { typeId } : {}),
           dayOfMonth: day,
           startMonth: addMonths(monthOf(date), 1),
           endMonth: null,
@@ -251,6 +255,14 @@ export function OperationModal({ type: initialType, editId }: Props) {
         </FieldRow>
 
         <TagField id={`${id}-tag`} data={data} value={tag} onChange={setTag} />
+
+        <ReserveField
+          id={`${id}-reserve`}
+          data={data}
+          accountIds={isTransfer ? [toId, fromId] : [accountId]}
+          value={typeId}
+          onChange={setTypeId}
+        />
 
         {(goals.length > 0 || debts.length > 0) && (
           <FieldRow>

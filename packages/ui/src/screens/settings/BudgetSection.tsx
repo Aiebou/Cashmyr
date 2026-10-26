@@ -1,5 +1,6 @@
 import {
   budgetWeight,
+  canHoldObjective,
   colorFor,
   createType,
   deleteType,
@@ -40,11 +41,11 @@ export function parsePercent(text: string): number | null {
   return bp <= 10_000 ? bp : null;
 }
 
-/** Un type d'un budget : renommer sur place, supprimer après confirmation (décisions 84 et 85). */
+/** Un type d'un budget : renommer sur place, fixer son objectif (décision 88), supprimer après confirmation (décisions 84 et 85). */
 function TypeRow({ type }: { type: BudgetType }) {
   const data = useApp((st) => st.data);
   const today = useApp((st) => st.today);
-  const { apply, ask } = useActions();
+  const { apply, ask, openModal } = useActions();
   const remove = async () => {
     const held = typeHolding(data, type.id, today);
     const ok = await ask({
@@ -60,10 +61,15 @@ function TypeRow({ type }: { type: BudgetType }) {
   return (
     <li className={s.typeRow}>
       <InlineText label={`Nom du type « ${type.name} »`} value={type.name} required onCommit={(name) => apply({ types: [touch(type, { name }, Date.now())] })} />
+      {canHoldObjective(data, type) && (
+        <Button size="small" variant="ghost" className={s.typeGoal} aria-label={`Objectif de « ${type.name} »`} onClick={() => openModal({ kind: "type-objective", typeId: type.id })}>
+          {type.objective !== null ? `Objectif : ${money(type.objective.amount)}` : "Objectif"}
+        </Button>
+      )}
       {type.id === PRECAUTION_TYPE_ID ? (
-        <span className={s.muted}>Objectif dans Objectifs</span>
+        <span className={`${s.muted} ${s.typeNote}`}>Objectif dans Objectifs</span>
       ) : (
-        <IconButton label={`Supprimer le type « ${type.name} »`} onClick={() => void remove()}>
+        <IconButton className={s.typeEnd} label={`Supprimer le type « ${type.name} »`} onClick={() => void remove()}>
           <TrashIcon size={16} />
         </IconButton>
       )}

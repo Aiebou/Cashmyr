@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  accountFigures,
   applyChanges,
   assertValidDataset,
   budgetActual,
@@ -123,6 +124,33 @@ describe("format 2 → 3 (décision 81)", () => {
     expect(courant).not.toHaveProperty("safety");
     // Même montant constitué qu'avant : le solde du livret.
     expect(safetyStatus(data, TODAY, TODAY).constituted).toBe(eur(3300));
+  });
+
+  it("chaque compte coché « précaution » porte le type, avec son solde intact ; rien d'autre ne change", () => {
+    const before = format2() as { collections: { accounts: Record<string, unknown>[]; operations: unknown[] } };
+    const ldds = { id: "acc-ldds", updatedAt: 7, deletedAt: null, name: "LDDS", role: "epargne", opening: eur(1500), safety: true, color: 2 };
+    before.collections.accounts.push(ldds);
+    before.collections.operations.push(
+      { id: "op-6", updatedAt: 1, deletedAt: null, date: "2026-09-06", amount: eur(250), type: "in", note: "", categoryId: cat("r2"), accountId: "acc-ldds" },
+      { id: "op-7", updatedAt: 1, deletedAt: null, date: "2026-09-07", amount: eur(100), type: "tx", note: "", fromAccountId: "acc-ldds", toAccountId: "acc-courant" },
+    );
+    const data = upgradeSchema(before) as unknown as Dataset;
+    assertValidDataset(data);
+
+    // Seul le champ « safety » devient « typeIds » ; nom, solde de départ, horodatage restent.
+    const strip = ({ safety, ...rest }: Record<string, unknown>) => ({ rest, safety });
+    for (const [i, old] of before.collections.accounts.entries()) {
+      const { rest, safety } = strip(old);
+      expect(data.collections.accounts[i]).toEqual(safety ? { ...rest, typeIds: [PRECAUTION_TYPE_ID] } : rest);
+    }
+    // Soldes au centime : courant 1 000 + 2 000 − 700 − 120 − 200 − 300 + 100 ; livret 3 000 + 300 ; LDDS 1 500 + 250 − 100.
+    const balances = accountFigures(data, TODAY);
+    expect(["acc-courant", "acc-livret", "acc-ldds"].map((id) => balances.get(id)!.balance)).toEqual([eur(1780), eur(3300), eur(1650)]);
+    // Toute la précaution leur revient : 3 300 + 1 650.
+    const status = safetyStatus(data, TODAY, TODAY);
+    expect(status.accountIds).toEqual(["acc-livret", "acc-ldds"]);
+    expect(status.accounts.map((a) => a.share)).toEqual([eur(3300), eur(1650)]);
+    expect(status.constituted).toBe(eur(4950));
   });
 
   it("catégories par défaut jamais modifiées : nouvelle forme, ou suppression qui garde les opérations (décision 73)", () => {

@@ -337,18 +337,48 @@
 }
 .typeList {
   display: grid;
-  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 4px 8px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
+/* Sous-grille : les colonnes de la liste valent pour toutes les lignes, le nom garde la même largeur. */
 .typeRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
 }
+/* Mêmes colonnes d'une ligne à l'autre : nom, objectif, corbeille ; la mention de la précaution prend les deux dernières. */
+.typeGoal {
+  grid-column: 2;
+  justify-self: start;
+}
+.typeEnd {
+  grid-column: 3;
+}
+.typeNote {
+  grid-column: 2 / 4;
+}
 @media (max-width: 640px) {
+  /* Le nom garde la largeur : l'objectif et la mention passent dessous. */
+  .typeList {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .typeRow {
+    row-gap: 4px;
+  }
+  .typeEnd {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .typeGoal,
+  .typeNote {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: start;
+  }
   .budgetRow {
     grid-template-columns: auto minmax(0, 1fr) 96px;
   }
@@ -369,4 +399,40 @@
   .types {
     margin-left: 12px;
   }
+}
+
+/* Types d'un compte (décision 77). */
+.accountTypes {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+}
+.accountTypes legend {
+  padding: 0 4px;
+  font-weight: 560;
+}
+.accountTypeGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: center;
+}
+.accountTypeGroup > span:first-child {
+  flex-basis: 100%;
+  font-size: 13px;
+}
+.accountType {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.principal {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ink-2);
 }

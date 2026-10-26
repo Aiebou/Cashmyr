@@ -2,11 +2,10 @@ import {
   accountUsage,
   colorFor,
   deleteAccount,
-  isPrecautionAccount,
   isUsed,
   nextStamp,
-  precautionType,
-  setPrecautionAccount,
+  setAccountTypes,
+  typesOf,
   touch,
   type Account,
   type AccountUsage,
@@ -19,7 +18,7 @@ import { Dot } from "../../components/figures";
 import { PlusIcon } from "../../components/icons";
 import { Card } from "../../components/layout";
 import { Modal } from "../../components/Modal";
-import { liveAccounts, ROLE_LABELS } from "../../lib/data";
+import { liveAccounts, liveBudgets, ROLE_LABELS } from "../../lib/data";
 import { count, dayLong } from "../../lib/format";
 import { useActions, useApp } from "../../store/context";
 import s from "./Settings.module.css";
@@ -100,14 +99,8 @@ function AccountEditor({ account }: { account: Account }) {
           </Field>
         )}
       </div>
+      <AccountTypes account={account} />
       <div className={s.itemFoot}>
-        {precautionType(data) && (
-          <Checkbox
-            label="Épargne de précaution"
-            checked={isPrecautionAccount(account)}
-            onChange={(e) => apply({ accounts: [setPrecautionAccount(account, e.target.checked, Date.now())] })}
-          />
-        )}
         {isUsed(usage) ? (
           <p className={s.muted}>Utilisé par {usageText(usage)} : il ne peut pas être supprimé.</p>
         ) : (
@@ -115,6 +108,60 @@ function AccountEditor({ account }: { account: Account }) {
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * Types du compte (décision 77) : les cocher, et choisir le principal, qui prend le solde moins les
+ * parts réservées aux autres. La précaution est l'un d'eux. Chaque changement s'enregistre aussitôt.
+ */
+function AccountTypes({ account }: { account: Account }) {
+  const data = useApp((st) => st.data);
+  const { apply } = useActions();
+  const id = useId();
+  const chosen = account.typeIds ?? [];
+  const save = (typeIds: string[]) => apply({ accounts: [setAccountTypes(account, typeIds, Date.now())] });
+  const toggle = (typeId: string, on: boolean) => save(on ? [...chosen, typeId] : chosen.filter((t) => t !== typeId));
+  const makePrincipal = (typeId: string) => save([typeId, ...chosen.filter((t) => t !== typeId)]);
+  const groups = liveBudgets(data)
+    .map((budget) => ({ budget, types: typesOf(data, budget.id) }))
+    .filter((g) => g.types.length > 0);
+  if (groups.length === 0) return null;
+  return (
+    <fieldset className={s.accountTypes}>
+      <legend>Types du compte</legend>
+      {groups.map(({ budget, types }) => (
+        <div key={budget.id} className={s.accountTypeGroup} role="group" aria-label={budget.name}>
+          <span className={s.muted}>{budget.name}</span>
+          {types.map((type) => {
+            const on = chosen.includes(type.id);
+            const principal = chosen[0] === type.id;
+            return (
+              <div key={type.id} className={s.accountType}>
+                <Checkbox label={type.name} checked={on} onChange={(e) => void toggle(type.id, e.target.checked)} />
+                {on && chosen.length > 1 && (
+                  <label className={s.principal}>
+                    <input
+                      type="radio"
+                      name={`${id}-principal`}
+                      checked={principal}
+                      onChange={() => void makePrincipal(type.id)}
+                      aria-label={`${type.name} comme type principal`}
+                    />
+                    principal
+                  </label>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+      <p className={s.muted}>
+        {chosen.length > 1
+          ? "Le type principal prend le solde du compte, moins les parts réservées aux autres à la saisie."
+          : "Un compte peut porter plusieurs types : une part se réserve alors à la saisie."}
+      </p>
+    </fieldset>
   );
 }
 

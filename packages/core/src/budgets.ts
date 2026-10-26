@@ -1,9 +1,9 @@
 import { indexOf, setPreference } from "./dataset";
 import { defaultBudgetId, PRECAUTION_TYPE_ID } from "./defaults";
 import { newId } from "./ids";
-import type { Account, Budget, BudgetNature, BudgetType, Cents, Changes, Dataset, Preferences, SeriesColor } from "./model";
+import type { Account, Budget, BudgetNature, BudgetType, Cents, Changes, Dataset, Preferences, SeriesColor, TypeObjective } from "./model";
 import { cleanName } from "./names";
-import { createRecord, nextStamp, tombstone } from "./records";
+import { createRecord, nextStamp, tombstone, touch } from "./records";
 import { typeShares } from "./calc/safety";
 import { UsageError } from "./usage";
 
@@ -141,4 +141,64 @@ export function deleteBudget(data: Dataset, budgetId: string, targetId: string, 
   delete splits[budgetId];
   if (moved > 0) splits[targetId] = (splits[targetId] ?? 0) + moved;
   return { changes, preferences: setPreference(data.preferences, "splits", splits, now) };
+}
+
+/**
+ * Rattache un compte à des types, dans l'ordre donné : le premier est son type principal
+ * (décision 77). Une liste vide retire le champ.
+ */
+export function setAccountTypes(account: Account, typeIds: readonly string[], now: number): Account {
+  const { typeIds: _old, ...rest } = account;
+  const unique = [...new Set(typeIds)];
+  return { ...rest, ...(unique.length > 0 ? { typeIds: unique } : {}), updatedAt: nextStamp(now, account) };
+}
+
+/**
+ * Types auxquels une opération peut réserver une part (décision 78) : ceux des comptes qu'elle touche,
+ * hors leur type principal, qui prend déjà le reste. Vivants, sans doublon, dans l'ordre des comptes.
+ */
+export function reservableTypes(data: Dataset, accountIds: readonly (string | undefined)[]): BudgetType[] {
+  const ix = indexOf(data);
+  const out = new Map<string, BudgetType>();
+  for (const accountId of accountIds) {
+    const account = accountId ? ix.accounts.get(accountId) : undefined;
+    for (const typeId of account?.typeIds?.slice(1) ?? []) {
+      const type = ix.types.get(typeId);
+      if (type && type.deletedAt === null) out.set(type.id, type);
+    }
+  }
+  return [...out.values()];
+}
+
+/**
+ * Vrai si le type peut porter un objectif en montant (décision 88) : un type vivant d'un budget
+ * d'épargne vivant, hors précaution, qui a sa propre carte (décision 79).
+ */
+export function canHoldObjective(data: Dataset, type: BudgetType): boolean {
+  const budget = indexOf(data).budgets.get(type.budgetId);
+  return type.id !== PRECAUTION_TYPE_ID && type.deletedAt === null && budget?.deletedAt === null && budget.nature === "save";
+}
+
+/**
+ * Types qui affichent une carte d'objectif (décision 88), hors précaution : ceux d'un budget
+ * d'épargne qui ont un objectif, dans l'ordre des budgets puis des types.
+ */
+export const objectiveTypes = (data: Dataset): BudgetType[] =>
+  liveBudgetsOf(data)
+    .filter((b) => b.nature === "save")
+    .flatMap((b) => typesOf(data, b.id))
+    .filter((t) => t.id !== PRECAUTION_TYPE_ID && t.objective !== null);
+
+/**
+ * Fixe l'objectif d'un type en montant, ou le retire avec `null` (décision 88). Les réglages
+ * « masquée » et « épinglée » d'un objectif déjà fixé restent.
+ */
+export function setTypeObjective(data: Dataset, typeId: string, amount: Cents | null, now: number): Changes {
+  const type = indexOf(data).types.get(typeId);
+  if (!type || !canHoldObjective(data, type)) throw new UsageError("Seul un type d'un budget d'épargne peut avoir un objectif.");
+  if (amount !== null && !(Number.isInteger(amount) && amount > 0)) throw new UsageError("Indique un montant supérieur à zéro.");
+  const old = type.objective;
+  const objective: TypeObjective | null =
+    amount === null ? null : { mode: "amount", months: old?.months ?? 1, amount, hidden: old?.hidden ?? false, pinned: old?.pinned ?? false };
+  return { types: [touch(type, { objective }, now)] };
 }

@@ -5,9 +5,11 @@ import {
   colorFor,
   declaredAsOf,
   formatCents,
+  indexOf,
   isPrecautionAccount,
   isFluctuatingRole,
   reorderAccounts,
+  typeShares,
   type Account,
   type Cents,
   type Dataset,
@@ -103,6 +105,8 @@ type TileProps = {
   asOf: Day;
   today: Day;
   figures: ReturnType<typeof accountFigures>;
+  /** Part de chaque type dans les comptes (décision 78). */
+  shares: ReturnType<typeof typeShares>;
   /** Mode « Modifier l'ordre » : poignée et flèches sur chaque tuile. */
   ordering: { index: number; count: number; onMove(id: string, delta: -1 | 1): void; onDropOn(dragged: string, target: string, after: boolean): void } | null;
   /** Ouvre « Modifier le compte », hors du mode « Modifier l'ordre ». */
@@ -113,7 +117,7 @@ type TileProps = {
  * Un compte. Épargne, placement et autre : la valeur déclarée en avant, le capital injecté dessous
  * (décision 42) ; sans valeur déclarée à cette date, le capital injecté, sur fond rouge discret.
  */
-function AccountTile({ data, account, asOf, today, figures, ordering, onEdit }: TileProps) {
+function AccountTile({ data, account, asOf, today, figures, shares, ordering, onEdit }: TileProps) {
   const drag = useReorderDrag(account.id, "application/x-cashmyr-account", (dragged, target, after) => ordering?.onDropOn(dragged, target, after));
   const f = figures.get(account.id);
   if (!f) return null;
@@ -167,12 +171,21 @@ function AccountTile({ data, account, asOf, today, figures, ordering, onEdit }: 
       <p className={s.detail}>
         Départ {money(f.opening)} · {money(f.inflow)} entrés · {money(f.outflow)} sortis
       </p>
+      {/* Plusieurs types : le compte montre tout, chaque type sa part. */}
+      {(account.typeIds?.length ?? 0) > 1 && (
+        <p className={s.detail}>
+          {[...(shares.get(account.id) ?? new Map<string, number>())]
+            .map(([typeId, share]) => `${indexOf(data).types.get(typeId)?.name ?? "Type supprimé"} ${money(share)}`)
+            .join(" · ")}
+        </p>
+      )}
     </li>
   );
 }
 
 function AccountList({ data, accounts, asOf, today, ordering }: { data: Dataset; accounts: Account[]; asOf: Day; today: Day; ordering: boolean }) {
   const figures = useMemo(() => accountFigures(data, asOf), [data, asOf]);
+  const shares = useMemo(() => typeShares(data, asOf), [data, asOf]);
   const { apply, openModal } = useActions();
   // Décision 49 : l'ordre est celui de tous les comptes ; un filtre actif ne déplace que parmi ceux qu'il montre.
   const order = liveAccounts(data).map((a) => a.id);
@@ -189,6 +202,7 @@ function AccountList({ data, accounts, asOf, today, ordering }: { data: Dataset;
             asOf={asOf}
             today={today}
             figures={figures}
+            shares={shares}
             onEdit={() => openModal({ kind: "edit-account", accountId: account.id })}
             ordering={
               ordering

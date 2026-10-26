@@ -11,13 +11,13 @@ import { CreateAccountModal, CreateDebtModal, CreateGoalModal } from "./screens/
 import { DashboardScreen } from "./screens/DashboardScreen";
 import { AccountsScreen } from "./screens/AccountsScreen";
 import { DebtsScreen } from "./screens/DebtsScreen";
-import { GoalsScreen } from "./screens/GoalsScreen";
+import { GoalsScreen, PrecautionAccountsModal } from "./screens/GoalsScreen";
 import { MonthScreen } from "./screens/MonthScreen";
 import { OperationsScreen } from "./screens/OperationsScreen";
 import { OperationModal } from "./screens/OperationModal";
 import { RecurrenceModal } from "./screens/RecurrenceModal";
 import { EditAccountModal } from "./screens/settings/AccountsSection";
-import { CreateBudgetModal, DeleteBudgetModal } from "./screens/settings/BudgetModals";
+import { CreateBudgetModal, DeleteBudgetModal, TypeObjectiveModal } from "./screens/settings/BudgetModals";
 import { DeleteCategoryModal } from "./screens/settings/DeleteCategoryModal";
 import { CreateProfileModal, DeleteProfileModal } from "./screens/settings/ProfileModals";
 import { SETTINGS_TOC, SettingsScreen } from "./screens/settings/SettingsScreen";
@@ -184,8 +184,12 @@ function Modals() {
       return <EditAccountModal accountId={modal.accountId} />;
     case "create-budget":
       return <CreateBudgetModal />;
+    case "precaution-accounts":
+      return <PrecautionAccountsModal />;
     case "delete-budget":
       return <DeleteBudgetModal budgetId={modal.budgetId} />;
+    case "type-objective":
+      return <TypeObjectiveModal typeId={modal.typeId} />;
     case "recurrence":
       return <RecurrenceModal key={modal.editId ?? "new"} {...(modal.editId ? { editId: modal.editId } : {})} />;
     case "delete-category":
