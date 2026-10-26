@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  accountFigures,
   applyChanges,
   defaultBudgetId,
   defaultBudgets,
@@ -21,6 +22,7 @@ import {
   parseImport,
   PRECAUTION_TYPE_ID,
   readLegacyExport,
+  safetyStatus,
   serializeBackup,
   setPreference,
   skipId,
@@ -89,6 +91,12 @@ describe("reprise de l'ancienne application (§7)", () => {
       ["Livret A", 300000, 310050],
       ["PEA", 0, undefined],
       ["Compte joint", -12010, undefined],
+    ]);
+    // L'ancienne case « précaution » devient le type, solde compris (décision 79).
+    expect(data.collections.accounts.map((a) => a.typeIds)).toEqual([undefined, [PRECAUTION_TYPE_ID], undefined, undefined]);
+    const livret = acc("a2");
+    expect(safetyStatus(data, "2026-09-30", "2026-09-30").accounts).toEqual([
+      { account: expect.objectContaining({ id: livret }), share: accountFigures(data, "2026-09-30").get(livret)!.balance },
     ]);
     expect(clearedDebtCategories).toEqual(["Dépannage"]);
   });
