@@ -187,6 +187,9 @@ describe("graphiques et textes", () => {
     expect(niceTicks(0, 3_120_00)).toEqual([0, 100_000, 200_000, 300_000, 400_000]);
     expect(niceTicks(-50_000, 90_000)).toEqual([-50_000, 0, 50_000, 100_000]);
     expect(niceTicks(0, 0)).toEqual([0]);
+    // Épargne nulle toute l'année : l'échelle va jusqu'à 1 centime, sans graduation en double.
+    expect(niceTicks(0, 1)).toEqual([0, 1]);
+    expect(niceTicks(0, 3)).toEqual([0, 1, 2, 3]);
   });
 
   it("phrase de dette : « reste 1 échéance de 75 € · prochaine le 10 novembre 2026 · soldée en novembre 2026. »", () => {

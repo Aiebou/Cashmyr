@@ -10,7 +10,8 @@ export function niceTicks(min: number, max: number, target = 4): number[] {
   if (hi === lo) return [0];
   const raw = (hi - lo) / target;
   const power = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * power).find((s) => s >= raw) ?? 10 * power;
+  // Des centimes entiers : un pas de moins d'un centime donnerait, une fois arrondies, deux graduations égales.
+  const step = Math.max(1, [1, 2, 2.5, 5, 10].map((m) => m * power).find((s) => s >= raw) ?? 10 * power);
   const first = Math.floor(lo / step) * step;
   const last = Math.ceil(hi / step) * step;
   const ticks: number[] = [];
