@@ -492,8 +492,6 @@ Restent, du plus pressé au moins pressé :
    encore au futur dans `architecture.md` (§6, iOS) ; le README n'en donne qu'une mise en garde générale.
 3. **« Compte professionnel » ou « profil professionnel »** : reporté le 26/09/2026, à rediscuter. Toute piste qui
    touche aux calculs ou au format passe d'abord par des questions chiffrées.
-4. **Avertissement React dans `SavingsChart`** : deux éléments reçoivent la même clé quand toute l'épargne de
-   l'année vaut 0. Sans effet visible relevé ; à corriger dans une petite PR à part.
 
 ## 7. Pièges rencontrés
 
